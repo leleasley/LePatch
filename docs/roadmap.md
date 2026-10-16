@@ -118,14 +118,14 @@ Status: Complete except browser tests.
 - [x] Add backup/restore docs and in-app backup UI.
 - [x] Add dependency update workflow (`npm run deps:outdated`).
 - [x] Add security advisory workflow.
-- [ ] Run the app containers as a non-root user. The `Dockerfile` still has no `USER` directive. See `docs/operations.md`.
+- [x] Run the app containers as a non-root user (`USER node`).
 - [ ] Pin base image tags/digests in `Dockerfile` and `docker-compose.yml`.
 
 Status: Mostly complete; two hardening items open.
 
 ## Current Priorities
 
-1. Run app containers as non-root (security).
+1. Add resource limits and pinned base-image digests (see `docs/operations.md`).
 2. Apply pending dependency updates — see the audit findings in `docs/operations.md`.
 3. Playwright smoke tests, when a browser environment is available.
 4. Fix the dashboard `.slice(0, 6)` truncation so releases past the sixth are visible.

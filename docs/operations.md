@@ -130,52 +130,20 @@ docker compose build lepatch && docker compose up -d && docker image prune -f
 
 - `postgres:16-alpine` — runs as the `postgres` user, non-root by default
 - `redis:7-alpine` — runs as the `redis` user, non-root by default
-- `lepatch` / `worker` — **currently run as root**; see the recommendation below
+- `lepatch` / `worker` — run as the image's built-in `node` user (UID 1000).
+  `Dockerfile` sets `USER node` and chowns `/app/data`, `/app/.next` and
+  `/app/public` so the app can still write backups and its build cache.
 
-### Hardening Recommendations
+### Further hardening
 
-1. **Drop root in the app image**: the `Dockerfile` has no `USER` directive, so
-   both the `lepatch` and `worker` containers run as UID 0. The app only needs
-   write access to `/app/data/backups`, so add a non-root user and chown that
-   directory:
-
-   ```dockerfile
-   RUN useradd --system --uid 1001 --create-home lepatch \
-     && mkdir -p /app/data/backups \
-     && chown -R lepatch:lepatch /app/data
-   USER lepatch
-   ```
-
-   Verify after changing this — the container runs `npx prisma migrate deploy`
-   and `npm start` on start-up, and the entrypoint must still be able to write
-   the Prisma engine cache location.
-
-2. **Pin base image versions**: `node:22-bookworm-slim` is a moving tag. For
-   reproducible rebuilds, pin to a digest or at least to a patch-level tag.
-
-3. **Secrets management**: all secrets come from the `.env` file. For production,
-   use Docker secrets or a vault rather than a plaintext file on the host.
-
-4. **Network isolation**: services communicate over an internal Docker network.
-   Only the app port is published. In single-user setups you can bind it to
-   localhost and front it with a reverse proxy that terminates TLS.
-
-5. **Read-only root filesystem**: the app container can run with `--read-only`
-   if `/app/data` and `/tmp` are mounted as writable tmpfs/volumes.
-
-6. **Resource limits** to prevent resource exhaustion:
-
-   ```yaml
-   lepatch:
-     deploy:
-       resources:
-         limits:
-           memory: 512M
-   ```
-
-7. **Image scanning**: run `docker scout` or Trivy against built images to catch
-   CVEs in base layers (the Alpine `postgres`/`redis` images and `sharp`'s
-   bundled libvips are the usual sources).
+1. **Restrict the published port** if the app is fronted by a reverse proxy, and
+   set `TRUST_PROXY=true` only when that proxy is under your control.
+2. **Add resource limits** (`deploy.resources.limits`) so a runaway worker
+   cannot starve the host.
+3. **Pin base images** to digests rather than floating tags for reproducible
+   builds.
+4. **Configure a log driver** (`logging: { driver, options }`) so container logs
+   cannot fill the disk.
 
 ---
 
