@@ -12,7 +12,7 @@ export default async function ProfileSecurityPage() {
   const sessionId = await getCurrentSessionId();
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <ThemePicker initialTheme={((user as unknown as { theme: string }).theme as ThemeId) || "dark"} />
       <ProfileSecurityClient
         user={{

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, startTransition } from "react";
+import { useEffect, useState, startTransition } from "react";
 import { X, AlertTriangle } from "lucide-react";
 import { ModalShell } from "@/components/ModalShell";
+import { Input } from "@/components/ui/Input";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -29,93 +30,62 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  const buttonRef = useRef<HTMLButtonElement>(null);
   const [typed, setTyped] = useState("");
-
-  useEffect(() => {
-    if (open) {
-      buttonRef.current?.focus();
-    }
-  }, [open]);
 
   useEffect(() => {
     if (!open) startTransition(() => setTyped(""));
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    function handleKey(event: KeyboardEvent) {
-      if (event.key === "Escape") onCancel();
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [open, onCancel]);
-
-  if (!open) return null;
-
-  const confirmStyles =
-    variant === "danger"
-      ? "bg-red-600 text-text hover:bg-red-500 shadow-lg shadow-red-500/20"
-      : "bg-accent text-accent-foreground hover:bg-accent shadow-lg shadow-cyan-500/20";
   const confirmReady = !confirmText || typed === confirmText;
 
   return (
-    <ModalShell open={open} onClose={onCancel} panelClassName="flex w-auto max-w-md flex-col p-6">
-      <div className="relative flex max-h-full flex-col overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/[0.03] to-transparent pointer-events-none" />
-        <div className="relative flex items-start gap-4">
+    <ModalShell open={open} onClose={onCancel} title={title} panelClassName="w-auto max-w-md p-6">
+      <div className="flex items-start gap-4">
+        {variant === "danger" && (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-status-danger/10">
+            <AlertTriangle className="h-5 w-5 text-status-danger" aria-hidden="true" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-base font-semibold text-text">{title}</h2>
+            <button type="button" onClick={onCancel} aria-label="Close" className="icon-button -mr-1 -mt-1">
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-text-muted">{message}</p>
           {variant === "danger" && (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-status-danger/10">
-              <AlertTriangle className="h-5 w-5 text-status-danger" />
+            <div className="mt-4 rounded-md border border-status-danger/30 bg-status-danger/10 px-3 py-2 text-sm text-status-danger">
+              Review this carefully. This action changes live data and may be irreversible.
             </div>
           )}
-          <div className="flex-1 min-w-0 overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-text">{title}</h2>
-              <button
-                onClick={onCancel}
-                className="rounded-lg p-1.5 text-text-muted hover:text-text hover:bg-white/5 transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
+          {confirmText && (
+            <div className="mt-4">
+              <Input
+                label={`Type ${confirmText} to confirm`}
+                value={typed}
+                onChange={(event) => setTyped(event.target.value)}
+                placeholder={confirmPlaceholder || confirmText}
+                data-autofocus
+                className="font-mono"
+              />
             </div>
-            <p className="mt-2 text-sm text-text-muted leading-relaxed">{message}</p>
-            {variant === "danger" && (
-              <div className="mt-4 rounded-lg border border-red-500/30 bg-status-danger/10 px-3 py-2 text-sm text-red-200">
-                Review this carefully. This action changes live data and may be irreversible.
-              </div>
-            )}
-            {confirmText && (
-              <div className="mt-4">
-                <p className="text-xs text-text-muted">
-                  Type <span className="font-mono text-text">{confirmText}</span> to confirm.
-                </p>
-                <input
-                  value={typed}
-                  onChange={(event) => setTyped(event.target.value)}
-                  placeholder={confirmPlaceholder || confirmText}
-                  className="focus-ring mt-2 w-full rounded-lg border border-line/50 bg-surface px-3 py-2 text-sm text-text placeholder-slate-500 transition-all focus:border-cyan-500/50"
-                />
-              </div>
-            )}
-          </div>
+          )}
         </div>
-        <div className="relative mt-6 flex flex-col sm:flex-row justify-end gap-3">
-          <button
-            onClick={onCancel}
-            className="rounded-lg border border-line/50 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-text transition-all duration-200 hover:bg-white/[0.06] hover:border-line"
-          >
-            {cancelLabel}
-          </button>
-          <button
-            ref={buttonRef}
-            onClick={onConfirm}
-            disabled={!confirmReady}
-            className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${confirmStyles}`}
-          >
-            {confirmLabel}
-          </button>
-        </div>
+      </div>
+      <div className="mt-6 flex flex-col justify-end gap-2 sm:flex-row">
+        <button type="button" onClick={onCancel} className="btn btn--secondary">
+          {cancelLabel}
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={!confirmReady}
+          data-autofocus={confirmText ? undefined : true}
+          className={variant === "danger" ? "btn btn--danger" : "btn btn--primary"}
+        >
+          {confirmLabel}
+        </button>
       </div>
     </ModalShell>
   );

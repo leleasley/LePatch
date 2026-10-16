@@ -1,16 +1,31 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowUpDown, Check, Filter, Loader2, RefreshCw, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AppsTable } from "@/components/AppsTable";
-import { AddAppModal } from "@/components/AddAppModal";
+import {
+  AlertTriangle,
+  BellOff,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  RefreshCw,
+  Search,
+  Sparkles,
+  X,
+} from "lucide-react";
+import { AddAppButton } from "@/components/AddAppButton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/Card";
+import { List, ListRow, MetricStrip, RowAvatar, StatusDot, Toolbar, type StatusTone } from "@/components/ui/List";
+import { Input, Select } from "@/components/ui/Input";
 import { useApps } from "@/lib/use-swr";
 import { csrfFetch } from "@/lib/csrf-client";
 import { useToast } from "@/lib/toast";
+import { formatRelativeTime } from "@/lib/time-ago";
+import { cn } from "@/lib/cn";
 
-type App = {
+export type WatchedAppRow = {
   id: string;
   name: string;
   repoFullName: string;
@@ -22,569 +37,382 @@ type App = {
   includePrereleases: boolean;
 };
 
-type FilterKey = "all" | "updates" | "failed" | "quiet" | "notificationsOff" | "stale";
-type SortKey = "status" | "name" | "checked" | "version";
+type FilterKey = "all" | "attention" | "updates" | "failed" | "muted" | "fresh";
+type SortKey = "attention" | "name" | "checked";
 
 const STALE_MS = 24 * 60 * 60 * 1000;
 
-function appNeedsUpdate(app: App): boolean {
-  return app.updateAvailable;
-}
-
-function getTimestamp(value: string | null): number | null {
+function timestamp(value: string | null): number | null {
   if (!value) return null;
-  const ts = new Date(value).getTime();
-  return Number.isNaN(ts) ? null : ts;
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? null : ms;
 }
 
-function isStale(app: App): boolean {
-  const ts = getTimestamp(app.lastCheckedAt);
-  if (ts === null) return true;
-  return Date.now() - ts > STALE_MS;
+function isStale(app: WatchedAppRow): boolean {
+  const ms = timestamp(app.lastCheckedAt);
+  return ms === null || Date.now() - ms > STALE_MS;
 }
 
-function statusPriority(app: App): number {
+function attentionScore(app: WatchedAppRow): number {
   if (app.checkStatus === "failed") return 0;
-  if (app.updateAvailable) return 2;
-  if (!app.notificationsEnabled) return 3;
-  if (isStale(app)) return 4;
-  return 5;
+  if (app.updateAvailable) return 1;
+  if (!app.notificationsEnabled) return 2;
+  if (isStale(app)) return 3;
+  return 4;
 }
 
-async function runBulkRequest(appIds: string[], action: (appId: string) => Promise<void>) {
-  for (const appId of appIds) {
-    await action(appId);
-  }
+/** One status per row, described in words rather than three stacked pills. */
+function status(app: WatchedAppRow): { tone: StatusTone; label: string } {
+  if (app.checkStatus === "failed") return { tone: "danger", label: "Check failed" };
+  if (app.updateAvailable) return { tone: "warning", label: "Update available" };
+  if (!app.notificationsEnabled) return { tone: "neutral", label: "Muted" };
+  if (isStale(app)) return { tone: "neutral", label: "Stale" };
+  if (app.checkStatus === "no_releases") return { tone: "neutral", label: "No releases" };
+  return { tone: "success", label: "Up to date" };
 }
 
-export function AppsClient({ initialApps, watchedApps = [], canAdd = true }: { initialApps: App[]; initialTotal: number; watchedApps?: { id: string; repoFullName: string }[]; canAdd?: boolean }) {
+export function AppsClient({
+  initialApps,
+  watchedApps = [],
+  canAdd = true,
+}: {
+  initialApps: WatchedAppRow[];
+  initialTotal: number;
+  watchedApps?: { id: string; repoFullName: string }[];
+  canAdd?: boolean;
+}) {
   const router = useRouter();
   const { addToast } = useToast();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
-  const [sortBy, setSortBy] = useState<SortKey>("status");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [addAppModalOpen, setAddAppModalOpen] = useState(false);
-  const { data } = useApps();
-  const apps = data?.apps || initialApps;
+  const [sortBy, setSortBy] = useState<SortKey>("attention");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<WatchedAppRow | null>(null);
+  const { data, error, isLoading } = useApps();
+  const apps: WatchedAppRow[] = (data?.apps as WatchedAppRow[] | undefined) ?? initialApps;
 
-  const filteredApps = useMemo(() => {
+  const counts = useMemo(
+    () => ({
+      all: apps.length,
+      attention: apps.filter((app) => attentionScore(app) < 4).length,
+      updates: apps.filter((app) => app.updateAvailable).length,
+      failed: apps.filter((app) => app.checkStatus === "failed").length,
+      muted: apps.filter((app) => !app.notificationsEnabled).length,
+      fresh: apps.filter((app) => !isStale(app) && app.checkStatus === "success").length,
+    }),
+    [apps]
+  );
+
+  const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const matchesQuery = (app: App) => {
-      if (!q) return true;
-      return (
-        app.name.toLowerCase().includes(q) ||
-        app.repoFullName.toLowerCase().includes(q) ||
-        (app.latestSeenTag || "").toLowerCase().includes(q) ||
-        app.checkStatus.toLowerCase().includes(q)
-      );
-    };
-    const matchesFilter = (app: App) => {
-      if (filter === "all") return true;
-      if (filter === "updates") return appNeedsUpdate(app);
+    const matches = (app: WatchedAppRow) => {
+      if (q && !`${app.name} ${app.repoFullName} ${app.latestSeenTag ?? ""}`.toLowerCase().includes(q)) return false;
+      if (filter === "attention") return attentionScore(app) < 4;
+      if (filter === "updates") return app.updateAvailable;
       if (filter === "failed") return app.checkStatus === "failed";
-      if (filter === "quiet")
-        return !app.updateAvailable && app.checkStatus === "success" && app.notificationsEnabled && !isStale(app);
-      if (filter === "notificationsOff") return !app.notificationsEnabled;
-      if (filter === "stale") return isStale(app);
+      if (filter === "muted") return !app.notificationsEnabled;
+      if (filter === "fresh") return !isStale(app) && app.checkStatus === "success";
       return true;
     };
 
-    return [...apps]
-      .filter(matchesQuery)
-      .filter(matchesFilter)
-      .sort((a, b) => {
-        if (sortBy === "name") return a.name.localeCompare(b.name);
-        if (sortBy === "checked")
-          return (getTimestamp(b.lastCheckedAt) || 0) - (getTimestamp(a.lastCheckedAt) || 0);
-        if (sortBy === "version") return (b.latestSeenTag || "").localeCompare(a.latestSeenTag || "");
-        return statusPriority(a) - statusPriority(b) || a.name.localeCompare(b.name);
-      });
+    return apps.filter(matches).sort((a, b) => {
+      if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "checked") return (timestamp(b.lastCheckedAt) ?? 0) - (timestamp(a.lastCheckedAt) ?? 0);
+      return attentionScore(a) - attentionScore(b) || a.name.localeCompare(b.name);
+    });
   }, [apps, filter, query, sortBy]);
 
-  const counts = useMemo(() => {
-    return apps.reduce(
-      (acc, app) => {
-        acc.total += 1;
-        if (appNeedsUpdate(app)) acc.updates += 1;
-        if (app.checkStatus === "failed") acc.failed += 1;
-        if (!app.notificationsEnabled) acc.notificationsOff += 1;
-        if (isStale(app)) acc.stale += 1;
-        if (!appNeedsUpdate(app) && app.checkStatus === "success" && app.notificationsEnabled && !isStale(app))
-          acc.quiet += 1;
-        return acc;
-      },
-      { total: 0, updates: 0, failed: 0, notificationsOff: 0, stale: 0, quiet: 0 }
-    );
-  }, [apps]);
-
-  const selectedCount = selectedIds.length;
-  const visibleIds = filteredApps.map((app) => app.id);
-  const selectedVisibleCount = visibleIds.filter((id) => selectedIds.includes(id)).length;
-  const allVisibleSelected = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
-  const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
-
-  const topAttention = useMemo(() => {
-    return [...apps]
-      .sort((a, b) => statusPriority(a) - statusPriority(b) || a.name.localeCompare(b.name))
-      .filter((app) => appNeedsUpdate(app) || app.checkStatus === "failed" || !app.notificationsEnabled || isStale(app))
-      .slice(0, 6);
-  }, [apps]);
-
-  const filterButtons: Array<{ key: FilterKey; label: string; count: number; tone?: "warning" | "error" | "muted" }> = [
-    { key: "all", label: "All", count: counts.total },
-    { key: "updates", label: "Updates", count: counts.updates, tone: "warning" },
-    { key: "failed", label: "Failed", count: counts.failed, tone: "error" },
-    { key: "quiet", label: "Quiet", count: counts.quiet, tone: "muted" },
-    { key: "notificationsOff", label: "Muted", count: counts.notificationsOff, tone: "muted" },
-    { key: "stale", label: "Stale", count: counts.stale, tone: "muted" },
-  ];
-
-  function toggleOne(appId: string) {
-    setSelectedIds((prev) => (prev.includes(appId) ? prev.filter((id) => id !== appId) : [...prev, appId]));
-  }
-  function toggleAll(ids: string[]) {
-    setSelectedIds((prev) => {
-      const everySelected = ids.length > 0 && ids.every((id) => prev.includes(id));
-      if (everySelected) return prev.filter((id) => !ids.includes(id));
-      return Array.from(new Set([...prev, ...ids]));
-    });
-  }
-
-  function selectWithUpdates() {
-    const ids = filteredApps.filter((app) => app.updateAvailable).map((app) => app.id);
-    setSelectedIds(ids);
-  }
-  function selectHealthy() {
-    const ids = filteredApps.filter((app) => app.checkStatus === "success" && !app.updateAvailable).map((app) => app.id);
-    setSelectedIds(ids);
-  }
-
-  async function bulkCheck() {
-    if (selectedIds.length === 0) return;
-    setBusy(true);
+  async function check(app: WatchedAppRow) {
+    setBusyId(app.id);
     try {
-      await runBulkRequest(selectedIds, async (appId) => {
-        const res = await csrfFetch(`/api/apps/${appId}/check`, { method: "POST" });
-        if (!res.ok) throw new Error("Check failed");
-      });
-      addToast(`Triggered checks for ${selectedIds.length} app${selectedIds.length === 1 ? "" : "s"}`, "success");
-      setSelectedIds([]);
+      const res = await csrfFetch(`/api/apps/${app.id}/check`, { method: "POST" });
+      if (!res.ok) throw new Error();
+      addToast(`Checking ${app.name}…`, "success");
       router.refresh();
     } catch {
-      addToast("Failed to trigger one or more checks", "error");
+      addToast(`Could not queue a check for ${app.name}`, "error");
     } finally {
-      setBusy(false);
+      setBusyId(null);
     }
   }
-  async function bulkMarkSeen() {
-    if (selectedIds.length === 0) return;
-    setBusy(true);
-    try {
-      await runBulkRequest(selectedIds, async (appId) => {
-        const res = await csrfFetch("/api/releases/seen", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ watchedAppId: appId }),
-        });
-        if (!res.ok) throw new Error("Mark seen failed");
-      });
-      addToast(`Marked ${selectedIds.length} app${selectedIds.length === 1 ? "" : "s"} as seen`, "success");
-      setSelectedIds([]);
-      router.refresh();
-    } catch {
-      addToast("Failed to mark one or more apps seen", "error");
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function bulkSetNotifications(enabled: boolean) {
-    if (selectedIds.length === 0) return;
-    setBusy(true);
-    try {
-      await runBulkRequest(selectedIds, async (appId) => {
-        const res = await csrfFetch(`/api/apps/${appId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ notificationsEnabled: enabled }),
-        });
-        if (!res.ok) throw new Error("Update failed");
-      });
-      addToast(`${enabled ? "Enabled" : "Disabled"} notifications for ${selectedIds.length} app${selectedIds.length === 1 ? "" : "s"}`, "success");
-      setSelectedIds([]);
-      router.refresh();
-    } catch {
-      addToast("Failed to update notification settings", "error");
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function bulkDelete() {
-    if (selectedIds.length === 0) return;
-    setBusy(true);
-    try {
-      await runBulkRequest(selectedIds, async (appId) => {
-        const res = await csrfFetch(`/api/apps/${appId}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("Delete failed");
-      });
-      addToast(`Removed ${selectedIds.length} app${selectedIds.length === 1 ? "" : "s"}`, "success");
-      setSelectedIds([]);
-      setDeleteConfirmOpen(false);
-      router.refresh();
-    } catch {
-      addToast("Failed to remove one or more apps", "error");
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function checkOne(appId: string) {
-    setBusy(true);
-    try {
-      const res = await csrfFetch(`/api/apps/${appId}/check`, { method: "POST" });
-      if (!res.ok) throw new Error("Check failed");
-      addToast("Check triggered", "success");
-      router.refresh();
-    } catch {
-      addToast("Failed to trigger check", "error");
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function markSeenOne(appId: string) {
-    setBusy(true);
+
+  async function markSeen(app: WatchedAppRow) {
+    setBusyId(app.id);
     try {
       const res = await csrfFetch("/api/releases/seen", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ watchedAppId: appId }),
+        body: JSON.stringify({ watchedAppId: app.id }),
       });
-      if (!res.ok) throw new Error("Mark seen failed");
-      addToast("Marked as seen", "success");
+      if (!res.ok) throw new Error();
+      addToast(`${app.name} marked as seen`, "success");
       router.refresh();
     } catch {
-      addToast("Failed to mark as seen", "error");
+      addToast("Could not mark as seen", "error");
     } finally {
-      setBusy(false);
+      setBusyId(null);
     }
   }
-  const activeFilter = filterButtons.find((b) => b.key === filter);
+
+  async function toggleMute(app: WatchedAppRow) {
+    setBusyId(app.id);
+    try {
+      const res = await csrfFetch(`/api/apps/${app.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationsEnabled: !app.notificationsEnabled }),
+      });
+      if (!res.ok) throw new Error();
+      addToast(app.notificationsEnabled ? `Muted ${app.name}` : `Unmuted ${app.name}`, "success");
+      router.refresh();
+    } catch {
+      addToast("Could not update notifications", "error");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function remove(app: WatchedAppRow) {
+    setBusyId(app.id);
+    try {
+      const res = await csrfFetch(`/api/apps/${app.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      addToast(`Removed ${app.name}`, "success");
+      setPendingDelete(null);
+      router.refresh();
+    } catch {
+      addToast("Could not remove this repository", "error");
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
-      <div className="space-y-4 min-w-0">
-        <div className="app-shell-card p-3.5 sm:p-4">
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-            <div className="relative min-w-0 flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-faint)]" />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search apps, repos, versions…"
-                className="w-full rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] py-2.5 pl-10 pr-9 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] focus:border-[var(--color-accent-border)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-focus-ring)] transition-all"
-              />
-              {query && (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-[var(--color-text-faint)] hover:bg-[color-mix(in_srgb,var(--color-text)_5%,transparent)] hover:text-[var(--color-text)]"
-                  aria-label="Clear filter"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+    <div className="flex flex-col gap-5">
+      <MetricStrip
+        items={[
+          { label: "Watched", value: counts.all },
+          { label: "Updates", value: counts.updates, tone: counts.updates > 0 ? "warning" : undefined },
+          { label: "Failed", value: counts.failed, tone: counts.failed > 0 ? "danger" : undefined },
+          { label: "Up to date", value: counts.fresh, tone: counts.fresh > 0 ? "success" : undefined },
+        ]}
+      />
 
-            <div className="flex items-center gap-2">
+      <Toolbar className="justify-between">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <div className="relative min-w-56 flex-1 sm:max-w-xs">
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-faint"
+            />
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Filter by name, repo or tag"
+              aria-label="Filter watched repositories"
+              className="pl-8 pr-8"
+            />
+            {query && (
               <button
                 type="button"
-                onClick={() => setShowFilters((s) => !s)}
-                className="btn btn--ghost btn--sm lg:hidden"
+                onClick={() => setQuery("")}
+                aria-label="Clear filter"
+                className="icon-button absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2"
               >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                Filters
-                {filter !== "all" && (
-                  <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--color-accent)] px-1.5 text-[0.62rem] font-semibold text-[var(--color-accent-foreground)]">
-                    1
-                  </span>
-                )}
+                <X className="h-3.5 w-3.5" />
               </button>
-
-              <label className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_40%,transparent)] px-2.5 py-2 text-xs text-[var(--color-text-muted)]">
-                <ArrowUpDown className="h-3.5 w-3.5 text-[var(--color-text-faint)]" />
-                <span className="hidden sm:inline">Sort</span>
-                <select
-                  value={sortBy}
-                  onChange={(event) => setSortBy(event.target.value as SortKey)}
-                  className="bg-transparent text-sm text-[var(--color-text)] focus:outline-none"
-                >
-                  <option value="status">Status</option>
-                  <option value="name">Name</option>
-                  <option value="checked">Last checked</option>
-                  <option value="version">Latest tag</option>
-                </select>
-              </label>
-            </div>
+            )}
           </div>
 
-          <div className="chip-row mt-3 hidden lg:flex">
-            {filterButtons.map((item) => (
+          <div className="chip-row" role="group" aria-label="Filter repositories">
+            {(
+              [
+                ["all", "All"],
+                ["attention", "Needs attention"],
+                ["updates", "Updates"],
+                ["failed", "Failed"],
+                ["muted", "Muted"],
+                ["fresh", "Up to date"],
+              ] as Array<[FilterKey, string]>
+            ).map(([key, label]) => (
               <button
-                key={item.key}
+                key={key}
                 type="button"
-                onClick={() => setFilter(item.key)}
-                data-active={filter === item.key}
                 className="chip"
+                data-active={filter === key}
+                aria-pressed={filter === key}
+                onClick={() => setFilter(key)}
+                disabled={counts[key] === 0 && key !== "all"}
               >
-                <Filter className="h-3 w-3" />
-                {item.label}
-                <span className="text-[0.7rem] opacity-70">{item.count}</span>
+                {label}
+                <span className="mono text-2xs opacity-70">{counts[key]}</span>
               </button>
             ))}
           </div>
-
-          {showFilters && (
-            <div className="mt-3 grid grid-cols-2 gap-2 lg:hidden">
-              {filterButtons.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => {
-                    setFilter(item.key);
-                    setShowFilters(false);
-                  }}
-                  data-active={filter === item.key}
-                  className="chip justify-between w-full"
-                >
-                  <span className="flex items-center gap-1.5">
-                    {item.label}
-                  </span>
-                  <span className="text-[0.7rem] opacity-70">{item.count}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.72rem] text-[var(--color-text-faint)]">
-            <span>
-              Showing <span className="text-[var(--color-text)] font-medium">{filteredApps.length}</span> of{" "}
-              <span className="text-[var(--color-text)] font-medium">{counts.total}</span>
-            </span>
-            {activeFilter && activeFilter.key !== "all" && (
-              <>
-                <span>·</span>
-                <button
-                  type="button"
-                  onClick={() => setFilter("all")}
-                  className="inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] px-1.5 py-0.5 hover:border-[var(--color-text-faint)]"
-                >
-                  {activeFilter.label} <X className="h-3 w-3" />
-                </button>
-              </>
-            )}
-            {selectedCount > 0 && (
-              <>
-                <span>·</span>
-                <span className="text-[var(--color-accent)]">{selectedCount} selected</span>
-              </>
-            )}
-          </div>
         </div>
 
-        {selectedCount > 0 && (
-          <div className="sticky-action-bar">
-            <span className="text-[0.82rem] text-[var(--color-text)] mr-1">
-              <span className="font-semibold">{selectedCount}</span> selected
-            </span>
-            <div className="ml-auto flex flex-wrap items-center gap-1.5">
-              <button type="button" disabled={busy} onClick={bulkCheck} className="btn btn--ghost btn--sm">
-                {busy ? <Loader2 className="h-3.5 w-3.5 spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                Check
-              </button>
-              <button type="button" disabled={busy} onClick={bulkMarkSeen} className="btn btn--ghost btn--sm">
-                <Check className="h-3.5 w-3.5" />
-                Mark seen
-              </button>
-              <button type="button" disabled={busy} onClick={() => bulkSetNotifications(true)} className="btn btn--ghost btn--sm">
-                <span>Alerts on</span>
-              </button>
-              <button type="button" disabled={busy} onClick={() => bulkSetNotifications(false)} className="btn btn--ghost btn--sm">
-                <span>Alerts off</span>
-              </button>
-              <button type="button" disabled={busy} onClick={() => setDeleteConfirmOpen(true)} className="btn btn--danger btn--sm">
-                <Trash2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Remove</span>
-              </button>
-              <button type="button" onClick={() => setSelectedIds([])} className="btn btn--subtle btn--sm">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <Select
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value as SortKey)}
+            aria-label="Sort repositories"
+            className="w-36"
+          >
+            <option value="attention">Needs attention</option>
+            <option value="name">Name</option>
+            <option value="checked">Recently checked</option>
+          </Select>
+          {canAdd && (
+            <AddAppButton watchedApps={watchedApps} canAdd={canAdd} />
+          )}
+        </div>
+      </Toolbar>
 
-        {topAttention.length > 0 && (
-          <div className="mb-3 xl:hidden rounded-xl border border-[var(--theme-status-pending-border)] bg-[var(--theme-status-pending-bg)] px-4 py-3">
-            <p className="text-xs font-semibold text-[var(--color-status-warning)]">
-              {topAttention.length} app{topAttention.length === 1 ? "" : "s"} need{topAttention.length === 1 ? "s" : ""} attention
-            </p>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {topAttention.slice(0, 4).map((app) => (
-                <a
-                  key={app.id}
-                  href={`/apps/${app.id}`}
-                  className="inline-flex items-center gap-1 rounded-md border border-[var(--theme-status-pending-border)] bg-[color-mix(in_srgb,var(--color-status-warning)_8%,transparent)] px-2 py-0.5 text-[0.7rem] font-medium text-[var(--color-status-warning)] hover:bg-[color-mix(in_srgb,var(--color-status-warning)_15%,transparent)] transition-colors"
-                >
-                  {app.name}
-                </a>
-              ))}
-              {topAttention.length > 4 && (
-                <span className="inline-flex items-center px-2 py-0.5 text-[0.7rem] text-[var(--color-status-warning)]">
-                  +{topAttention.length - 4} more
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
-        <AppsTable
-          apps={filteredApps}
-          selectedIds={selectedIds}
-          onToggleApp={toggleOne}
-          onToggleAll={toggleAll}
-          onSelectWithUpdates={selectWithUpdates}
-          onSelectHealthy={selectHealthy}
-          allSelected={allVisibleSelected}
-          someSelected={someVisibleSelected}
-          onCheck={checkOne}
-          onMarkSeen={markSeenOne}
+      {error ? (
+        <ErrorState
+          title="Could not load repositories"
+          description="The list may be stale. Reload the page to try again."
         />
-      </div>
-
-      <aside className="space-y-4 desktop-only">
-        <div className="app-shell-card p-4">
-          <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
-            Needs attention
-          </h3>
-          <div className="mt-3 space-y-2">
-            {topAttention.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-muted)]">Nothing needs attention right now.</p>
-            ) : (
-              topAttention.map((app) => {
-                const stale = isStale(app);
+      ) : isLoading && apps.length === 0 ? (
+        <div className="rounded-lg border border-border bg-panel">
+          <SkeletonRows rows={5} columns={3} />
+        </div>
+      ) : apps.length === 0 ? (
+        <EmptyState
+          icon={<Sparkles className="h-4 w-4" />}
+          title="No repositories watched yet"
+          description="Add a repository and LePatch will check it on a schedule, classify each release, and notify you when something ships."
+          action={
+            <Link href="/apps/search" className="btn btn--primary btn--sm">
+              Find repositories
+            </Link>
+          }
+        />
+      ) : visible.length === 0 ? (
+        <EmptyState
+          title="Nothing matches this view"
+          description="Try a different filter or clear the search."
+          action={
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => {
+                setFilter("all");
+                setQuery("");
+              }}
+            >
+              Clear filters
+            </button>
+          }
+        />
+      ) : (
+        <>
+          <p className="text-xs text-text-faint">
+            {visible.length} of {apps.length} shown
+          </p>
+          <div className="overflow-hidden rounded-lg border border-border bg-panel">
+            <List>
+              {visible.map((app) => {
+                const state = status(app);
+                const busy = busyId === app.id;
                 return (
-                  <a
+                  <ListRow
                     key={app.id}
                     href={`/apps/${app.id}`}
-                    className="block rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] p-3 transition-all hover:border-[color-mix(in_srgb,var(--color-border)_140%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-surface-elevated)_80%,transparent)]"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-[var(--color-text)]">{app.name}</div>
-                        <div className="mt-0.5 truncate text-[0.72rem] text-[var(--color-text-faint)] app-mono">
-                          {app.repoFullName}
-                        </div>
+                    leading={<RowAvatar tone={state.tone}>{app.name.slice(0, 1).toUpperCase()}</RowAvatar>}
+                    title={
+                      <>
+                        <span className="truncate text-sm font-medium text-text">{app.name}</span>
+                        <StatusDot tone={state.tone}>{state.label}</StatusDot>
+                      </>
+                    }
+                    subtitle={app.repoFullName}
+                    meta={
+                      <>
+                        <span className="mono">{app.latestSeenTag ?? "no release yet"}</span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <Clock className="h-3 w-3" aria-hidden="true" />
+                          {app.lastCheckedAt ? `checked ${formatRelativeTime(app.lastCheckedAt)}` : "never checked"}
+                        </span>
+                        {app.includePrereleases && <span>pre-releases on</span>}
+                      </>
+                    }
+                    trailing={
+                      <div className="flex items-center gap-0.5" onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}>
+                        <button
+                          type="button"
+                          onClick={() => markSeen(app)}
+                          disabled={busy}
+                          className="icon-button disabled:opacity-50"
+                          title="Mark the latest release as seen"
+                          aria-label={`Mark ${app.name} as seen`}
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleMute(app)}
+                          disabled={busy}
+                          className={cn("icon-button disabled:opacity-50", !app.notificationsEnabled && "text-text-faint")}
+                          title={app.notificationsEnabled ? "Mute notifications" : "Unmute notifications"}
+                          aria-label={app.notificationsEnabled ? `Mute ${app.name}` : `Unmute ${app.name}`}
+                        >
+                          <BellOff className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => check(app)}
+                          disabled={busy}
+                          className="icon-button disabled:opacity-50"
+                          title="Check for releases now"
+                          aria-label={`Check ${app.name} now`}
+                        >
+                          <RefreshCw className={cn("h-4 w-4", busy && "animate-spin")} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPendingDelete(app)}
+                          disabled={busy}
+                          className="icon-button text-text-faint hover:text-status-danger disabled:opacity-50"
+                          title="Stop watching"
+                          aria-label={`Stop watching ${app.name}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        <ChevronRight className="ml-1 h-4 w-4 text-text-faint" aria-hidden="true" />
                       </div>
-                      <span className="text-[0.7rem] text-[var(--color-text-faint)]">
-                        {app.checkStatus === "failed"
-                          ? "Failed"
-                          : app.updateAvailable
-                          ? "Update"
-                          : !app.notificationsEnabled
-                          ? "Muted"
-                          : stale
-                          ? "Stale"
-                          : "Ok"}
-                      </span>
-                    </div>
-                  </a>
+                    }
+                  />
                 );
-              })
-            )}
+              })}
+            </List>
           </div>
-        </div>
+        </>
+      )}
 
-        <div className="app-shell-card p-4">
-          <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
-            Quick links
-          </h3>
-          <div className="mt-3 space-y-1.5">
-            <button
-              onClick={() => setAddAppModalOpen(true)}
-              className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] px-3 py-2 text-sm text-[var(--color-text)] hover:border-[var(--color-accent-border)] hover:text-[var(--color-accent)] transition-colors w-full text-left"
-            >
-              <span>Add app</span>
-              <span className="text-[var(--color-text-faint)]">→</span>
-            </button>
-            <a
-              href="/apps/search"
-              className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] px-3 py-2 text-sm text-[var(--color-text)] hover:border-[var(--color-accent-border)] hover:text-[var(--color-accent)] transition-colors"
-            >
-              <span>Find repositories</span>
-              <span className="text-[var(--color-text-faint)]">→</span>
-            </a>
-            <a
-              href="/admin/settings"
-              className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] px-3 py-2 text-sm text-[var(--color-text)] hover:border-[var(--color-accent-border)] hover:text-[var(--color-accent)] transition-colors"
-            >
-              <span>Audit log</span>
-              <span className="text-[var(--color-text-faint)]">→</span>
-            </a>
-          </div>
-        </div>
-
-        <div className="app-shell-card p-4">
-          <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
-            Health snapshot
-          </h3>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <Stat label="Total" value={counts.total} />
-            <Stat label="Healthy" value={counts.total - counts.failed} tone="success" />
-            <Stat label="Updates" value={counts.updates} tone={counts.updates > 0 ? "warning" : "muted"} />
-            <Stat label="Failed" value={counts.failed} tone={counts.failed > 0 ? "error" : "muted"} />
-            <Stat label="Muted" value={counts.notificationsOff} tone="muted" />
-            <Stat label="Stale" value={counts.stale} tone={counts.stale > 0 ? "stale" : "muted"} />
-          </div>
-        </div>
-      </aside>
+      {counts.failed > 0 && (
+        <p className="flex items-center gap-2 text-xs text-text-muted">
+          <AlertTriangle className="h-3.5 w-3.5 text-status-danger" aria-hidden="true" />
+          {counts.failed} repositor{counts.failed === 1 ? "y is" : "ies are"} failing checks. Open one to see the error
+          and reconnect GitHub if the token expired.
+        </p>
+      )}
 
       <ConfirmDialog
-        open={deleteConfirmOpen}
-        title="Remove selected apps"
-        message={`This will permanently delete ${selectedCount} app${selectedCount === 1 ? "" : "s"} and their releases.`}
+        open={pendingDelete !== null}
+        title="Stop watching this repository?"
+        message={
+          pendingDelete
+            ? `${pendingDelete.name} and its stored release history will be removed. You can add it again later.`
+            : ""
+        }
         confirmLabel="Remove"
         variant="danger"
-        confirmText="REMOVE"
-        onConfirm={bulkDelete}
-        onCancel={() => setDeleteConfirmOpen(false)}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete) void remove(pendingDelete);
+        }}
       />
-
-      <AddAppModal
-        open={addAppModalOpen}
-        onClose={() => setAddAppModalOpen(false)}
-        watchedApps={watchedApps}
-        canAdd={canAdd}
-      />
-    </div>
-  );
-}
-
-function Stat({ label, value, tone = "default" }: { label: string; value: number; tone?: "default" | "success" | "warning" | "error" | "stale" | "muted" }) {
-  const colors = {
-    default: "var(--color-text)",
-    success: "var(--color-status-success)",
-    warning: "var(--color-status-warning)",
-    error: "var(--color-status-danger)",
-    stale: "var(--color-status-warning)",
-    muted: "var(--color-text-muted)",
-  }[tone];
-  return (
-    <div className="app-stat !p-2.5">
-      <div className="app-stat-label">{label}</div>
-      <div className="app-stat-value !text-lg !font-bold" style={{ color: colors }}>
-        {value}
-      </div>
     </div>
   );
 }

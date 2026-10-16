@@ -388,12 +388,6 @@
 }
 
 /* Legacy shell card kept for the app-detail surface. */
-.app-shell-card {
-  background: var(--ui-panel);
-  border: 1px solid var(--ui-border);
-  border-radius: var(--radius-lg);
-}
-
 /* --- Tabs --- */
 .app-tabs {
   display: flex;
@@ -581,125 +575,13 @@
 }
 
 /* --- Table --- */
-.data-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 13px;
-}
-.data-table th {
-  text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ui-text-faint);
-  padding: 8px 12px;
-  background: var(--ui-surface);
-  border-bottom: 1px solid var(--ui-border);
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-.data-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--ui-divider);
-  vertical-align: middle;
-}
-.data-table tbody tr:hover td {
-  background: var(--ui-surface);
-}
-
 /* --- Section heading --- */
-.section-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-.section-heading h2 {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ui-text);
-  margin: 0;
-}
-.section-heading-meta {
-  font-size: 12px;
-  color: var(--ui-text-faint);
-}
-
 /* --- Commit row --- */
-.commit-row {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 12px;
-  transition: background-color 120ms ease;
-}
 .commit-row:hover {
   background: var(--ui-surface);
 }
-.commit-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-full);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ui-text);
-  background: var(--ui-surface-elevated);
-  border: 1px solid var(--ui-border);
-  flex-shrink: 0;
-}
-
 /* --- Timeline --- */
-.timeline {
-  position: relative;
-  padding-left: 20px;
-}
-.timeline::before {
-  content: "";
-  position: absolute;
-  top: 8px;
-  bottom: 8px;
-  left: 5px;
-  width: 1px;
-  background: var(--ui-border);
-}
-.timeline-dot {
-  position: absolute;
-  left: -20px;
-  top: 7px;
-  width: 11px;
-  height: 11px;
-  border-radius: var(--radius-full);
-  background: var(--ui-border-strong);
-  border: 2px solid var(--ui-panel);
-}
-.timeline-dot--muted {
-  background: var(--ui-border-strong);
-}
-
 /* --- App detail --- */
-.app-display-title {
-  font-size: 24px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-  color: var(--ui-text);
-  margin: 0;
-}
-.app-display-subtitle {
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--ui-text-muted);
-  margin: 4px 0 0;
-  max-width: 70ch;
-  overflow-wrap: break-word;
-}
 .app-link {
   color: var(--ui-accent);
   text-decoration: none;
@@ -708,29 +590,6 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.app-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  background: var(--ui-surface);
-  border: 1px solid var(--ui-border);
-}
-.app-stat-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-weight: 600;
-  color: var(--ui-text-faint);
-}
-.app-stat-value {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ui-text);
-  word-break: break-word;
-}
-
 /* --- Modals --- */
 .modal-root {
   position: fixed;
@@ -803,38 +662,10 @@
 }
 
 /* --- Misc --- */
-.mobile-stat-strip {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.sticky-action-bar {
-  position: sticky;
-  bottom: 8px;
-  z-index: 10;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 8px;
-  border-radius: var(--radius-lg);
-  background: var(--ui-panel);
-  border: 1px solid var(--ui-border);
-  box-shadow: var(--shadow-md);
-}
-
 .spin {
   animation: spin 1s linear infinite;
 }
 
-.pulse-dot {
-  position: relative;
-  width: 7px;
-  height: 7px;
-  border-radius: var(--radius-full);
-  background: currentColor;
-  flex-shrink: 0;
-}
 .pulse-dot::after {
   content: "";
   position: absolute;
@@ -844,20 +675,8 @@
   opacity: 0.5;
   animation: pulse-ring 1.8s ease-out infinite;
 }
-.pulse-pill {
-  animation: pill-pulse 2.4s ease-in-out infinite;
-}
-
 @keyframes spin {
   to { transform: rotate(360deg); }
-}
-@keyframes pulse-ring {
-  0% { transform: scale(0.8); opacity: 0.6; }
-  100% { transform: scale(1.6); opacity: 0; }
-}
-@keyframes pill-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.65; }
 }
 @keyframes fade-in {
   from { opacity: 0; }

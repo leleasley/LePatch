@@ -1,8 +1,33 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronRight, GitCommit, ExternalLink, Copy, Check } from "lucide-react";
-import { StatusBadge } from "@/components/StatusBadge";
+import { StatusDot, type StatusTone } from "@/components/ui/List";
+import { cn } from "@/lib/cn";
 import type { CommitWithStatus } from "@/lib/commit-snapshot";
+
+const STATUS_TONE: Record<string, StatusTone> = {
+  success: "success",
+  failure: "danger",
+  in_progress: "warning",
+  pending: "warning",
+  neutral: "neutral",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  success: "Passing",
+  failure: "Failing",
+  in_progress: "Running",
+  pending: "Pending",
+  neutral: "No CI",
+};
+
+const STATUS_DOT_BG: Record<StatusTone, string> = {
+  success: "bg-status-success",
+  danger: "bg-status-danger",
+  warning: "bg-status-warning",
+  neutral: "bg-text-faint",
+  accent: "bg-accent",
+};
 
 function formatRelativeTime(iso: string | null): string {
   if (!iso) return "";
@@ -35,6 +60,8 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
   const canExpand = hasMultipleChecks || commit.message.includes("\n");
   const displayName = commit.author.login || commit.author.name;
   const initials = getInitials(commit.author.name);
+  const tone = STATUS_TONE[commit.status.state] ?? "neutral";
+  const statusLabel = STATUS_LABEL[commit.status.state] ?? "No CI";
 
   function copySha() {
     if (typeof navigator === "undefined" || !navigator.clipboard) return;
@@ -45,7 +72,7 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
   }
 
   return (
-    <div className="commit-row group">
+    <li className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-surface">
       <div className="relative shrink-0">
         {commit.author.avatarUrl ? (
           <img
@@ -63,11 +90,12 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
           </span>
         )}
         <span
-          className="absolute -bottom-0.5 -right-0.5 rounded-full bg-panel ring-2 ring-panel"
-          title={commit.status.state}
-        >
-          <StatusBadge status={commit.status.state} variant="dot" />
-        </span>
+          aria-hidden="true"
+          className={cn(
+            "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-panel",
+            STATUS_DOT_BG[tone]
+          )}
+        />
       </div>
 
       <div className="min-w-0 flex-1">
@@ -76,62 +104,66 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
             href={commit.htmlUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-accent)] transition-colors truncate max-w-full"
+            className="max-w-full truncate text-sm font-medium text-text transition-colors hover:text-accent"
           >
             {commit.messageHeadline}
           </Link>
           {commit.status.total > 0 && (
-            <span className="text-[0.7rem] text-[var(--color-text-faint)]">
+            <span className="text-xs text-text-faint">
               {commit.status.total} check{commit.status.total === 1 ? "" : "s"}
             </span>
           )}
         </div>
 
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.78rem] text-[var(--color-text-muted)]">
-          <span className="truncate max-w-[12rem] sm:max-w-[16rem]">
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-muted">
+          <span className="max-w-[12rem] truncate sm:max-w-[16rem]">
             {commit.author.login ? (
-              <Link
+              <a
                 href={commit.author.htmlUrl || commit.htmlUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="app-link"
+                className="text-accent hover:underline"
               >
                 {commit.author.login}
-              </Link>
+              </a>
             ) : (
               <span>{commit.author.name}</span>
             )}
           </span>
-          <span className="text-[var(--color-text-faint)]">·</span>
-          <span className="app-mono text-[0.72rem] inline-flex items-center gap-1">
-            <button
-              type="button"
-              onClick={copySha}
-              className="inline-flex items-center gap-1 text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors"
-              title="Copy full SHA"
-            >
-              {copied ? <Check className="h-3 w-3" /> : <GitCommit className="h-3 w-3" />}
-              {commit.shortSha}
-            </button>
-          </span>
+          <span aria-hidden="true" className="text-text-faint">·</span>
+          <button
+            type="button"
+            onClick={copySha}
+            className="mono inline-flex items-center gap-1 text-text-faint transition-colors hover:text-text"
+            title="Copy full SHA"
+            aria-label={`Copy commit SHA ${commit.shortSha}`}
+          >
+            {copied ? <Check className="h-3 w-3" aria-hidden="true" /> : <GitCommit className="h-3 w-3" aria-hidden="true" />}
+            {commit.shortSha}
+          </button>
           {commit.author.date && (
             <>
-              <span className="text-[var(--color-text-faint)]">·</span>
-              <span className="text-[var(--color-text-faint)]" title={new Date(commit.author.date).toLocaleString()}>
+              <span aria-hidden="true" className="text-text-faint">·</span>
+              <time
+                dateTime={commit.author.date}
+                className="text-text-faint"
+                title={new Date(commit.author.date).toLocaleString()}
+              >
                 {formatRelativeTime(commit.author.date)}
-              </span>
+              </time>
             </>
           )}
         </div>
 
-        {(canExpand || hasMultipleChecks) && (
+        {canExpand && (
           <>
             <button
               type="button"
               onClick={() => setExpanded((e) => !e)}
-              className="mt-1.5 inline-flex items-center gap-1 text-[0.72rem] text-[var(--color-text-faint)] hover:text-[var(--color-text-muted)] transition-colors"
+              aria-expanded={expanded}
+              className="mt-1.5 inline-flex items-center gap-1 text-xs text-text-faint transition-colors hover:text-text-muted"
             >
-              {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              {expanded ? <ChevronDown className="h-3 w-3" aria-hidden="true" /> : <ChevronRight className="h-3 w-3" aria-hidden="true" />}
               {hasMultipleChecks
                 ? expanded
                   ? "Hide checks"
@@ -142,27 +174,25 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
             </button>
 
             {expanded && (
-              <div className="mt-2 rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] p-3 space-y-2 text-[0.78rem]">
+              <div className="mt-2 space-y-2 rounded-md border border-border bg-surface p-3 text-xs">
                 {hasMultipleChecks && (
                   <div className="flex flex-wrap gap-1.5">
                     {commit.status.checks.map((check) =>
                       check.url ? (
-                        <Link
+                        <a
                           key={check.name}
                           href={check.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={`status-pill status-pill--${check.state} hover:opacity-80 transition-opacity cursor-pointer`}
-                          style={{ padding: "0.2rem 0.5rem", fontSize: "0.7rem" }}
+                          className={cn("status-pill", `status-pill--${check.state}`, "transition-opacity hover:opacity-80")}
                           title={check.name}
                         >
                           {check.name}
-                        </Link>
+                        </a>
                       ) : (
                         <span
                           key={check.name}
-                          className={`status-pill status-pill--${check.state}`}
-                          style={{ padding: "0.2rem 0.5rem", fontSize: "0.7rem" }}
+                          className={cn("status-pill", `status-pill--${check.state}`)}
                           title={check.name}
                         >
                           {check.name}
@@ -172,7 +202,7 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
                   </div>
                 )}
                 {commit.message.includes("\n") && (
-                  <pre className="whitespace-pre-wrap break-words font-sans text-[0.78rem] leading-relaxed text-[var(--color-text-muted)] m-0">
+                  <pre className="m-0 whitespace-pre-wrap break-words font-sans text-xs leading-relaxed text-text-muted">
                     {commit.message}
                   </pre>
                 )}
@@ -181,18 +211,18 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
                     href={commit.htmlUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[0.72rem] text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors"
+                    className="inline-flex items-center gap-1 text-xs text-text-faint transition-colors hover:text-text"
                   >
-                    <ExternalLink className="h-3 w-3" />
+                    <ExternalLink className="h-3 w-3" aria-hidden="true" />
                     View on GitHub
                   </Link>
-                  <span className="text-[var(--color-text-faint)]">·</span>
+                  <span aria-hidden="true" className="text-text-faint">·</span>
                   <button
                     type="button"
                     onClick={copySha}
-                    className="inline-flex items-center gap-1 text-[0.72rem] text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors"
+                    className="inline-flex items-center gap-1 text-xs text-text-faint transition-colors hover:text-text"
                   >
-                    {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    {copied ? <Check className="h-3 w-3" aria-hidden="true" /> : <Copy className="h-3 w-3" aria-hidden="true" />}
                     Copy SHA
                   </button>
                 </div>
@@ -201,6 +231,10 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
           </>
         )}
       </div>
-    </div>
+
+      <div className="shrink-0 pt-0.5">
+        <StatusDot tone={tone} pulse={commit.status.state === "in_progress"}>{statusLabel}</StatusDot>
+      </div>
+    </li>
   );
 }

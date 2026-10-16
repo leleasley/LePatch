@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback, startTransition } from "react";
 import { X, Loader2, Send, ChevronRight, FileText, Bold, Italic, Code, Link as LinkIcon, List, Quote, Strikethrough, Heading, ListOrdered, CheckSquare, Table, AtSign, Terminal, Paperclip } from "lucide-react";
 import { csrfFetch } from "@/lib/csrf-client";
 import { ModalShell } from "@/components/ModalShell";
+import { Badge } from "@/components/ui/Card";
+import { Field, Input, Select } from "@/components/ui/Input";
+import { List as ListContainer, RowAvatar } from "@/components/ui/List";
 
 type TemplateField = {
   type: string;
@@ -35,30 +38,33 @@ type CreateIssueModalProps = {
 };
 
 function MarkdownToolbar({ fieldId, onInsert }: { fieldId: string; onInsert: (fieldId: string, before: string, after?: string) => void }) {
-  const btnClass = "rounded p-1 text-text-muted hover:bg-surface hover:text-text";
+  const btnClass = "rounded p-1 text-text-muted transition-colors hover:bg-surface hover:text-text";
   const iconClass = "h-3.5 w-3.5";
   return (
-    <div className="flex items-center gap-0.5 border-b border-line px-2 py-1 flex-wrap">
-      <button type="button" onClick={() => onInsert(fieldId, "**", "**")} className={btnClass} title="Bold"><Bold className={iconClass} /></button>
-      <button type="button" onClick={() => onInsert(fieldId, "*", "*")} className={btnClass} title="Italic"><Italic className={iconClass} /></button>
-      <button type="button" onClick={() => onInsert(fieldId, "~~", "~~")} className={btnClass} title="Strikethrough"><Strikethrough className={iconClass} /></button>
-      <div className="mx-1 h-4 w-px bg-line/50" />
-      <button type="button" onClick={() => onInsert(fieldId, "# ")} className={btnClass} title="Heading"><Heading className={iconClass} /></button>
-      <button type="button" onClick={() => onInsert(fieldId, "`", "`")} className={btnClass} title="Inline code"><Code className={iconClass} /></button>
-      <button type="button" onClick={() => onInsert(fieldId, "\n```\n", "\n```\n")} className={btnClass} title="Code block"><Terminal className={iconClass} /></button>
-      <div className="mx-1 h-4 w-px bg-line/50" />
-      <button type="button" onClick={() => onInsert(fieldId, "[", "](url)")} className={btnClass} title="Link"><LinkIcon className={iconClass} /></button>
-      <button type="button" onClick={() => onInsert(fieldId, "\n- ")} className={btnClass} title="Unordered list"><List className={iconClass} /></button>
-      <button type="button" onClick={() => onInsert(fieldId, "\n1. ")} className={btnClass} title="Ordered list"><ListOrdered className={iconClass} /></button>
-      <button type="button" onClick={() => onInsert(fieldId, "\n- [ ] ")} className={btnClass} title="Task list"><CheckSquare className={iconClass} /></button>
-      <div className="mx-1 h-4 w-px bg-line/50" />
-      <button type="button" onClick={() => onInsert(fieldId, "\n> ")} className={btnClass} title="Quote"><Quote className={iconClass} /></button>
-      <button type="button" onClick={() => onInsert(fieldId, "\n| Col 1 | Col 2 |\n|------|------|\n| Cell | Cell |\n")} className={btnClass} title="Table"><Table className={iconClass} /></button>
-      <button type="button" onClick={() => onInsert(fieldId, "@")} className={btnClass} title="Mention"><AtSign className={iconClass} /></button>
-      <div className="ml-auto text-[10px] text-text-faint">Markdown</div>
+    <div className="flex flex-wrap items-center gap-0.5 border-b border-border px-2 py-1">
+      <button type="button" onClick={() => onInsert(fieldId, "**", "**")} className={btnClass} title="Bold" aria-label="Bold"><Bold className={iconClass} aria-hidden="true" /></button>
+      <button type="button" onClick={() => onInsert(fieldId, "*", "*")} className={btnClass} title="Italic" aria-label="Italic"><Italic className={iconClass} aria-hidden="true" /></button>
+      <button type="button" onClick={() => onInsert(fieldId, "~~", "~~")} className={btnClass} title="Strikethrough" aria-label="Strikethrough"><Strikethrough className={iconClass} aria-hidden="true" /></button>
+      <div className="mx-1 h-4 w-px bg-border" />
+      <button type="button" onClick={() => onInsert(fieldId, "# ")} className={btnClass} title="Heading" aria-label="Heading"><Heading className={iconClass} aria-hidden="true" /></button>
+      <button type="button" onClick={() => onInsert(fieldId, "`", "`")} className={btnClass} title="Inline code" aria-label="Inline code"><Code className={iconClass} aria-hidden="true" /></button>
+      <button type="button" onClick={() => onInsert(fieldId, "\n```\n", "\n```\n")} className={btnClass} title="Code block" aria-label="Code block"><Terminal className={iconClass} aria-hidden="true" /></button>
+      <div className="mx-1 h-4 w-px bg-border" />
+      <button type="button" onClick={() => onInsert(fieldId, "[", "](url)")} className={btnClass} title="Link" aria-label="Link"><LinkIcon className={iconClass} aria-hidden="true" /></button>
+      <button type="button" onClick={() => onInsert(fieldId, "\n- ")} className={btnClass} title="Unordered list" aria-label="Unordered list"><List className={iconClass} aria-hidden="true" /></button>
+      <button type="button" onClick={() => onInsert(fieldId, "\n1. ")} className={btnClass} title="Ordered list" aria-label="Ordered list"><ListOrdered className={iconClass} aria-hidden="true" /></button>
+      <button type="button" onClick={() => onInsert(fieldId, "\n- [ ] ")} className={btnClass} title="Task list" aria-label="Task list"><CheckSquare className={iconClass} aria-hidden="true" /></button>
+      <div className="mx-1 h-4 w-px bg-border" />
+      <button type="button" onClick={() => onInsert(fieldId, "\n> ")} className={btnClass} title="Quote" aria-label="Quote"><Quote className={iconClass} aria-hidden="true" /></button>
+      <button type="button" onClick={() => onInsert(fieldId, "\n| Col 1 | Col 2 |\n|------|------|\n| Cell | Cell |\n")} className={btnClass} title="Table" aria-label="Table"><Table className={iconClass} aria-hidden="true" /></button>
+      <button type="button" onClick={() => onInsert(fieldId, "@")} className={btnClass} title="Mention" aria-label="Mention"><AtSign className={iconClass} aria-hidden="true" /></button>
+      <span className="ml-auto text-[10px] text-text-faint">Markdown</span>
     </div>
   );
 }
+
+const textareaClass =
+  "w-full resize-y border-0 bg-surface px-3 py-2 text-sm text-text placeholder:text-text-faint focus:outline-none";
 
 export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: CreateIssueModalProps) {
   const [step, setStep] = useState<"choose" | "form">("choose");
@@ -103,15 +109,6 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
       fetchTemplates();
     }
   }, [open, fetchTemplates]);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [open, onClose]);
 
   function selectTemplate(template: IssueTemplate | null) {
     setSelectedTemplate(template);
@@ -220,316 +217,256 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
     <ModalShell
       open={open}
       onClose={onClose}
+      title={step === "choose" ? "New issue" : selectedTemplate?.name || "New issue"}
       panelClassName="flex w-auto max-w-lg flex-col overflow-hidden"
     >
-        <div className="flex items-center justify-between border-b border-line px-5 py-4 shrink-0">
-          <h2 className="text-lg font-semibold text-text">
-            {step === "choose" ? "New Issue" : selectedTemplate?.name || "New Issue"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-white/5 hover:text-text"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+      <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <h2 className="text-base font-semibold text-text">
+          {step === "choose" ? "New issue" : selectedTemplate?.name || "New issue"}
+        </h2>
+        <button type="button" onClick={onClose} aria-label="Close" className="icon-button -mr-1">
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
 
-        <div className="overflow-auto flex-1 p-5">
-          {step === "choose" && (
-            <div className="space-y-3">
-              <p className="text-sm text-text-muted mb-4">
-                Creating issue on <span className="font-mono text-text">{owner}/{repo}</span>
-              </p>
+      <div className="flex-1 overflow-auto p-5">
+        {step === "choose" && (
+          <div className="space-y-4">
+            <p className="text-sm text-text-muted">
+              Creating an issue on <span className="mono text-text">{owner}/{repo}</span>
+            </p>
 
-              {loadingTemplates ? (
-                <div className="flex items-center justify-center gap-2 py-8">
-                  <Loader2 className="h-4 w-4 animate-spin text-accent" />
-                  <span className="text-sm text-text-muted">Loading templates...</span>
-                </div>
-              ) : (
-                <>
-                  {hasTemplates && (
-                    <div className="space-y-2">
-                      {templates.map((template) => (
-                        <button
-                          key={template.name}
-                          onClick={() => selectTemplate(template)}
-                          className="group flex w-full items-center gap-3 rounded-lg border border-line/50 bg-surface p-3 text-left transition-colors hover:border-line hover:bg-panel"
-                        >
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent/10">
-                            <FileText className="h-4 w-4 text-accent" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium text-text group-hover:text-accent transition-colors">
-                              {template.name}
-                            </div>
-                            {template.description && (
-                              <div className="mt-0.5 text-xs text-text-muted line-clamp-1">
-                                {template.description}
-                              </div>
-                            )}
-                          </div>
-                          <ChevronRight className="h-4 w-4 shrink-0 text-text-faint group-hover:text-text-muted transition-colors" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {blankEnabled && hasTemplates && (
-                    <div className="flex items-center gap-3 my-3">
-                      <div className="h-px flex-1 bg-line/50" />
-                      <span className="text-xs uppercase tracking-wider text-text-faint">or</span>
-                      <div className="h-px flex-1 bg-line/50" />
-                    </div>
-                  )}
+            {loadingTemplates ? (
+              <div className="flex items-center justify-center gap-2 py-8" aria-live="polite">
+                <Loader2 className="h-4 w-4 spin text-accent" aria-hidden="true" />
+                <span className="text-sm text-text-muted">Loading templates…</span>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-lg border border-border bg-panel">
+                <ListContainer>
+                  {templates.map((template) => (
+                    <li key={template.name}>
+                      <button
+                        type="button"
+                        onClick={() => selectTemplate(template)}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface"
+                      >
+                        <RowAvatar tone="accent"><FileText className="h-4 w-4" aria-hidden="true" /></RowAvatar>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-text">{template.name}</span>
+                          {template.description && (
+                            <span className="mt-0.5 block truncate text-xs text-text-muted">{template.description}</span>
+                          )}
+                        </span>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-text-faint" aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
 
                   {blankEnabled && (
-                    <button
-                      onClick={() => selectTemplate(null)}
-                      className="group flex w-full items-center gap-3 rounded-lg border border-dashed border-line/50 bg-transparent p-3 text-left transition-colors hover:border-line hover:bg-surface"
-                    >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/5">
-                        <Send className="h-4 w-4 text-text-muted" />
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-text group-hover:text-text transition-colors">
-                          Blank issue
-                        </div>
-                        <div className="mt-0.5 text-xs text-text-faint">
-                          Open a blank issue without a template
-                        </div>
-                      </div>
-                    </button>
-                  )}
-
-                  {!loadingTemplates && !hasTemplates && !blankEnabled && (
-                    <p className="text-sm text-text-muted text-center py-6">
-                      No issue templates available for this repository.
-                    </p>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
-          {step === "form" && (
-            <form onSubmit={submit} className="space-y-4">
-              <label className="block text-sm">
-                <span className="text-text font-medium">Title *</span>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder={selectedTemplate?.title || "Issue title"}
-                  required
-                  maxLength={256}
-                  className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text placeholder:text-text-faint"
-                  autoFocus
-                />
-              </label>
-
-              {selectedTemplate && selectedTemplate.body.map((field, index) => {
-                const fieldKey = field.id || `field-${index}`;
-                if (field.type === "markdown") {
-                  return (
-                    <div key={fieldKey} className="rounded-md border border-line bg-surface p-3 text-xs text-text-muted whitespace-pre-wrap leading-relaxed">
-                      {field.attributes.value}
-                    </div>
-                  );
-                }
-
-                if (field.type === "textarea") {
-                  return (
-                    <div key={fieldKey} className="block text-sm">
-                      <span className="text-text font-medium">
-                        {field.attributes.label || field.id}
-                        {field.validations?.required && " *"}
-                      </span>
-                      {field.attributes.description && (
-                        <span className="block mt-0.5 text-xs text-text-muted font-normal">
-                          {field.attributes.description.split("\n").map((line, i) => <span key={i}>{line}<br /></span>)}
+                    <li>
+                      <button
+                        type="button"
+                        onClick={() => selectTemplate(null)}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface"
+                      >
+                        <RowAvatar><Send className="h-4 w-4" aria-hidden="true" /></RowAvatar>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-text">Blank issue</span>
+                          <span className="mt-0.5 block text-xs text-text-muted">Open a blank issue without a template</span>
                         </span>
-                      )}
-                      <div className="mt-1 rounded-md border border-line overflow-hidden">
-                        <MarkdownToolbar fieldId={fieldKey} onInsert={handleInsert} />
-                        <textarea
-                          id={`ta-${fieldKey}`}
-                          value={fieldValues[fieldKey] || ""}
-                          onChange={(e) => setFieldValues((prev) => ({ ...prev, [fieldKey]: e.target.value }))}
-                          placeholder={field.attributes.placeholder}
-                          rows={4}
-                          required={field.validations?.required}
-                          className="w-full border-0 bg-surface px-3 py-2 text-sm text-text placeholder:text-text-faint resize-y focus:outline-none"
-                        />
-                        <div className="border-t border-line px-3 py-1.5 text-xs text-text-muted flex items-center gap-1.5">
-                          <Paperclip className="h-3 w-3 shrink-0" />
-                          <span>Attach files by dragging &amp; dropping, <button type="button" className="text-accent hover:underline" onClick={() => document.getElementById(`file-${fieldKey}`)?.click()}>selecting</button> or pasting them.</span>
-                          <input id={`file-${fieldKey}`} type="file" multiple className="hidden" onChange={(e) => {
-                            if (e.target.files?.length) {
-                              const names = Array.from(e.target.files).map(f => f.name).join(", ");
-                              setFieldValues((prev) => ({ ...prev, [fieldKey]: (prev[fieldKey] || "") + `\n[Attached: ${names}]` }));
-                            }
-                            e.target.value = "";
-                          }} />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
+                        <ChevronRight className="h-4 w-4 shrink-0 text-text-faint" aria-hidden="true" />
+                      </button>
+                    </li>
+                  )}
+                </ListContainer>
+              </div>
+            )}
 
-                if (field.type === "input") {
-                  return (
-                    <div key={fieldKey} className="block text-sm">
-                      <span className="text-text font-medium">
-                        {field.attributes.label || field.id}
-                        {field.validations?.required && " *"}
-                      </span>
-                      {field.attributes.description && (
-                        <span className="block mt-0.5 text-xs text-text-muted font-normal">{field.attributes.description}</span>
-                      )}
-                      <input
-                        type="text"
+            {!loadingTemplates && !hasTemplates && !blankEnabled && (
+              <p className="py-6 text-center text-sm text-text-muted">
+                No issue templates available for this repository.
+              </p>
+            )}
+          </div>
+        )}
+
+        {step === "form" && (
+          <form onSubmit={submit} className="space-y-4">
+            <Input
+              label="Title *"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={selectedTemplate?.title || "Issue title"}
+              required
+              maxLength={256}
+              data-autofocus
+              className="mt-1"
+            />
+
+            {selectedTemplate && selectedTemplate.body.map((field, index) => {
+              const fieldKey = field.id || `field-${index}`;
+              const label = `${field.attributes.label || field.id}${field.validations?.required ? " *" : ""}`;
+              if (field.type === "markdown") {
+                return (
+                  <div key={fieldKey} className="whitespace-pre-wrap rounded-md border border-border bg-surface p-3 text-xs leading-relaxed text-text-muted">
+                    {field.attributes.value}
+                  </div>
+                );
+              }
+
+              if (field.type === "textarea") {
+                return (
+                  <Field key={fieldKey} label={label} htmlFor={`ta-${fieldKey}`} hint={field.attributes.description}>
+                    <div className="mt-1 overflow-hidden rounded-md border border-border">
+                      <MarkdownToolbar fieldId={fieldKey} onInsert={handleInsert} />
+                      <textarea
+                        id={`ta-${fieldKey}`}
                         value={fieldValues[fieldKey] || ""}
                         onChange={(e) => setFieldValues((prev) => ({ ...prev, [fieldKey]: e.target.value }))}
                         placeholder={field.attributes.placeholder}
+                        rows={4}
                         required={field.validations?.required}
-                        className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text placeholder:text-text-faint"
+                        className={textareaClass}
                       />
+                      <div className="flex items-center gap-1.5 border-t border-border px-3 py-1.5 text-xs text-text-muted">
+                        <Paperclip className="h-3 w-3 shrink-0" aria-hidden="true" />
+                        <span>Attach files by dragging &amp; dropping, <button type="button" className="text-accent hover:underline" onClick={() => document.getElementById(`file-${fieldKey}`)?.click()}>selecting</button> or pasting them.</span>
+                        <input id={`file-${fieldKey}`} type="file" multiple className="hidden" onChange={(e) => {
+                          if (e.target.files?.length) {
+                            const names = Array.from(e.target.files).map(f => f.name).join(", ");
+                            setFieldValues((prev) => ({ ...prev, [fieldKey]: (prev[fieldKey] || "") + `\n[Attached: ${names}]` }));
+                          }
+                          e.target.value = "";
+                        }} />
+                      </div>
                     </div>
-                  );
-                }
+                  </Field>
+                );
+              }
 
-                if (field.type === "dropdown") {
-                  return (
-                    <div key={fieldKey} className="block text-sm">
-                      <span className="text-text font-medium">
-                        {field.attributes.label || field.id}
-                        {field.validations?.required && " *"}
-                      </span>
-                      {field.attributes.description && (
-                        <span className="block mt-0.5 text-xs text-text-muted font-normal">{field.attributes.description}</span>
-                      )}
-                      <select
-                        value={fieldValues[fieldKey] || ""}
-                        onChange={(e) => setFieldValues((prev) => ({ ...prev, [fieldKey]: e.target.value }))}
-                        required={field.validations?.required}
-                        className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
-                      >
-                        <option value="">Select...</option>
-                        {(field.attributes.options || []).map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    </div>
-                  );
-                }
-
-                return null;
-              })}
-
-              {!selectedTemplate && (
-                <div className="block text-sm">
-                  <span className="text-text font-medium">Description</span>
-                  <div className="mt-1 rounded-md border border-line overflow-hidden">
-                    <MarkdownToolbar fieldId="blank-body" onInsert={(_, before, after) => {
-                      const textarea = document.getElementById("ta-blank-body") as HTMLTextAreaElement;
-                      if (!textarea) return;
-                      const start = textarea.selectionStart;
-                      const end = textarea.selectionEnd;
-                      const selected = body.substring(start, end);
-                      const newText = body.substring(0, start) + before + selected + (after || "") + body.substring(end);
-                      setBody(newText);
-                      setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + before.length, start + before.length + selected.length); }, 0);
-                    }} />
-                    <textarea
-                      id="ta-blank-body"
-                      value={body}
-                      onChange={(e) => setBody(e.target.value)}
-                      placeholder="Describe the issue (markdown supported)"
-                      rows={6}
-                      className="w-full border-0 bg-surface px-3 py-2 text-sm text-text placeholder:text-text-faint resize-y focus:outline-none"
-                    />
-                    <div className="border-t border-line px-3 py-1.5 text-xs text-text-muted flex items-center gap-1.5">
-                      <Paperclip className="h-3 w-3 shrink-0" />
-                      <span>Attach files by dragging &amp; dropping, <button type="button" className="text-accent hover:underline" onClick={() => document.getElementById("file-blank-body")?.click()}>selecting</button> or pasting them.</span>
-                      <input id="file-blank-body" type="file" multiple className="hidden" onChange={(e) => {
-                        if (e.target.files?.length) {
-                          const names = Array.from(e.target.files).map(f => f.name).join(", ");
-                          setBody((prev) => prev + `\n[Attached: ${names}]`);
-                        }
-                        e.target.value = "";
-                      }} />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {selectedTemplate ? (
-                <div className="text-sm">
-                  <span className="text-text font-medium">Labels</span>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {selectedTemplate.labels.map((label) => (
-                      <span
-                        key={label}
-                        className="inline-flex items-center rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent"
-                      >
-                        {label}
-                      </span>
-                    ))}
-                    {selectedTemplate.labels.length === 0 && (
-                      <span className="text-xs text-text-muted">No labels</span>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <label className="block text-sm">
-                  <span className="text-text font-medium">Labels</span>
-                  <input
+              if (field.type === "input") {
+                return (
+                  <Input
+                    key={fieldKey}
+                    label={label}
+                    hint={field.attributes.description}
                     type="text"
-                    value={labels}
-                    onChange={(e) => setLabels(e.target.value)}
-                    placeholder="bug, enhancement (comma-separated)"
-                    className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text placeholder:text-text-faint"
+                    value={fieldValues[fieldKey] || ""}
+                    onChange={(e) => setFieldValues((prev) => ({ ...prev, [fieldKey]: e.target.value }))}
+                    placeholder={field.attributes.placeholder}
+                    required={field.validations?.required}
+                    className="mt-1"
                   />
-                </label>
-              )}
+                );
+              }
 
-              {error && (
-                <p className="rounded-md border border-red-500/40 bg-status-danger/10 px-3 py-2 text-sm text-red-200">{error}</p>
-              )}
+              if (field.type === "dropdown") {
+                return (
+                  <Select
+                    key={fieldKey}
+                    label={label}
+                    hint={field.attributes.description}
+                    value={fieldValues[fieldKey] || ""}
+                    onChange={(e) => setFieldValues((prev) => ({ ...prev, [fieldKey]: e.target.value }))}
+                    required={field.validations?.required}
+                    className="mt-1"
+                  >
+                    <option value="">Select…</option>
+                    {(field.attributes.options || []).map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </Select>
+                );
+              }
 
-              <div className="flex justify-between gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setStep("choose")}
-                  className="rounded-md border border-line px-4 py-2 text-sm text-text hover:bg-white/5 transition-colors"
-                >
-                  Back
-                </button>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="rounded-md border border-line px-4 py-2 text-sm text-text hover:bg-white/5 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading || !title.trim()}
-                    className="focus-ring inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent transition-colors disabled:opacity-50"
-                  >
-                    {loading ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> Creating...</>
-                    ) : (
-                      <><Send className="h-4 w-4" /> Create Issue</>
-                    )}
-                  </button>
+              return null;
+            })}
+
+            {!selectedTemplate && (
+              <Field label="Description" htmlFor="ta-blank-body">
+                <div className="mt-1 overflow-hidden rounded-md border border-border">
+                  <MarkdownToolbar fieldId="blank-body" onInsert={(_, before, after) => {
+                    const textarea = document.getElementById("ta-blank-body") as HTMLTextAreaElement;
+                    if (!textarea) return;
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const selected = body.substring(start, end);
+                    const newText = body.substring(0, start) + before + selected + (after || "") + body.substring(end);
+                    setBody(newText);
+                    setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + before.length, start + before.length + selected.length); }, 0);
+                  }} />
+                  <textarea
+                    id="ta-blank-body"
+                    value={body}
+                    onChange={(e) => setBody(e.target.value)}
+                    placeholder="Describe the issue (markdown supported)"
+                    rows={6}
+                    className={textareaClass}
+                  />
+                  <div className="flex items-center gap-1.5 border-t border-border px-3 py-1.5 text-xs text-text-muted">
+                    <Paperclip className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    <span>Attach files by dragging &amp; dropping, <button type="button" className="text-accent hover:underline" onClick={() => document.getElementById("file-blank-body")?.click()}>selecting</button> or pasting them.</span>
+                    <input id="file-blank-body" type="file" multiple className="hidden" onChange={(e) => {
+                      if (e.target.files?.length) {
+                        const names = Array.from(e.target.files).map(f => f.name).join(", ");
+                        setBody((prev) => prev + `\n[Attached: ${names}]`);
+                      }
+                      e.target.value = "";
+                    }} />
+                  </div>
+                </div>
+              </Field>
+            )}
+
+            {selectedTemplate ? (
+              <div className="text-sm">
+                <span className="font-medium text-text">Labels</span>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {selectedTemplate.labels.map((label) => (
+                    <Badge key={label} tone="neutral">{label}</Badge>
+                  ))}
+                  {selectedTemplate.labels.length === 0 && (
+                    <span className="text-xs text-text-muted">No labels</span>
+                  )}
                 </div>
               </div>
-            </form>
-          )}
-        </div>
+            ) : (
+              <Input
+                label="Labels"
+                type="text"
+                value={labels}
+                onChange={(e) => setLabels(e.target.value)}
+                placeholder="bug, enhancement (comma-separated)"
+                className="mt-1"
+              />
+            )}
+
+            {error && (
+              <p role="alert" className="rounded-md border border-status-danger/30 bg-status-danger/10 px-3 py-2 text-sm text-status-danger">{error}</p>
+            )}
+
+            <div className="flex justify-between gap-2 pt-2">
+              <button type="button" onClick={() => setStep("choose")} className="btn btn--secondary">
+                Back
+              </button>
+              <div className="flex gap-2">
+                <button type="button" onClick={onClose} className="btn btn--ghost">
+                  Cancel
+                </button>
+                <button type="submit" disabled={loading || !title.trim()} className="btn btn--primary">
+                  {loading ? (
+                    <><Loader2 className="h-4 w-4 spin" aria-hidden="true" /> Creating…</>
+                  ) : (
+                    <><Send className="h-4 w-4" aria-hidden="true" /> Create issue</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+      </div>
     </ModalShell>
   );
 }

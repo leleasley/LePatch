@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, createElement, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   Users,
   Plus,
@@ -8,9 +8,6 @@ import {
   Pencil,
   KeyRound,
   Trash2,
-  Shield,
-  ShieldCheck,
-  UserRound,
   X,
   ChevronLeft,
   ChevronRight,
@@ -22,6 +19,10 @@ import { useToast } from "@/lib/toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ModalShell } from "@/components/ModalShell";
 import { PasswordInput } from "@/components/PasswordStrengthInput";
+import { EmptyState } from "@/components/ui/Card";
+import { List, ListRow, MetricStrip, Panel, RowAvatar, StatusDot, Toolbar, type StatusTone } from "@/components/ui/List";
+import { Input, Select } from "@/components/ui/Input";
+import { cn } from "@/lib/cn";
 import type { UserRole } from "@prisma/client";
 
 type User = {
@@ -36,17 +37,11 @@ type User = {
 
 const PER_PAGE = 20;
 
-const ROLE_STYLES: Record<string, string> = {
-  administrator: "text-status-danger bg-status-danger/10 border-status-danger/30",
-  moderator: "text-status-warning bg-status-warning/10 border-status-warning/30",
-  user: "text-accent bg-accent/10 border-accent/40",
-  restricted: "text-text-muted bg-slate-500/10 border-slate-500/20",
-};
-
-function roleIcon(role: string) {
-  if (role === "administrator") return Shield;
-  if (role === "moderator") return ShieldCheck;
-  return UserRound;
+function roleTone(role: string): StatusTone {
+  if (role === "administrator") return "danger";
+  if (role === "moderator") return "warning";
+  if (role === "user") return "accent";
+  return "neutral";
 }
 
 function timeAgo(dateStr: string): string {
@@ -67,15 +62,10 @@ function timeAgo(dateStr: string): string {
 }
 
 function PasswordBadge({ enabled }: { enabled: boolean }) {
-  return enabled ? (
-    <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400/80">
-      <Key className="h-3 w-3" />
-      Password
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-1 text-[11px] text-text-muted">
-      <Key className="h-3 w-3 opacity-50" />
-      No password
+  return (
+    <span className={cn("inline-flex items-center gap-1 text-xs", enabled ? "text-text-muted" : "text-text-faint")}>
+      <Key className={cn("h-3 w-3", !enabled && "opacity-50")} aria-hidden="true" />
+      {enabled ? "Password set" : "No password"}
     </span>
   );
 }
@@ -93,19 +83,14 @@ function Modal({
 }) {
   if (!open) return null;
   return (
-    <ModalShell open={open} onClose={onClose} panelClassName="w-auto max-w-lg overflow-y-auto p-5 sm:p-6">
-      <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/[0.03] to-transparent pointer-events-none rounded-t-2xl sm:rounded-xl" />
-        <div className="relative">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-semibold text-text">{title}</h2>
-            <button onClick={onClose} className="rounded-lg p-1.5 text-text-muted hover:text-text hover:bg-white/5 transition-colors">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          {children}
-        </div>
+    <ModalShell open={open} onClose={onClose} title={title} panelClassName="w-auto max-w-lg overflow-y-auto p-5 sm:p-6">
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="text-base font-semibold text-text">{title}</h2>
+        <button type="button" onClick={onClose} className="icon-button" aria-label={`Close ${title}`}>
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
       </div>
+      {children}
     </ModalShell>
   );
 }
@@ -145,57 +130,47 @@ function AddUserModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Add User">
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm text-text font-medium mb-1.5">Name</label>
-          <input
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Jane Doe"
-            className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-text placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-text font-medium mb-1.5">Email</label>
-          <input
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            placeholder="jane@example.com"
-            className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-text placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-text font-medium mb-1.5">Role</label>
-          <select
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })}
-            className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-cyan-500/50 transition-colors"
-          >
-            {Object.entries(roleLabels).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </div>
+    <Modal open={open} onClose={onClose} title="Add user">
+      <div className="flex flex-col gap-4">
+        <Input
+          label="Name"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          placeholder="Jane Doe"
+        />
+        <Input
+          label="Email"
+          type="email"
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+          placeholder="jane@example.com"
+        />
+        <Select
+          label="Role"
+          value={form.role}
+          onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })}
+        >
+          {Object.entries(roleLabels).map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </Select>
         <PasswordInput
           label="Password"
           value={form.password}
           onChange={(password) => setForm({ ...form, password })}
           placeholder="min 10 characters"
         />
-        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">
-          <button
-            onClick={onClose}
-            className="w-full sm:w-auto rounded-lg border border-line/50 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-text hover:bg-white/[0.06] transition-all"
-          >
+        <div className="flex flex-col-reverse justify-end gap-2 pt-2 sm:flex-row">
+          <button type="button" onClick={onClose} className="btn btn--secondary">
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={submitting || !form.name || !form.email || form.password.length < 10}
-            className="w-full sm:w-auto rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent disabled:opacity-50 transition-all"
+            className="btn btn--primary"
           >
-            {submitting ? "Creating..." : "Create User"}
+            {submitting ? "Creating…" : "Create user"}
           </button>
         </div>
       </div>
@@ -247,81 +222,65 @@ function EditUserModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Edit User">
+    <Modal open={open} onClose={onClose} title="Edit user">
       {user && (
-        <div className="space-y-5">
-          {/* User context header */}
-          <div className="flex items-center gap-4 rounded-xl border border-line/50 bg-white/[0.02] p-4">
-            <div className="h-12 w-12 shrink-0 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center border border-accent/40">
-              <span className="text-base font-semibold text-accent">
-                {(user.name || user.email)[0]?.toUpperCase() || "?"}
-              </span>
-            </div>
+        <div className="flex flex-col gap-5">
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3">
+            <RowAvatar tone={roleTone(user.role)}>
+              {(user.name || user.email)[0]?.toUpperCase() || "?"}
+            </RowAvatar>
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold text-text truncate">{user.name || "Unnamed"}</div>
-              <div className="text-xs text-text-muted truncate">{user.email}</div>
-              <div className="mt-1 flex items-center gap-3">
-                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${ROLE_STYLES[user.role] || ROLE_STYLES.user}`}>
-                  {createElement(roleIcon(user.role), { className: "h-2.5 w-2.5" })}
-                  {roleLabels[user.role]}
-                </span>
+              <div className="truncate text-sm font-medium text-text">{user.name || "Unnamed"}</div>
+              <div className="truncate text-xs text-text-muted">{user.email}</div>
+              <div className="mt-1 flex flex-wrap items-center gap-3">
+                <StatusDot tone={roleTone(user.role)}>{roleLabels[user.role]}</StatusDot>
                 <PasswordBadge enabled={user.passwordEnabled} />
               </div>
             </div>
             <button
+              type="button"
               onClick={() => { onClose(); onResetPassword(user); }}
-              className="shrink-0 rounded-lg border border-line/50 bg-white/[0.03] px-3 py-2 text-xs font-medium text-text hover:bg-white/[0.06] hover:text-text transition-all flex items-center gap-1.5"
+              className="btn btn--secondary btn--sm shrink-0"
             >
-              <KeyRound className="h-3.5 w-3.5" />
-              Reset Password
+              <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
+              Reset password
             </button>
           </div>
 
-          {/* Edit fields */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-text font-medium mb-1.5">Name</label>
-              <input
-                value={draft.name}
-                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-cyan-500/50 transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-text font-medium mb-1.5">Email</label>
-              <input
-                value={draft.email}
-                onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-                className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-cyan-500/50 transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-text font-medium mb-1.5">Role</label>
-              <select
-                value={draft.role}
-                onChange={(e) => setDraft({ ...draft, role: e.target.value as UserRole })}
-                className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-cyan-500/50 transition-colors"
-              >
-                {Object.entries(roleLabels).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-            </div>
+          <div className="flex flex-col gap-4">
+            <Input
+              label="Name"
+              value={draft.name}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+            />
+            <Input
+              label="Email"
+              type="email"
+              value={draft.email}
+              onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+            />
+            <Select
+              label="Role"
+              value={draft.role}
+              onChange={(e) => setDraft({ ...draft, role: e.target.value as UserRole })}
+            >
+              {Object.entries(roleLabels).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </Select>
           </div>
 
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-1">
-            <button
-              onClick={onClose}
-              className="w-full sm:w-auto rounded-lg border border-line/50 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-text hover:bg-white/[0.06] transition-all"
-            >
+          <div className="flex flex-col-reverse justify-end gap-2 pt-1 sm:flex-row">
+            <button type="button" onClick={onClose} className="btn btn--secondary">
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleSave}
               disabled={submitting || !draft.name || !draft.email}
-              className="w-full sm:w-auto rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent disabled:opacity-50 transition-all"
+              className="btn btn--primary"
             >
-              {submitting ? "Saving..." : "Save Changes"}
+              {submitting ? "Saving…" : "Save changes"}
             </button>
           </div>
         </div>
@@ -367,57 +326,47 @@ function ResetPasswordModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Reset Password">
-      <div className="space-y-4">
-        {/* User context */}
+    <Modal open={open} onClose={onClose} title="Reset password">
+      <div className="flex flex-col gap-4">
         {user && (
-          <div className="flex items-center gap-3 rounded-xl border border-line/50 bg-white/[0.02] p-3">
-            <div className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center border border-accent/40">
-              <span className="text-sm font-semibold text-accent">
-                {(user.name || user.email)[0]?.toUpperCase() || "?"}
-              </span>
-            </div>
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3">
+            <RowAvatar tone={roleTone(user.role)}>
+              {(user.name || user.email)[0]?.toUpperCase() || "?"}
+            </RowAvatar>
             <div className="min-w-0">
-              <div className="text-sm font-medium text-text truncate">{user.name || "Unnamed"}</div>
-              <div className="text-xs text-text-muted truncate">{user.email}</div>
+              <div className="truncate text-sm font-medium text-text">{user.name || "Unnamed"}</div>
+              <div className="truncate text-xs text-text-muted">{user.email}</div>
             </div>
           </div>
         )}
 
-        <div className="rounded-lg border border-status-warning/30 bg-amber-500/5 p-3">
-          <p className="text-xs text-amber-300/80">
-            You must confirm your own password to reset another user&apos;s password.
-          </p>
-        </div>
-        <div>
-          <label className="block text-sm text-text font-medium mb-1.5">Your Current Password</label>
-          <input
-            type="password"
-            value={adminPassword}
-            onChange={(e) => setAdminPassword(e.target.value)}
-            placeholder="Enter your password"
-            className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-text placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
-          />
-        </div>
+        <p className="rounded-md border border-status-warning/30 bg-status-warning/10 p-3 text-xs text-status-warning">
+          Confirm your own password before resetting another user&apos;s password.
+        </p>
+        <Input
+          type="password"
+          label="Your current password"
+          value={adminPassword}
+          onChange={(e) => setAdminPassword(e.target.value)}
+          placeholder="Enter your password"
+        />
         <PasswordInput
-          label="New Password"
+          label="New password"
           value={newPassword}
           onChange={setNewPassword}
           placeholder="min 10 characters"
         />
-        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">
-          <button
-            onClick={onClose}
-            className="w-full sm:w-auto rounded-lg border border-line/50 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-text hover:bg-white/[0.06] transition-all"
-          >
+        <div className="flex flex-col-reverse justify-end gap-2 pt-2 sm:flex-row">
+          <button type="button" onClick={onClose} className="btn btn--secondary">
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleReset}
             disabled={submitting || !adminPassword || newPassword.length < 10}
-            className="w-full sm:w-auto rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent disabled:opacity-50 transition-all"
+            className="btn btn--primary"
           >
-            {submitting ? "Resetting..." : "Reset Password"}
+            {submitting ? "Resetting…" : "Reset password"}
           </button>
         </div>
       </div>
@@ -425,155 +374,41 @@ function ResetPasswordModal({
   );
 }
 
-function UserCard({
-  user,
-  isCurrent,
-  onEdit,
-  onDelete,
-}: {
-  user: User;
-  isCurrent: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  return (
-    <div className="rounded-xl border border-line/50 bg-panel/80 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center border border-accent/40">
-            <span className="text-sm font-semibold text-accent">
-              {(user.name || user.email)[0]?.toUpperCase() || "?"}
-            </span>
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-text truncate">{user.name || "Unnamed"}</span>
-              {isCurrent && <span className="text-[10px] text-text-muted shrink-0">(you)</span>}
-            </div>
-            <p className="text-xs text-text-muted truncate">{user.email}</p>
-          </div>
-        </div>
-      </div>
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${ROLE_STYLES[user.role] || ROLE_STYLES.user}`}>
-            {createElement(roleIcon(user.role), { className: "h-3 w-3" })}
-            {roleLabels[user.role]}
-          </span>
-          <PasswordBadge enabled={user.passwordEnabled} />
-        </div>
-        <span className="text-xs text-text-muted">{timeAgo(user.createdAt)}</span>
-      </div>
-      <div className="mt-3 flex items-center gap-2 border-t border-line/30 pt-3">
-        <button
-          onClick={onEdit}
-          className="flex items-center gap-1.5 rounded-lg border border-line/50 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-text hover:bg-white/[0.06] hover:text-text transition-all"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-          Edit
-        </button>
-        <button
-          onClick={onDelete}
-          disabled={isCurrent}
-          className="flex items-center gap-1.5 rounded-lg border border-line/50 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-red-300/80 hover:bg-red-500/5 hover:text-status-danger transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-          Delete
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function UserTableRow({
-  user,
-  isCurrent,
-  onEdit,
-  onDelete,
-}: {
-  user: User;
-  isCurrent: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  return (
-    <tr className="border-b border-line/30 hover:bg-white/[0.02] transition-colors">
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center border border-accent/40">
-            <span className="text-sm font-semibold text-accent">
-              {(user.name || user.email)[0]?.toUpperCase() || "?"}
-            </span>
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-text truncate">{user.name || "Unnamed"}</span>
-              {isCurrent && <span className="text-[10px] text-text-muted shrink-0">(you)</span>}
-            </div>
-          </div>
-        </div>
-      </td>
-      <td className="px-4 py-3 text-sm text-text-muted truncate max-w-[240px]">{user.email}</td>
-      <td className="px-4 py-3">
-        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${ROLE_STYLES[user.role] || ROLE_STYLES.user}`}>
-          {createElement(roleIcon(user.role), { className: "h-3 w-3" })}
-          {roleLabels[user.role]}
-        </span>
-      </td>
-      <td className="px-4 py-3">
-        <PasswordBadge enabled={user.passwordEnabled} />
-      </td>
-      <td className="px-4 py-3 text-sm text-text-muted whitespace-nowrap">{timeAgo(user.createdAt)}</td>
-      <td className="px-4 py-3">
-        <div className="flex items-center justify-end gap-1">
-          <button
-            onClick={onEdit}
-            title="Edit user"
-            className="rounded-lg p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
-          <button
-            onClick={onDelete}
-            disabled={isCurrent}
-            title={isCurrent ? "Can't delete yourself" : "Delete user"}
-            className="rounded-lg p-1.5 text-text-muted hover:text-status-danger hover:bg-status-danger/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
-      </td>
-    </tr>
-  );
-}
+type RoleFilter = "all" | UserRole;
 
 export function UsersClient({ users: initialUsers, currentUserId }: { users: User[]; currentUserId: string }) {
   const { addToast } = useToast();
   const [users, setUsers] = useState(initialUsers);
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [page, setPage] = useState(0);
   const [addOpen, setAddOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [resetUser, setResetUser] = useState<User | null>(null);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
 
-  const filtered = useMemo(() => {
-    if (!search) return users;
-    const q = search.toLowerCase();
-    return users.filter(
-      (u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.role.includes(q)
-    );
-  }, [users, search]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
-  const safePage = Math.min(page, totalPages - 1);
-  const paginated = filtered.slice(safePage * PER_PAGE, (safePage + 1) * PER_PAGE);
-
   const stats = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const u of users) counts[u.role] = (counts[u.role] || 0) + 1;
     return counts;
   }, [users]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return users.filter((u) => {
+      if (roleFilter !== "all" && u.role !== roleFilter) return false;
+      if (!q) return true;
+      return (
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.role.includes(q)
+      );
+    });
+  }, [users, search, roleFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const safePage = Math.min(page, totalPages - 1);
+  const paginated = filtered.slice(safePage * PER_PAGE, (safePage + 1) * PER_PAGE);
 
   const handleDelete = useCallback(async () => {
     if (!deleteUser) return;
@@ -592,10 +427,10 @@ export function UsersClient({ users: initialUsers, currentUserId }: { users: Use
   }, [deleteUser, addToast]);
 
   return (
-    <div className="max-w-5xl">
+    <div className="flex flex-col gap-5">
       <ConfirmDialog
         open={!!deleteUser}
-        title="Delete User"
+        title="Delete user"
         message={`Remove ${deleteUser?.name} (${deleteUser?.email})? This action cannot be undone.`}
         confirmLabel="Delete"
         variant="danger"
@@ -614,147 +449,190 @@ export function UsersClient({ users: initialUsers, currentUserId }: { users: Use
       />
       <ResetPasswordModal open={!!resetUser} user={resetUser} onClose={() => setResetUser(null)} />
 
-      {/* Header */}
-      <div className="mb-4 sm:mb-6 overflow-hidden rounded-xl border border-line/50 bg-gradient-to-br from-surface via-panel to-surface p-4 sm:p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="rounded-xl bg-accent/10 p-2.5 sm:p-3 shrink-0">
-              <Users className="h-5 w-5 sm:h-6 sm:w-6 text-accent" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-text">User Management</h1>
-              <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-text-muted hidden sm:block">Manage local accounts, roles, and access control.</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setAddOpen(true)}
-            className="flex items-center gap-2 rounded-lg bg-accent px-3 sm:px-4 py-2 sm:py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent transition-all shrink-0"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Add User</span>
-          </button>
-        </div>
+      <MetricStrip
+        items={[
+          { label: "Users", value: users.length },
+          { label: "Administrators", value: stats.administrator ?? 0, tone: (stats.administrator ?? 0) > 0 ? "danger" : undefined },
+          { label: "Moderators", value: stats.moderator ?? 0, tone: (stats.moderator ?? 0) > 0 ? "warning" : undefined },
+          { label: "Restricted", value: stats.restricted ?? 0 },
+        ]}
+      />
 
-        <div className="mt-3 sm:mt-4 flex flex-wrap gap-1.5 sm:gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-line/50 bg-white/[0.03] px-2.5 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium text-text">
-            {users.length} total
-          </span>
-          {Object.entries(stats).map(([role, count]) => (
-            <span key={role} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium ${ROLE_STYLES[role] || ROLE_STYLES.user}`}>
-              {count} {roleLabels[role as UserRole] || role}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Search + count */}
-      <div className="mb-3 sm:mb-4 flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-          <input
-            type="text"
-            placeholder="Search users..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-            className="w-full rounded-lg border border-line/50 bg-panel/80 py-2.5 pl-10 pr-4 text-sm text-text placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
-          />
-          {search && (
-            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text">
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-        <span className="text-xs sm:text-sm text-text-muted whitespace-nowrap">
-          {filtered.length === users.length ? `${users.length} users` : `${filtered.length}/${users.length}`}
-        </span>
-      </div>
-
-      {/* Desktop: Table */}
-      <div className="hidden sm:block overflow-hidden rounded-xl border border-line/50 bg-panel/80">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-line/50">
-              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider w-[220px]">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider w-[260px]">Email</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider w-[140px]">Role</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider w-[110px]">Auth</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider w-[90px]">Created</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-text-muted uppercase tracking-wider w-[80px]"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginated.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-16 text-center">
-                  <Users className="mx-auto mb-3 h-10 w-10 text-text-faint" />
-                  <p className="text-sm font-medium text-text-muted">{search ? "No users match your search" : "No users yet"}</p>
-                  {!search && (
-                    <button onClick={() => setAddOpen(true)} className="mt-2 text-sm text-accent hover:text-accent transition-colors">
-                      Create your first user
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ) : (
-              paginated.map((user) => (
-                <UserTableRow
-                  key={user.id}
-                  user={user}
-                  isCurrent={user.id === currentUserId}
-                  onEdit={() => setEditUser(user)}
-                  onDelete={() => setDeleteUser(user)}
-                />
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile: Cards */}
-      <div className="sm:hidden space-y-3">
-        {paginated.length === 0 ? (
-          <div className="rounded-xl border border-line/50 bg-panel/80 p-8 text-center">
-            <Users className="mx-auto mb-3 h-10 w-10 text-text-faint" />
-            <p className="text-sm font-medium text-text-muted">{search ? "No users match your search" : "No users yet"}</p>
-            {!search && (
-              <button onClick={() => setAddOpen(true)} className="mt-2 text-sm text-accent hover:text-accent transition-colors">
-                Create your first user
+      <Toolbar className="justify-between">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <div className="relative min-w-56 flex-1 sm:max-w-xs">
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-faint"
+            />
+            <Input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              placeholder="Search by name or email"
+              aria-label="Search users"
+              className="pl-8 pr-8"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+                className="icon-button absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2"
+              >
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             )}
           </div>
-        ) : (
-          paginated.map((user) => (
-            <UserCard
-              key={user.id}
-              user={user}
-              isCurrent={user.id === currentUserId}
-              onEdit={() => setEditUser(user)}
-              onDelete={() => setDeleteUser(user)}
-            />
-          ))
-        )}
-      </div>
 
-      {/* Pagination */}
+          <div className="chip-row" role="group" aria-label="Filter users by role">
+            {(
+              [
+                ["all", "All", users.length],
+                ["administrator", "Administrators", stats.administrator ?? 0],
+                ["moderator", "Moderators", stats.moderator ?? 0],
+                ["user", "Users", stats.user ?? 0],
+                ["restricted", "Restricted", stats.restricted ?? 0],
+              ] as Array<[RoleFilter, string, number]>
+            ).map(([key, label, count]) => (
+              <button
+                key={key}
+                type="button"
+                className="chip"
+                data-active={roleFilter === key}
+                aria-pressed={roleFilter === key}
+                onClick={() => { setRoleFilter(key); setPage(0); }}
+                disabled={count === 0 && key !== "all"}
+              >
+                {label}
+                <span className="mono text-2xs opacity-70">{count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button type="button" onClick={() => setAddOpen(true)} className="btn btn--primary btn--sm">
+          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+          Add user
+        </button>
+      </Toolbar>
+
+      <p className="text-xs text-text-faint">
+        {filtered.length === users.length
+          ? `${users.length} user${users.length === 1 ? "" : "s"}`
+          : `${filtered.length} of ${users.length} shown`}
+      </p>
+
+      {users.length === 0 ? (
+        <EmptyState
+          icon={<Users className="h-4 w-4" />}
+          title="No users yet"
+          description="Create the first account and assign it a role."
+          action={
+            <button type="button" onClick={() => setAddOpen(true)} className="btn btn--primary btn--sm">
+              Add user
+            </button>
+          }
+        />
+      ) : paginated.length === 0 ? (
+        <EmptyState
+          title="Nothing matches this view"
+          description="Try a different search term or role filter."
+          action={
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => { setSearch(""); setRoleFilter("all"); }}
+            >
+              Clear filters
+            </button>
+          }
+        />
+      ) : (
+        <Panel flush>
+          <List>
+            {paginated.map((user) => {
+              const isCurrent = user.id === currentUserId;
+              return (
+                <ListRow
+                  key={user.id}
+                  leading={
+                    <RowAvatar tone={roleTone(user.role)}>
+                      {(user.name || user.email)[0]?.toUpperCase() || "?"}
+                    </RowAvatar>
+                  }
+                  title={
+                    <>
+                      <span className="truncate text-sm font-medium text-text">{user.name || "Unnamed"}</span>
+                      {isCurrent && <span className="shrink-0 text-xs text-text-faint">(you)</span>}
+                    </>
+                  }
+                  subtitle={user.email}
+                  meta={
+                    <>
+                      <StatusDot tone={roleTone(user.role)}>{roleLabels[user.role]}</StatusDot>
+                      <PasswordBadge enabled={user.passwordEnabled} />
+                      <span>added {timeAgo(user.createdAt)}</span>
+                    </>
+                  }
+                  trailing={
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setEditUser(user)}
+                        className="icon-button"
+                        aria-label={`Edit ${user.name || user.email}`}
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setResetUser(user)}
+                        className="icon-button"
+                        aria-label={`Reset password for ${user.name || user.email}`}
+                      >
+                        <KeyRound className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteUser(user)}
+                        disabled={isCurrent}
+                        className="icon-button text-text-faint hover:text-status-danger disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label={isCurrent ? "You cannot delete your own account" : `Delete ${user.name || user.email}`}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </>
+                  }
+                />
+              );
+            })}
+          </List>
+        </Panel>
+      )}
+
       {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-xs sm:text-sm text-text-muted">
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-text-muted">
             Page {safePage + 1} of {totalPages}
           </p>
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => setPage(Math.max(0, safePage - 1))}
               disabled={safePage === 0}
-              className="rounded-lg border border-line/50 bg-panel/80 px-3 py-2 text-sm text-text hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="btn btn--ghost btn--sm"
+              aria-label="Previous page"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </button>
             <button
+              type="button"
               onClick={() => setPage(Math.min(totalPages - 1, safePage + 1))}
               disabled={safePage >= totalPages - 1}
-              className="rounded-lg border border-line/50 bg-panel/80 px-3 py-2 text-sm text-text hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="btn btn--ghost btn--sm"
+              aria-label="Next page"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </div>

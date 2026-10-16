@@ -4,25 +4,21 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowUpRight,
-  Bell,
-  Boxes,
+  BellOff,
   CalendarDays,
   CheckCircle2,
   Clock,
   Flame,
-  FlaskConical,
-  Gauge,
   Plus,
   RefreshCw,
   Search,
   Sparkles,
 } from "lucide-react";
-import type { ReactNode } from "react";
-import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/Card";
-import { Badge } from "@/components/Badge";
-import { LiveTimestamp } from "@/components/LiveTimestamp";
+import { PageHeader, MetaItem } from "@/components/ui/PageHeader";
+import { List, ListRow, MetricStrip, Panel, RowAvatar, StatusDot } from "@/components/ui/List";
+import { EmptyState, ErrorState } from "@/components/ui/Card";
 import { useDashboard } from "@/lib/use-swr";
+import { formatRelativeTime } from "@/lib/time-ago";
 
 type DashboardData = {
   total: number;
@@ -36,12 +32,7 @@ type DashboardData = {
     prerelease: boolean;
     publishedAt: Date | null;
     detectedAt: Date;
-    watchedApp: {
-      id: string;
-      name: string;
-      repoFullName: string;
-      updateAvailable: boolean;
-    };
+    watchedApp: { id: string; name: string; repoFullName: string; updateAvailable: boolean };
   }>;
   lastCheckedAt: Date | null;
   pendingEvents: number;
@@ -81,82 +72,40 @@ type DashboardData = {
   lastCheckContext: string;
 };
 
-const staleThresholdMs = 24 * 60 * 60 * 1000;
+const STALE_MS = 24 * 60 * 60 * 1000;
 
-function toTimestamp(value: Date | string | null): number | null {
+function toMs(value: Date | string | null): number | null {
   if (!value) return null;
-  const timestamp = typeof value === "string" ? new Date(value).getTime() : value.getTime();
-  return Number.isNaN(timestamp) ? null : timestamp;
+  const ms = typeof value === "string" ? new Date(value).getTime() : value.getTime();
+  return Number.isNaN(ms) ? null : ms;
 }
 
-function formatCount(count: number): string {
-  return count.toLocaleString();
+function isStale(lastCheckedAt: Date | null): boolean {
+  const ms = toMs(lastCheckedAt);
+  return ms === null || Date.now() - ms > STALE_MS;
 }
 
-function isStaleApp(app: DashboardData["attentionApps"][number]): boolean {
-  const timestamp = toTimestamp(app.lastCheckedAt);
-  if (timestamp === null) return true;
-  return Date.now() - timestamp > staleThresholdMs;
-}
-
-function appPriority(app: DashboardData["attentionApps"][number]): number {
+function attentionRank(app: DashboardData["attentionApps"][number]): number {
   if (app.checkStatus === "failed") return 0;
   if (app.updateAvailable) return 1;
   if (!app.notificationsEnabled) return 2;
-  const timestamp = toTimestamp(app.lastCheckedAt);
-  if (timestamp === null) return 3;
-  if (Date.now() - timestamp > staleThresholdMs) return 4;
-  return 5;
+  if (isStale(app.lastCheckedAt)) return 3;
+  return 4;
 }
 
-function MetricCard({
-  label,
-  value,
-  hint,
-  icon,
-  tone = "neutral",
-}: {
-  label: string;
-  value: ReactNode;
-  hint?: string;
-  icon: ReactNode;
-  tone?: "neutral" | "accent" | "success" | "warning" | "danger";
-}) {
-  const toneClass = {
-    neutral: "text-text-muted",
-    accent: "text-accent",
-    success: "text-status-success",
-    warning: "text-status-pending",
-    danger: "text-status-failure",
-  }[tone];
-
-  return (
-    <Card className="flex items-start gap-3 p-4">
-      <div className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-surface ${toneClass}`}>
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <div className="text-xs font-medium uppercase tracking-wide text-text-faint">{label}</div>
-        <div className="mt-1 text-2xl font-semibold tabular-nums text-text">{value}</div>
-        {hint && <div className="mt-0.5 truncate text-xs text-text-muted">{hint}</div>}
-      </div>
-    </Card>
-  );
-}
-
-function ActivityStrip({ activity }: { activity: DashboardData["activity"] }) {
+function ActivityBars({ activity }: { activity: DashboardData["activity"] }) {
   const max = Math.max(1, ...activity.map((day) => day.count));
   return (
-    <div className="flex items-end gap-1.5" role="img" aria-label="Releases detected per day over the last 7 days">
+    <div className="flex items-end gap-1.5" role="img" aria-label="Releases detected per day over the last seven days">
       {activity.map((day) => (
         <div key={day.date} className="flex min-w-0 flex-1 flex-col items-center gap-2" title={`${day.date}: ${day.count} release${day.count === 1 ? "" : "s"}`}>
-          <div className="flex h-24 w-full items-end rounded-md bg-surface">
+          <div className="flex h-20 w-full items-end rounded-sm bg-surface">
             <div
-              className={`w-full rounded-md ${day.count > 0 ? "bg-accent" : "bg-border/40"}`}
-              style={{ height: `${Math.max(day.count > 0 ? 10 : 5, (day.count / max) * 100)}%` }}
+              className={day.count > 0 ? "w-full rounded-sm bg-accent" : "w-full rounded-sm bg-border/50"}
+              style={{ height: `${Math.max(day.count > 0 ? 12 : 6, (day.count / max) * 100)}%` }}
             />
           </div>
-          <span className="text-[10px] uppercase text-text-faint">{day.label}</span>
+          <span className="text-2xs uppercase text-text-faint">{day.label}</span>
         </div>
       ))}
     </div>
@@ -164,269 +113,289 @@ function ActivityStrip({ activity }: { activity: DashboardData["activity"] }) {
 }
 
 export function DashboardClient({ initialData }: { initialData: DashboardData }) {
-  const { data } = useDashboard();
-  const d = data || initialData;
-  const attentionApps = [...d.attentionApps].sort((a, b) => appPriority(a) - appPriority(b));
+  const { data, error } = useDashboard();
+  const d = data ?? initialData;
+  const attention = [...d.attentionApps].sort((a, b) => attentionRank(a) - attentionRank(b));
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text">Overview</h1>
-          <p className="mt-1 text-sm text-text-muted">
-            {d.total === 0
-              ? "Watch your first repository to start tracking releases."
-              : `Tracking ${formatCount(d.total)} repositor${d.total === 1 ? "y" : "ies"}. ${d.lastCheckContext}.`}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href="/apps/search"
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-elevated px-3 text-sm font-medium text-text transition-colors hover:border-accent/50"
-          >
-            <Search className="h-4 w-4 text-text-muted" />
-            Add repository
-          </Link>
-          <Link
-            href="/apps"
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-accent px-3 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90"
-          >
-            <Boxes className="h-4 w-4" />
-            Watched apps
-          </Link>
-        </div>
-      </header>
-
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Watched repos" value={formatCount(d.total)} hint="Repositories tracked" icon={<Gauge className="h-4 w-4" />} />
-        <MetricCard
-          label="Updates"
-          value={formatCount(d.updates)}
-          hint={d.updates > 0 ? "New releases waiting" : "Nothing waiting"}
-          tone={d.updates > 0 ? "warning" : "neutral"}
-          icon={<Sparkles className="h-4 w-4" />}
-        />
-        <MetricCard label="Releases this week" value={formatCount(d.releasesThisWeek)} hint={`${d.prereleasesThisWeek} pre-release(s) included`} tone="success" icon={<CalendarDays className="h-4 w-4" />} />
-        <MetricCard
-          label="Failed checks"
-          value={formatCount(d.failed)}
-          hint={d.failed > 0 ? "Needs attention" : "All healthy"}
-          tone={d.failed > 0 ? "danger" : "neutral"}
-          icon={<AlertTriangle className="h-4 w-4" />}
-        />
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-[1.15fr_1fr]">
-        <Card className="overflow-hidden">
-          <CardHeader>
-            <div>
-              <div className="text-xs font-medium uppercase tracking-wide text-text-faint">Attention required</div>
-              <CardTitle className="mt-1 text-base">Apps needing action</CardTitle>
-            </div>
-            <Link href="/apps" className="inline-flex items-center gap-1 text-sm text-accent hover:underline">
-              All apps
-              <ArrowUpRight className="h-3.5 w-3.5" />
+    <>
+      <PageHeader
+        title="Overview"
+        description={
+          d.total === 0
+            ? "Watch a repository and LePatch will track its releases for you."
+            : `Tracking ${d.total} repositor${d.total === 1 ? "y" : "ies"}. ${d.lastCheckContext}.`
+        }
+        meta={
+          <>
+            <MetaItem icon={<Clock className="h-3.5 w-3.5" />}>
+              Last check {d.lastCheckedAt ? formatRelativeTime(d.lastCheckedAt) : "never run"}
+            </MetaItem>
+            <MetaItem icon={<CalendarDays className="h-3.5 w-3.5" />}>
+              {d.releasesThisWeek} release{d.releasesThisWeek === 1 ? "" : "s"} this week
+            </MetaItem>
+          </>
+        }
+        actions={
+          <>
+            <Link href="/apps/search" className="btn btn--ghost btn--sm">
+              <Search className="h-3.5 w-3.5" aria-hidden="true" />
+              Find repositories
             </Link>
-          </CardHeader>
-          {attentionApps.length === 0 ? (
+            <Link href="/apps" className="btn btn--primary btn--sm">
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              Watched repositories
+            </Link>
+          </>
+        }
+      />
+
+      <div className="mb-6">
+        <MetricStrip
+          items={[
+            { label: "Watched", value: d.total },
+            { label: "Updates waiting", value: d.updates, tone: d.updates > 0 ? "warning" : undefined },
+            { label: "Releases this week", value: d.releasesThisWeek, tone: "success" },
+            { label: "Failed checks", value: d.failed, tone: d.failed > 0 ? "danger" : undefined },
+          ]}
+        />
+      </div>
+
+      {error && (
+        <div className="mb-6">
+          <ErrorState
+            title="Live data unavailable"
+            description="Showing the last values loaded with the page. Retrying automatically."
+          />
+        </div>
+      )}
+
+      <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
+        <Panel
+          title="Needs attention"
+          description="Failed checks, unacknowledged releases and muted repositories."
+          actions={
+            <Link href="/apps?filter=attention" className="text-xs text-accent hover:underline">
+              View all
+            </Link>
+          }
+          flush
+        >
+          {attention.length === 0 ? (
             <div className="p-4">
               <EmptyState
-                icon={<CheckCircle2 className="h-5 w-5" />}
-                title="Everything is healthy"
-                description="No failed checks, stale repos, or muted apps right now."
+                icon={<CheckCircle2 className="h-4 w-4" />}
+                title="Everything is up to date"
+                description="No failed checks, stale repositories or muted apps right now."
               />
             </div>
           ) : (
-            <ul className="divide-y divide-border">
-              {attentionApps.map((app) => {
-                const isStale = isStaleApp(app);
+            <List>
+              {attention.map((app) => {
+                const stale = isStale(app.lastCheckedAt);
+                const tone = app.checkStatus === "failed"
+                  ? "danger"
+                  : app.updateAvailable
+                    ? "warning"
+                    : "neutral";
                 const label = app.checkStatus === "failed"
                   ? "Check failed"
                   : app.updateAvailable
                     ? "Update available"
                     : !app.notificationsEnabled
-                      ? "Notifications off"
-                      : isStale
+                      ? "Muted"
+                      : stale
                         ? "Stale"
-                        : "Watching";
-                const variant = app.checkStatus === "failed" ? "error" : app.updateAvailable ? "warning" : "neutral";
-
+                        : "Up to date";
                 return (
-                  <li key={app.id}>
-                    <Link href={`/apps/${app.id}`} className="flex items-start justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-elevated/60">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate text-sm font-medium text-text">{app.name}</span>
-                          <Badge variant={variant as "error" | "warning" | "neutral"} dot>{label}</Badge>
-                        </div>
-                        <div className="mt-0.5 truncate text-xs text-text-muted">{app.repoFullName}</div>
+                  <ListRow
+                    key={app.id}
+                    href={`/apps/${app.id}`}
+                    leading={<RowAvatar tone={tone}>{app.name.slice(0, 1).toUpperCase()}</RowAvatar>}
+                    title={
+                      <>
+                        <span className="truncate text-sm font-medium text-text">{app.name}</span>
+                        <StatusDot tone={tone}>{label}</StatusDot>
+                      </>
+                    }
+                    subtitle={app.repoFullName}
+                    meta={
+                      <>
+                        <span className="mono">{app.latestSeenTag ?? "no release yet"}</span>
+                        {app.lastCheckedAt && <span>checked {formatRelativeTime(app.lastCheckedAt)}</span>}
                         {app.checkError && app.checkStatus === "failed" && (
-                          <div className="mt-1 truncate text-xs text-status-failure">{app.checkError}</div>
+                          <span className="text-status-danger">{app.checkError}</span>
                         )}
-                      </div>
-                      <div className="shrink-0 text-right text-xs text-text-faint">
-                        <div className="font-mono text-text-muted">{app.latestSeenTag || "no release yet"}</div>
-                        <LiveTimestamp date={app.lastCheckedAt} />
-                      </div>
-                    </Link>
-                  </li>
+                      </>
+                    }
+                  />
                 );
               })}
-            </ul>
+            </List>
           )}
-        </Card>
+        </Panel>
 
-        <div className="flex flex-col gap-6">
-          <Card className="overflow-hidden">
-            <CardHeader>
-              <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-text-faint">Latest detections</div>
-                <CardTitle className="mt-1 text-base">Recent releases</CardTitle>
-              </div>
-              <Link href="/apps" className="text-sm text-accent hover:underline">All</Link>
-            </CardHeader>
+        <div className="flex flex-col gap-5">
+          <Panel
+            title="Recent releases"
+            description="Newest detections across every watched repository."
+            actions={
+              <Link href="/apps" className="text-xs text-accent hover:underline">
+                All repositories
+              </Link>
+            }
+            flush
+          >
             {d.recent.length === 0 ? (
               <div className="p-4">
                 <EmptyState
-                  icon={<Plus className="h-5 w-5" />}
-                  title="No releases yet"
-                  description="Add a repository and LePatch will start detecting releases."
+                  icon={<Sparkles className="h-4 w-4" />}
+                  title="No releases detected yet"
+                  description="Releases appear here as soon as LePatch spots them."
                 />
               </div>
             ) : (
-              <ul className="max-h-96 divide-y divide-border overflow-y-auto">
+              <List className="max-h-96 overflow-y-auto">
                 {d.recent.map((release) => (
-                  <li key={release.id}>
-                    <Link href={`/apps/${release.watchedApp.id}/releases`} className="flex items-start justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-elevated/60">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate text-sm font-medium text-text">{release.watchedApp.name}</span>
-                          <span className="truncate font-mono text-xs text-accent">{release.tagName}</span>
-                          {release.prerelease && <Badge variant="warning">Pre-release</Badge>}
-                        </div>
-                        <div className="mt-0.5 truncate text-xs text-text-muted">{release.watchedApp.repoFullName}</div>
-                      </div>
-                      <div className="shrink-0 text-xs text-text-faint">
-                        <LiveTimestamp date={release.detectedAt} />
-                      </div>
-                    </Link>
-                  </li>
+                  <ListRow
+                    key={release.id}
+                    href={`/apps/${release.watchedApp.id}?tab=releases`}
+                    title={
+                      <>
+                        <span className="mono truncate text-sm font-medium text-accent">{release.tagName}</span>
+                        {release.prerelease && <StatusDot tone="warning">pre-release</StatusDot>}
+                      </>
+                    }
+                    subtitle={`${release.watchedApp.name} · ${release.watchedApp.repoFullName}`}
+                    meta={<span>{formatRelativeTime(release.detectedAt)}</span>}
+                  />
                 ))}
-              </ul>
+              </List>
             )}
-          </Card>
+          </Panel>
 
-          <Card>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-text-faint">Last 7 days</div>
-                <CardTitle className="mt-1 text-base">Release activity</CardTitle>
-              </div>
-              <span className="text-2xl font-semibold tabular-nums text-text">{formatCount(d.releasesThisWeek)}</span>
+          <Panel title="Release activity" description="Detections over the last seven days.">
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-semibold tabular-nums text-text">{d.releasesThisWeek}</span>
+              <span className="text-xs text-text-muted">
+                {d.prereleasesThisWeek} pre-release{d.prereleasesThisWeek === 1 ? "" : "s"}
+              </span>
             </div>
             <div className="mt-4">
-              <ActivityStrip activity={d.activity} />
+              <ActivityBars activity={d.activity} />
             </div>
-            <p className="mt-3 text-xs text-text-faint">{d.lastCheckContext}</p>
-          </Card>
+          </Panel>
         </div>
-      </section>
+      </div>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <Card className="overflow-hidden">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <FlaskConical className="h-4 w-4 text-status-pending" />
-              <CardTitle className="text-base">Pre-release spotlight</CardTitle>
-            </div>
-            <span className="text-xs text-text-faint">Beta &amp; RC</span>
-          </CardHeader>
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <Panel title="Pre-release spotlight" description="Beta and release-candidate tags tracked recently." flush>
           {d.prereleases.length === 0 ? (
-            <div className="p-4">
-              <EmptyState title="No pre-releases tracked" description="Enable “Include prereleases” on an app to surface them here." />
-            </div>
+            <p className="px-4 py-6 text-center text-sm text-text-muted">
+              Enable pre-releases on a repository to surface them here.
+            </p>
           ) : (
-            <ul className="divide-y divide-border">
+            <List>
               {d.prereleases.map((release) => (
-                <li key={release.id}>
-                  <Link href={`/apps/${release.watchedApp.id}/releases`} className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-elevated/60">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm text-text">
-                        {release.watchedApp.name} <span className="font-mono text-status-pending">{release.tagName}</span>
-                      </div>
-                      <div className="mt-0.5 truncate text-xs text-text-muted">{release.watchedApp.repoFullName}</div>
-                    </div>
-                    <LiveTimestamp date={release.detectedAt} />
-                  </Link>
-                </li>
+                <ListRow
+                  key={release.id}
+                  href={`/apps/${release.watchedApp.id}?tab=releases`}
+                  title={<span className="mono text-sm font-medium text-status-warning">{release.tagName}</span>}
+                  subtitle={`${release.watchedApp.name} · ${release.watchedApp.repoFullName}`}
+                  meta={<span>{formatRelativeTime(release.detectedAt)}</span>}
+                />
               ))}
-            </ul>
+            </List>
           )}
-        </Card>
+        </Panel>
 
-        <Card className="overflow-hidden">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Flame className="h-4 w-4 text-status-pending" />
-              <CardTitle className="text-base">Most active repos</CardTitle>
-            </div>
-          </CardHeader>
+        <Panel title="Most active repositories" description="Ranked by releases detected." flush>
           {d.mostActive.length === 0 ? (
-            <div className="p-4">
-              <EmptyState title="Nothing tracked yet" description="Release volume per repository will appear here." />
-            </div>
+            <p className="px-4 py-6 text-center text-sm text-text-muted">Nothing tracked yet.</p>
           ) : (
-            <ul className="divide-y divide-border">
+            <List>
               {d.mostActive.map((row) => (
-                <li key={row.watchedAppId}>
-                  <Link href={`/apps/${row.watchedAppId}/releases`} className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-elevated/60">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-text">{row.name}</div>
-                      <div className="mt-0.5 truncate text-xs text-text-muted">{row.repoFullName}</div>
-                    </div>
-                    <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-text-muted">
-                      {row.releaseCount}
-                    </span>
-                  </Link>
-                </li>
+                <ListRow
+                  key={row.watchedAppId}
+                  href={`/apps/${row.watchedAppId}?tab=releases`}
+                  leading={<RowAvatar tone="accent">{row.releaseCount > 99 ? "99" : row.releaseCount}</RowAvatar>}
+                  title={<span className="truncate text-sm font-medium text-text">{row.name}</span>}
+                  subtitle={row.repoFullName}
+                />
               ))}
-            </ul>
+            </List>
           )}
-        </Card>
-      </section>
+        </Panel>
+      </div>
 
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          { label: "Pending notifications", value: d.pendingEvents, href: "/notifications" },
-          { label: "Stale apps", value: d.staleApps, href: "/apps?filter=stale" },
-          { label: "Notifications off", value: d.notificationsDisabled, href: "/apps?filter=notificationsOff" },
-          { label: "Never checked", value: d.neverChecked, href: "/apps?filter=stale" },
-        ].map((tile) => (
-          <Link key={tile.label} href={tile.href} className="rounded-xl border border-border bg-surface-elevated/60 p-4 transition-colors hover:border-accent/50">
-            <div className="text-xs font-medium uppercase tracking-wide text-text-faint">{tile.label}</div>
-            <div className="mt-1 text-xl font-semibold tabular-nums text-text">{formatCount(tile.value)}</div>
-          </Link>
-        ))}
-      </section>
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <Panel title="Notifications" description="Delivery health across your channels.">
+          <dl className="flex flex-col gap-3 text-sm">
+            <div className="flex items-center justify-between">
+              <dt className="text-text-muted">Pending deliveries</dt>
+              <dd className="font-medium tabular-nums text-text">{d.pendingEvents}</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-text-muted">Muted repositories</dt>
+              <dd className="inline-flex items-center gap-1.5 font-medium tabular-nums text-text">
+                {d.notificationsDisabled > 0 && <BellOff className="h-3.5 w-3.5 text-text-faint" aria-hidden="true" />}
+                {d.notificationsDisabled}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-text-muted">Stale repositories</dt>
+              <dd className="font-medium tabular-nums text-text">{d.staleApps}</dd>
+            </div>
+            <Link href="/profile/notifications" className="inline-flex items-center gap-1 text-xs text-accent hover:underline">
+              Notification preferences
+              <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+            </Link>
+          </dl>
+        </Panel>
 
-      <section className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
-        <Link href="/apps/search" className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text transition-colors hover:border-accent/50">
-          <Plus className="h-4 w-4 text-text-muted" />
-          Add repository
+        <Panel title="Checks" description="Scheduler health for your watch list.">
+          <dl className="flex flex-col gap-3 text-sm">
+            <div className="flex items-center justify-between">
+              <dt className="text-text-muted">Checks passing</dt>
+              <dd className="font-medium tabular-nums text-status-success">{d.successCount}</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-text-muted">No releases published</dt>
+              <dd className="font-medium tabular-nums text-text">{d.noReleasesCount}</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-text-muted">Never checked</dt>
+              <dd className="font-medium tabular-nums text-text">{d.neverChecked}</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-text-muted">Checked in the last hour</dt>
+              <dd className="font-medium tabular-nums text-text">
+                {d.recentlyCheckedCount} / {d.total}
+              </dd>
+            </div>
+            {d.failed > 0 && (
+              <p className="inline-flex items-center gap-1.5 text-xs text-status-danger">
+                <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                {d.failed} repository checks are failing.
+              </p>
+            )}
+            <Link href="/admin/logs" className="inline-flex items-center gap-1 text-xs text-accent hover:underline">
+              <RefreshCw className="h-3 w-3" aria-hidden="true" />
+              Queues and logs
+            </Link>
+          </dl>
+        </Panel>
+      </div>
+
+      <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-border pt-4 text-xs text-text-muted">
+        <span className="inline-flex items-center gap-1.5">
+          <Flame className="h-3.5 w-3.5 text-text-faint" aria-hidden="true" />
+          {d.mostActive[0]?.name ?? "No repository"} is the most active this period.
+        </span>
+        <Link href="/apps" className="text-accent hover:underline">
+          Manage watched repositories
         </Link>
-        <Link href="/notifications" className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text transition-colors hover:border-accent/50">
-          <Bell className="h-4 w-4 text-text-muted" />
-          Notification centre
-        </Link>
-        <Link href="/admin/logs" className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text transition-colors hover:border-accent/50">
-          <RefreshCw className="h-4 w-4 text-text-muted" />
-          Queues &amp; logs
-        </Link>
-        <Link href="/apps" className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text transition-colors hover:border-accent/50">
-          <Clock className="h-4 w-4 text-text-muted" />
-          Watched apps
-        </Link>
-      </section>
-    </div>
+      </div>
+    </>
   );
 }

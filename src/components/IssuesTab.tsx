@@ -1,12 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback, startTransition } from "react";
-import { useRouter } from "next/navigation";
-import { Search, Loader2, ExternalLink, MessageSquare, CircleDot, CheckCircle2, Filter, Plus, Bell, BellOff, BellDot, GitPullRequest, ArrowUpDown } from "lucide-react";
+import Link from "next/link";
+import { Search, Loader2, MessageSquare, CircleDot, CheckCircle2, Filter, Plus, Bell, BellOff, BellDot, GitPullRequest } from "lucide-react";
 import { CreateIssueModal } from "@/components/CreateIssueModal";
 import { LabelBadge } from "@/components/LabelBadge";
+import { Badge, EmptyState, SkeletonRows } from "@/components/ui/Card";
+import { List, Panel, StatusDot } from "@/components/ui/List";
+import { Input, Select } from "@/components/ui/Input";
 import { csrfFetch } from "@/lib/csrf-client";
 import { timeAgo } from "@/lib/time-ago";
+import { cn } from "@/lib/cn";
 
 type Issue = {
   id: number;
@@ -26,6 +30,14 @@ type Issue = {
   milestone?: { title: string } | null;
 };
 
+type NotificationLevel = "participating" | "all_activity" | "ignore";
+
+const NOTIFICATION_LEVELS: Array<{ key: NotificationLevel; label: string; icon: typeof Bell }> = [
+  { key: "participating", label: "Participating", icon: Bell },
+  { key: "all_activity", label: "All activity", icon: BellDot },
+  { key: "ignore", label: "Ignore", icon: BellOff },
+];
+
 function stripMarkdown(body: string | null): string {
   if (!body) return "";
   return body
@@ -42,8 +54,137 @@ function stripMarkdown(body: string | null): string {
     .slice(0, 200);
 }
 
+function IssueRow({
+  issue,
+  href,
+  githubLinked,
+  level,
+  menuOpen,
+  onToggleMenu,
+  onSelectLevel,
+}: {
+  issue: Issue;
+  href?: string;
+  githubLinked: boolean;
+  level: NotificationLevel;
+  menuOpen: boolean;
+  onToggleMenu: () => void;
+  onSelectLevel: (level: NotificationLevel) => void;
+}) {
+  const stateIcon = issue.pull_request ? (
+    <GitPullRequest className="h-4 w-4 text-accent" aria-hidden="true" />
+  ) : issue.state === "open" ? (
+    <CircleDot className="h-4 w-4 text-status-success" aria-hidden="true" />
+  ) : (
+    <CheckCircle2 className="h-4 w-4 text-text-faint" aria-hidden="true" />
+  );
+
+  const BellIcon = level === "all_activity" ? BellDot : level === "participating" ? Bell : BellOff;
+  const bellMuted = level === "ignore";
+
+  const body = (
+    <>
+      <span className="mt-0.5 shrink-0">{stateIcon}</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="mono shrink-0 text-xs text-text-faint">#{issue.number}</span>
+          <span className="truncate text-sm font-medium text-text">{issue.title}</span>
+          {issue.pull_request && <Badge tone="accent">PR</Badge>}
+        </div>
+        {issue.body && (
+          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-text-muted">{stripMarkdown(issue.body)}</p>
+        )}
+        {issue.labels.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {issue.labels.slice(0, 5).map((label) => (
+              <LabelBadge key={label.name} name={label.name} color={label.color} />
+            ))}
+            {issue.labels.length > 5 && (
+              <span className="text-2xs text-text-faint">+{issue.labels.length - 5} more</span>
+            )}
+          </div>
+        )}
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-faint">
+          <StatusDot tone={issue.state === "open" ? "success" : "neutral"}>
+            {issue.state === "open" ? "Open" : "Closed"}
+          </StatusDot>
+          {issue.user && (
+            <span className="inline-flex items-center gap-1.5">
+              <img src={issue.user.avatar_url} alt="" className="h-4 w-4 rounded-full" loading="lazy" />
+              <span>{issue.user.login}</span>
+            </span>
+          )}
+          <span>updated {timeAgo(issue.updated_at)}</span>
+          {issue.comments > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <MessageSquare className="h-3 w-3" aria-hidden="true" />
+              {issue.comments}
+            </span>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <li className={cn("flex items-start gap-3 px-4 py-3 transition-colors", href && "hover:bg-surface")}>
+      {href ? (
+        <Link href={href} className="flex min-w-0 flex-1 items-start gap-3">
+          {body}
+        </Link>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-start gap-3">{body}</div>
+      )}
+
+      {githubLinked && (
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            className="icon-button"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            aria-label={`Notification settings for issue #${issue.number}`}
+            onClick={onToggleMenu}
+          >
+            <BellIcon className={cn("h-4 w-4", !bellMuted && "text-accent")} aria-hidden="true" />
+          </button>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-40" aria-hidden="true" onClick={onToggleMenu} />
+              <div
+                role="menu"
+                aria-label={`Notification level for issue #${issue.number}`}
+                className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-lg border border-border bg-surface-elevated shadow-md"
+              >
+                {NOTIFICATION_LEVELS.map((option) => {
+                  const Icon = option.icon;
+                  const current = level === option.key;
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => onSelectLevel(option.key)}
+                      className={cn(
+                        "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium transition-colors",
+                        current ? "bg-accent/10 text-accent" : "text-text-muted hover:bg-surface hover:text-text"
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
 export function IssuesTab({ owner, repo, appId }: { owner: string; repo: string; appId?: string }) {
-  const router = useRouter();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -111,6 +252,19 @@ export function IssuesTab({ owner, repo, appId }: { owner: string; repo: string;
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Escape closes the open notification menu.
+  useEffect(() => {
+    if (activeBell === null) return;
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        setActiveBell(null);
+      }
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [activeBell]);
+
   const filteredIssues = (debouncedSearch
     ? issues.filter(
         (issue) =>
@@ -125,8 +279,7 @@ export function IssuesTab({ owner, repo, appId }: { owner: string; repo: string;
 
   const hasMore = issues.length < totalCount;
 
-  async function setNotificationLevel(e: React.MouseEvent, issueNumber: number, level: string) {
-    e.stopPropagation();
+  async function setNotificationLevel(issueNumber: number, level: NotificationLevel) {
     const key = `${owner}/${repo}/${issueNumber}`;
     const issue = issues.find((i) => i.number === issueNumber);
     const res = await csrfFetch("/api/github/notification-setting", {
@@ -141,244 +294,101 @@ export function IssuesTab({ owner, repo, appId }: { owner: string; repo: string;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] p-0.5">
+          <div className="chip-row" role="group" aria-label="Filter issues by state">
             {(["open", "closed", "all"] as const).map((s) => (
               <button
                 key={s}
-                onClick={() => setState(s)}
+                type="button"
+                className="chip"
                 data-active={state === s}
-                className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[0.78rem] font-medium transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                style={state === s ? { background: "var(--color-accent)", color: "var(--color-accent-foreground)" } : undefined}
+                aria-pressed={state === s}
+                onClick={() => setState(s)}
               >
-                {s === "open" && <CircleDot className="h-3 w-3" />}
-                {s === "closed" && <CheckCircle2 className="h-3 w-3" />}
-                {s === "all" && <Filter className="h-3 w-3" />}
+                {s === "open" && <CircleDot className="h-3 w-3" aria-hidden="true" />}
+                {s === "closed" && <CheckCircle2 className="h-3 w-3" aria-hidden="true" />}
+                {s === "all" && <Filter className="h-3 w-3" aria-hidden="true" />}
                 {s.charAt(0).toUpperCase() + s.slice(1)}
-                {s === state && totalCount > 0 && (
-                  <span className="ml-0.5 text-[0.65rem] opacity-80">{totalCount}</span>
-                )}
+                {s === state && totalCount > 0 && <span className="mono text-2xs opacity-70">{totalCount}</span>}
               </button>
             ))}
           </div>
           {githubLinked && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="btn btn--primary btn--sm"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New Issue
+            <button type="button" onClick={() => setShowCreateModal(true)} className="btn btn--primary btn--sm">
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              New issue
             </button>
           )}
         </div>
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-text-faint)]" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filter issues…"
-            className="w-full rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] py-1.5 pl-9 pr-3 text-[0.82rem] text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] focus:border-[var(--color-accent-border)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-focus-ring)] transition-all sm:w-64"
-          />
-        </div>
-        <div className="relative">
-          <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-text-faint)]" />
-          <select
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-48 flex-1 lg:flex-none">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-faint" aria-hidden="true" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Filter issues"
+              aria-label="Filter issues by title or label"
+              className="pl-8"
+            />
+          </div>
+          <Select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as "created" | "comments")}
-            className="appearance-none rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] py-1.5 pl-9 pr-8 text-[0.82rem] text-[var(--color-text)] focus:border-[var(--color-accent-border)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-focus-ring)] transition-all"
+            aria-label="Sort issues"
+            className="w-44"
           >
             <option value="created">Newest</option>
             <option value="comments">Most commented</option>
-          </select>
+          </Select>
         </div>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-[var(--theme-status-failure-border)] bg-[var(--theme-status-failure-bg)] p-3 text-sm text-[var(--color-status-danger)]">
+        <div role="alert" className="rounded-md border border-status-danger/30 bg-status-danger/10 px-3 py-2 text-sm text-status-danger">
           {error}
         </div>
       )}
 
       {loading && (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="app-shell-card p-4">
-              <div className="flex items-start gap-3">
-                <div className="skeleton h-5 w-5 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <div className="skeleton h-4 w-3/4" />
-                  <div className="skeleton h-3 w-full" />
-                  <div className="flex gap-2">
-                    <div className="skeleton h-5 w-12" />
-                    <div className="skeleton h-5 w-16" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <Panel flush>
+          <SkeletonRows rows={5} columns={3} />
+        </Panel>
       )}
 
       {!loading && !error && filteredIssues.length === 0 && (
-        <div className="empty-state">
-          <span className="empty-state-icon">
-            <CircleDot className="h-5 w-5" />
-          </span>
-          <p className="empty-state-title">
-            {debouncedSearch ? "No issues match your filter" : `No ${state} issues`}
-          </p>
-          <p className="empty-state-copy">
-            {debouncedSearch ? "Try a different search term" : "There are no issues in this repository."}
-          </p>
-        </div>
+        <EmptyState
+          icon={<CircleDot className="h-4 w-4" />}
+          title={debouncedSearch ? "No issues match your filter" : `No ${state} issues`}
+          description={
+            debouncedSearch
+              ? "Try a different search term."
+              : "There are no issues in this repository for this state."
+          }
+        />
       )}
 
       {!loading && filteredIssues.length > 0 && (
-        <ul className="space-y-2">
-          {filteredIssues.map((issue) => (
-            <li key={issue.id}>
-              <button
-                type="button"
-                onClick={() => (appId ? router.push(`/apps/${appId}/issues/${issue.number}`) : undefined)}
-                className={`app-shell-card group block w-full p-4 text-left transition-all hover:border-[color-mix(in_srgb,var(--color-accent)_30%,transparent)] ${!appId ? "cursor-default" : ""}`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 shrink-0">
-                    {issue.pull_request ? (
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--color-accent-border)] bg-[var(--color-accent-muted)]">
-                        <GitPullRequest className="h-3 w-3 text-[var(--color-accent)]" />
-                      </span>
-                    ) : issue.state === "open" ? (
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--theme-status-success-border)] bg-[var(--theme-status-success-bg)]">
-                        <CircleDot className="h-3 w-3 text-[var(--color-status-success)]" />
-                      </span>
-                    ) : (
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--color-accent-border)] bg-[var(--color-accent-muted)]">
-                        <CheckCircle2 className="h-3 w-3 text-[var(--color-accent)]" />
-                      </span>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start gap-2">
-                      <h3 className="text-sm font-semibold text-[var(--color-text)] group-hover:text-[var(--color-accent)] transition-colors line-clamp-1">
-                        {issue.title}
-                      </h3>
-                      <span className="shrink-0 text-[0.7rem] text-[var(--color-text-faint)] app-mono">#{issue.number}</span>
-                      {issue.pull_request && (
-                        <span className="shrink-0 rounded-full border border-[var(--color-accent-border)] bg-[var(--color-accent-muted)] px-1.5 py-0.5 text-[9px] font-medium text-[var(--color-accent)]">PR</span>
-                      )}
-                    </div>
-                    {issue.body && (
-                      <p className="mt-1 text-[0.78rem] text-[var(--color-text-muted)] line-clamp-2 leading-relaxed">
-                        {stripMarkdown(issue.body)}
-                      </p>
-                    )}
-                    {issue.labels.length > 0 && (
-                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                        {issue.labels.slice(0, 5).map((label) => (
-                          <LabelBadge key={label.name} name={label.name} color={label.color} />
-                        ))}
-                        {issue.labels.length > 5 && (
-                          <span className="text-[0.7rem] text-[var(--color-text-faint)]">
-                            +{issue.labels.length - 5} more
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.72rem] text-[var(--color-text-faint)]">
-                      {issue.user && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <img
-                            src={issue.user.avatar_url}
-                            alt=""
-                            className="h-4 w-4 rounded-full"
-                            loading="lazy"
-                          />
-                          <span>{issue.user.login}</span>
-                        </span>
-                      )}
-                      {issue.assignees && issue.assignees.length > 0 && (
-                        <span className="inline-flex items-center gap-1">
-                          <span className="text-[var(--color-text-faint)]">→</span>
-                          {issue.assignees.slice(0, 3).map((a) => (
-                            <img
-                              key={a.login}
-                              src={a.avatar_url}
-                              alt={a.login}
-                              title={a.login}
-                              className="h-4 w-4 rounded-full -ml-1 first:ml-0"
-                              loading="lazy"
-                            />
-                          ))}
-                          {issue.assignees.length > 3 && (
-                            <span>+{issue.assignees.length - 3}</span>
-                          )}
-                        </span>
-                      )}
-                      <span>{timeAgo(issue.created_at)}</span>
-                      {issue.comments > 0 && (
-                        <span className="inline-flex items-center gap-1">
-                          <MessageSquare className="h-3 w-3" />
-                          {issue.comments}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <ExternalLink className="h-4 w-4 shrink-0 text-[var(--color-text-faint)] opacity-0 group-hover:opacity-100 transition-opacity" />
-                  {githubLinked && (
-                    <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => setActiveBell(activeBell === issue.number ? null : issue.number)}
-                        className="text-[var(--color-text-faint)] hover:text-[var(--color-accent)] transition-colors"
-                      >
-                        {notificationSettings[`${owner}/${repo}/${issue.number}`] === "ignore" ||
-                        !notificationSettings[`${owner}/${repo}/${issue.number}`] ? (
-                          <BellOff className="h-4 w-4" />
-                        ) : notificationSettings[`${owner}/${repo}/${issue.number}`] === "all_activity" ? (
-                          <BellDot className="h-4 w-4 text-[var(--color-accent)]" />
-                        ) : (
-                          <Bell className="h-4 w-4 text-[var(--color-accent)]" />
-                        )}
-                      </button>
-                      {activeBell === issue.number && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setActiveBell(null)} />
-                          <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_95%,transparent)] shadow-xl">
-                            <div className="p-1">
-                              {(["participating", "all_activity", "ignore"] as const).map((level) => {
-                                const current = notificationSettings[`${owner}/${repo}/${issue.number}`] || "ignore";
-                                return (
-                                  <button
-                                    key={level}
-                                    onClick={(e) => setNotificationLevel(e, issue.number, level)}
-                                    className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[0.78rem] font-medium transition-colors ${
-                                      current === level
-                                        ? "bg-[var(--color-accent-muted)] text-[var(--color-accent)]"
-                                        : "text-[var(--color-text-muted)] hover:bg-[color-mix(in_srgb,var(--color-text)_5%,transparent)] hover:text-[var(--color-text)]"
-                                    }`}
-                                  >
-                                    {level === "participating" && <Bell className="h-3.5 w-3.5" />}
-                                    {level === "all_activity" && <BellDot className="h-3.5 w-3.5" />}
-                                    {level === "ignore" && <BellOff className="h-3.5 w-3.5" />}
-                                    {level === "participating" && "Participating"}
-                                    {level === "all_activity" && "All activity"}
-                                    {level === "ignore" && "Ignore"}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <Panel flush>
+          <List>
+            {filteredIssues.map((issue) => {
+              const level = (notificationSettings[`${owner}/${repo}/${issue.number}`] as NotificationLevel | undefined) || "ignore";
+              return (
+                <IssueRow
+                  key={issue.id}
+                  issue={issue}
+                  href={appId ? `/apps/${appId}/issues/${issue.number}` : undefined}
+                  githubLinked={githubLinked}
+                  level={level}
+                  menuOpen={activeBell === issue.number}
+                  onToggleMenu={() => setActiveBell(activeBell === issue.number ? null : issue.number)}
+                  onSelectLevel={(next) => setNotificationLevel(issue.number, next)}
+                />
+              );
+            })}
+          </List>
+        </Panel>
       )}
 
       <CreateIssueModal
@@ -390,16 +400,17 @@ export function IssuesTab({ owner, repo, appId }: { owner: string; repo: string;
       />
 
       {!loading && hasMore && !debouncedSearch && (
-        <div className="flex justify-center pt-2">
+        <div className="flex justify-center">
           <button
+            type="button"
             onClick={() => fetchIssues(state, page + 1, true)}
             disabled={loadingMore}
             className="btn btn--ghost"
           >
             {loadingMore ? (
               <>
-                <Loader2 className="h-4 w-4 spin" />
-                Loading...
+                <Loader2 className="h-4 w-4 spin" aria-hidden="true" />
+                Loading…
               </>
             ) : (
               `Load more · ${issues.length} of ${totalCount.toLocaleString()}`

@@ -10,8 +10,8 @@ export default function ForbiddenRoutePage() {
       description="You are signed in, but this account does not have permission to view this page."
       note="Administrator-only areas are restricted."
       actions={[
-        { href: "/", label: "Go Home" },
-        { href: "/profile", label: "Open Profile", variant: "secondary" },
+        { href: "/", label: "Go home" },
+        { href: "/profile", label: "Open profile", variant: "secondary" },
       ]}
     />
   );

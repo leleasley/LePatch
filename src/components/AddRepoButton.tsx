@@ -5,15 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AppDetailLink } from "@/components/AppDetailLink";
 import { csrfFetch } from "@/lib/csrf-client";
-
-function buttonSizeClasses(size: "sm" | "xs") {
-  if (size === "xs") return "gap-1.5 rounded-md px-3 py-2 text-xs";
-  return "gap-2 rounded-md px-3 py-2 text-sm";
-}
-
-function iconSizeClasses(size: "sm" | "xs") {
-  return size === "xs" ? "h-3.5 w-3.5" : "h-4 w-4";
-}
+import { cn } from "@/lib/cn";
 
 export function AddRepoButton({ repoFullName, name, initialAdded = false, appId, size = "sm", canAdd = true }: { repoFullName: string; name?: string; initialAdded?: boolean; appId?: string; size?: "sm" | "xs"; canAdd?: boolean }) {
   const [loading, setLoading] = useState(false);
@@ -45,12 +37,16 @@ export function AddRepoButton({ repoFullName, name, initialAdded = false, appId,
   if (added) {
     return (
       <div className="flex flex-wrap items-center gap-2">
-        <span className={`inline-flex items-center border border-emerald-400/40 bg-emerald-400/10 font-medium text-emerald-200 ${buttonSizeClasses(size)}`}>
-          <Check className={iconSizeClasses(size)} />
+        <span className="badge badge--success">
+          <Check className="h-3.5 w-3.5" aria-hidden="true" />
           Added
         </span>
         {watchedAppId && (
-          <AppDetailLink href={`/apps/${watchedAppId}`} appName={name || repoFullName} className={`focus-ring border border-line text-text hover:bg-white/5 ${buttonSizeClasses(size)}`}>
+          <AppDetailLink
+            href={`/apps/${watchedAppId}`}
+            appName={name || repoFullName}
+            className={cn("btn btn--secondary", size === "xs" ? "btn--sm" : "")}
+          >
             View
           </AppDetailLink>
         )}
@@ -63,14 +59,15 @@ export function AddRepoButton({ repoFullName, name, initialAdded = false, appId,
   return (
     <div className="flex items-center gap-2">
       <button
+        type="button"
         onClick={add}
         disabled={loading}
-        className={`focus-ring inline-flex items-center bg-accent font-medium text-accent-foreground hover:bg-accent disabled:opacity-60 ${buttonSizeClasses(size)}`}
+        className={cn("btn btn--primary", size === "xs" ? "btn--sm" : "")}
       >
-        <Plus className={iconSizeClasses(size)} />
+        <Plus className="h-3.5 w-3.5" aria-hidden="true" />
         {loading ? "Adding" : "Add"}
       </button>
-      {message && <span className="text-xs text-text-muted">{message}</span>}
+      {message && <span role="alert" className="text-xs text-status-danger">{message}</span>}
     </div>
   );
 }

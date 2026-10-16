@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle, XCircle, Clock, Loader2, RotateCw } from "lucide-react";
+import { Workflow } from "lucide-react";
+import { List, StatusDot, type StatusTone } from "@/components/ui/List";
+import { formatRelativeTime } from "@/lib/time-ago";
 
 type WorkflowRun = {
   id: number;
@@ -18,18 +20,44 @@ type WorkflowRun = {
   run_number: number;
 };
 
+function statusOf(run: WorkflowRun): { tone: StatusTone; label: string } {
+  if (run.status === "in_progress") return { tone: "warning", label: "Running" };
+  if (run.status === "queued") return { tone: "warning", label: "Queued" };
+  switch (run.conclusion) {
+    case "success":
+      return { tone: "success", label: "Success" };
+    case "failure":
+    case "timed_out":
+    case "action_required":
+      return { tone: "danger", label: "Failed" };
+    case "cancelled":
+      return { tone: "neutral", label: "Cancelled" };
+    case "skipped":
+      return { tone: "neutral", label: "Skipped" };
+    default:
+      return { tone: "neutral", label: "Unknown" };
+  }
+}
+
 export function ActionsTab({ owner, repo }: { owner: string; repo: string }) {
   const [runs, setRuns] = useState<WorkflowRun[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       setLoading(true);
+      setError("");
       try {
         const res = await fetch(`/api/github/actions?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`);
         const data = res.ok ? await res.json() : { runs: [] };
         if (!cancelled) setRuns(data.runs || []);
+      } catch {
+        if (!cancelled) {
+          setRuns([]);
+          setError("Could not load workflow runs.");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -41,77 +69,59 @@ export function ActionsTab({ owner, repo }: { owner: string; repo: string }) {
 
   return (
     <div>
-      {loading ? (
-        <div className="space-y-3">
+      {error ? (
+        <p role="alert" className="text-sm text-status-danger">{error}</p>
+      ) : loading ? (
+        <div role="status" aria-busy="true" className="flex flex-col divide-y divide-divider">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="animate-pulse rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_20%,transparent)] p-4">
-              <div className="mb-2 h-4 w-48 rounded bg-[color-mix(in_srgb,var(--color-text)_5%,transparent)]" />
-              <div className="h-3 w-32 rounded bg-[color-mix(in_srgb,var(--color-text)_3%,transparent)]" />
+            <div key={i} className="flex items-start gap-3 px-4 py-3">
+              <div className="skeleton mt-0.5 h-4 w-4 rounded" />
+              <div className="flex-1 space-y-2">
+                <div className="skeleton h-4 w-1/2" />
+                <div className="skeleton h-3 w-1/3" />
+              </div>
             </div>
           ))}
         </div>
       ) : runs.length === 0 ? (
-        <p className="text-sm text-[var(--color-text-muted)]">No workflow runs found.</p>
+        <p className="text-sm text-text-muted">No workflow runs found.</p>
       ) : (
-        <div className="space-y-2">
-          {runs.map((run) => (
-            <a
-              key={run.id}
-              href={run.html_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-start gap-3 rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_20%,transparent)] p-4 transition-colors hover:border-[var(--color-accent-border)]"
-            >
-              <StatusIcon status={run.status} conclusion={run.conclusion} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-[var(--color-text)]">
-                    {run.name}
-                  </span>
-                  <span className="font-mono text-xs text-[var(--color-text-muted)]">
-                    #{run.run_number}
-                  </span>
-                </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-[var(--color-text-muted)]">
-                  <span className="font-mono">{run.head_branch}</span>
-                  <span className="font-mono">{run.head_sha.slice(0, 7)}</span>
-                  {run.actor && <span>by {run.actor.login}</span>}
-                  <span>{run.event}</span>
-                  <span>{formatDate(run.created_at)}</span>
-                </div>
-              </div>
-            </a>
-          ))}
-        </div>
+        <List>
+          {runs.map((run) => {
+            const { tone, label } = statusOf(run);
+            return (
+              <li key={run.id}>
+                <a
+                  href={run.html_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-start gap-3 px-4 py-3 transition-colors hover:bg-surface"
+                >
+                  <Workflow className="mt-0.5 h-4 w-4 shrink-0 text-text-faint" aria-hidden="true" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-text">{run.name}</span>
+                      <span className="mono shrink-0 text-xs text-text-faint">#{run.run_number}</span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted">
+                      <span className="mono">{run.head_branch}</span>
+                      <span className="mono">{run.head_sha.slice(0, 7)}</span>
+                      {run.actor && <span>by {run.actor.login}</span>}
+                      <span>{run.event}</span>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
+                    <StatusDot tone={tone} pulse={run.status === "in_progress"}>{label}</StatusDot>
+                    <time dateTime={run.created_at} className="text-xs text-text-faint">
+                      {formatRelativeTime(run.created_at)}
+                    </time>
+                  </div>
+                </a>
+              </li>
+            );
+          })}
+        </List>
       )}
     </div>
   );
-}
-
-function StatusIcon({ status, conclusion }: { status: string; conclusion: string | null }) {
-  if (status === "in_progress" || status === "queued") {
-    return <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-accent" />;
-  }
-  if (conclusion === "success") {
-    return <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-status-success" />;
-  }
-  if (conclusion === "failure" || conclusion === "timed_out" || conclusion === "action_required") {
-    return <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-status-danger" />;
-  }
-  if (conclusion === "cancelled") {
-    return <RotateCw className="mt-0.5 h-4 w-4 shrink-0 text-text-muted" />;
-  }
-  return <Clock className="mt-0.5 h-4 w-4 shrink-0 text-text-muted" />;
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return "today";
-  if (diffDays === 1) return "yesterday";
-  if (diffDays < 30) return `${diffDays}d ago`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
-  return `${Math.floor(diffDays / 365)}y ago`;
 }

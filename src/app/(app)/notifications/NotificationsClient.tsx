@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { StatCard } from "@/components/StatCard";
+import { AlertTriangle, Bell, CheckCircle2, Clock } from "lucide-react";
+import { List, ListRow, MetricStrip, Panel, StatusDot, type StatusTone } from "@/components/ui/List";
+import { EmptyState } from "@/components/ui/Card";
 import { useNotifications } from "@/lib/use-swr";
-import { Bell, CheckCircle, AlertTriangle, Clock } from "lucide-react";
+import { formatRelativeTime } from "@/lib/time-ago";
 
 type NotificationEvent = {
   id: string;
@@ -14,124 +15,104 @@ type NotificationEvent = {
   release: {
     tagName: string;
     htmlUrl: string;
-    watchedApp: {
-      id: string;
-      name: string;
-      repoFullName: string;
-    };
+    watchedApp: { id: string; name: string; repoFullName: string };
   };
-  channel: {
-    id: string;
-    type: string;
-    name: string;
-  };
+  channel: { id: string; type: string; name: string };
 };
 
-function formatDate(value: Date | null) {
-  return value ? value.toLocaleString() : "N/A";
+function statusTone(status: string): StatusTone {
+  if (status === "sent") return "success";
+  if (status === "failed") return "danger";
+  return "warning";
 }
 
-export function NotificationsClient({ initialData }: { initialData: { events: NotificationEvent[]; total: number; pending: number; failed: number; sent: number } }) {
+export function NotificationsClient({
+  initialData,
+}: {
+  initialData: { events: NotificationEvent[]; total: number; pending: number; failed: number; sent: number };
+}) {
   const { data } = useNotifications();
-  const events = data?.events || initialData.events;
+  const events = data?.events ?? initialData.events;
   const total = data?.total ?? initialData.total;
   const pending = data?.pending ?? initialData.pending;
   const failed = data?.failed ?? initialData.failed;
   const sent = data?.sent ?? initialData.sent;
 
   return (
-    <>
-      <div className="mobile-stat-strip mb-6 sm:grid sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total events" value={String(total)} icon={<Bell className="h-4 w-4" />} accent="cyan" />
-        <StatCard label="Sent" value={String(sent)} icon={<CheckCircle className="h-4 w-4" />} accent="green" />
-        <StatCard label="Pending" value={String(pending)} icon={<Clock className="h-4 w-4" />} accent="amber" />
-        <StatCard label="Failed" value={String(failed)} icon={<AlertTriangle className="h-4 w-4" />} accent="red" />
-      </div>
+    <div className="flex flex-col gap-5">
+      <MetricStrip
+        items={[
+          { label: "Events", value: total },
+          { label: "Sent", value: sent, tone: sent > 0 ? "success" : undefined },
+          { label: "Pending", value: pending, tone: pending > 0 ? "warning" : undefined },
+          { label: "Failed", value: failed, tone: failed > 0 ? "danger" : undefined },
+        ]}
+      />
 
-      <div className="overflow-hidden rounded-xl border border-line/50 bg-panel/80 backdrop-blur-sm">
-        <div className="flex items-center justify-between border-b border-line/50 px-5 py-3">
-          <h2 className="text-lg font-semibold tracking-tight text-text">Recent delivery events</h2>
-          <Link href="/admin/settings" className="text-sm text-accent hover:text-accent transition-colors">
-            Open Admin Settings
-          </Link>
-        </div>
-
+      <Panel
+        title="Delivery history"
+        description="One row per release per channel. Retries resolve to a single eventual delivery."
+        actions={
+          <span className="inline-flex items-center gap-1.5 text-xs text-text-faint">
+            <Bell className="h-3.5 w-3.5" aria-hidden="true" />
+            {events.length} shown
+          </span>
+        }
+        flush
+      >
         {events.length === 0 ? (
-          <p className="p-5 text-sm text-text-muted">No notification events recorded yet.</p>
+          <div className="p-4">
+            <EmptyState
+              icon={<Bell className="h-4 w-4" />}
+              title="No deliveries yet"
+              description="Once a watched repository publishes a release, its delivery appears here."
+            />
+          </div>
         ) : (
-          <>
-            {/* Desktop table (md+) */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-white/[0.03] text-left text-text-muted">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">App</th>
-                    <th className="px-4 py-3 font-medium">Channel</th>
-                    <th className="px-4 py-3 font-medium">Release</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium">Created</th>
-                    <th className="px-4 py-3 font-medium">Sent</th>
-                    <th className="px-4 py-3 font-medium">Error</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line/50">
-                  {events.map((event) => (
-                    <tr key={event.id} className="transition-colors hover:bg-white/[0.02]">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-text">{event.release.watchedApp.name}</div>
-                        <div className="text-xs text-text-muted">{event.release.watchedApp.repoFullName}</div>
-                      </td>
-                      <td className="px-4 py-3 text-text">{event.channel.name}</td>
-                      <td className="px-4 py-3">
-                        <a href={event.release.htmlUrl} target="_blank" className="text-accent hover:text-accent transition-colors">
-                          {event.release.tagName}
-                        </a>
-                      </td>
-                      <td className="px-4 py-3">
-                        {event.status === "sent" && <span className="inline-flex items-center gap-1.5 rounded-full border border-status-success/30 bg-status-success/10 px-2.5 py-0.5 text-xs font-medium text-status-success">sent</span>}
-                        {event.status === "failed" && <span className="inline-flex items-center gap-1.5 rounded-full border border-status-danger/30 bg-status-danger/10 px-2.5 py-0.5 text-xs font-medium text-status-danger">failed</span>}
-                        {event.status === "pending" && <span className="inline-flex items-center gap-1.5 rounded-full border border-status-warning/30 bg-status-warning/10 px-2.5 py-0.5 text-xs font-medium text-status-warning">pending</span>}
-                      </td>
-                      <td className="px-4 py-3 text-text-muted">{formatDate(event.createdAt)}</td>
-                      <td className="px-4 py-3 text-text-muted">{formatDate(event.sentAt)}</td>
-                      <td className="px-4 py-3 text-xs text-status-danger max-w-[200px] truncate">{event.error || ""}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile cards (< md) */}
-            <div className="md:hidden divide-y divide-line/50">
-              {events.map((event) => (
-                <div key={event.id} className="px-4 py-3 transition-colors hover:bg-white/[0.02]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-text truncate">{event.release.watchedApp.name}</div>
-                      <div className="text-xs text-text-muted truncate">{event.release.watchedApp.repoFullName}</div>
-                      <div className="mt-1 flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-text-muted">{event.channel.name}</span>
-                        <a href={event.release.htmlUrl} target="_blank" className="text-xs text-accent hover:text-accent transition-colors">
-                          {event.release.tagName}
-                        </a>
-                      </div>
-                      <div className="mt-1 text-xs text-text-muted">{formatDate(event.createdAt)}</div>
-                      {event.error && (
-                        <div className="mt-1 text-xs text-status-danger truncate">{event.error}</div>
-                      )}
-                    </div>
-                    <div className="shrink-0">
-                      {event.status === "sent" && <span className="inline-flex items-center gap-1.5 rounded-full border border-status-success/30 bg-status-success/10 px-2.5 py-0.5 text-xs font-medium text-status-success">sent</span>}
-                      {event.status === "failed" && <span className="inline-flex items-center gap-1.5 rounded-full border border-status-danger/30 bg-status-danger/10 px-2.5 py-0.5 text-xs font-medium text-status-danger">failed</span>}
-                      {event.status === "pending" && <span className="inline-flex items-center gap-1.5 rounded-full border border-status-warning/30 bg-status-warning/10 px-2.5 py-0.5 text-xs font-medium text-status-warning">pending</span>}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
+          <List>
+            {events.map((event) => (
+              <ListRow
+                key={event.id}
+                title={
+                  <>
+                    <a
+                      href={event.release.htmlUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mono truncate text-sm font-medium text-accent hover:underline"
+                    >
+                      {event.release.tagName}
+                    </a>
+                    <StatusDot tone={statusTone(event.status)}>{event.status}</StatusDot>
+                  </>
+                }
+                subtitle={`${event.release.watchedApp.name} · ${event.release.watchedApp.repoFullName}`}
+                meta={
+                  <>
+                    <span className="capitalize">{event.channel.name}</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Clock className="h-3 w-3" aria-hidden="true" />
+                      queued {formatRelativeTime(event.createdAt)}
+                    </span>
+                    {event.sentAt && (
+                      <span className="inline-flex items-center gap-1.5 text-status-success">
+                        <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                        sent {formatRelativeTime(event.sentAt)}
+                      </span>
+                    )}
+                    {event.error && (
+                      <span className="inline-flex items-center gap-1.5 text-status-danger">
+                        <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+                        {event.error}
+                      </span>
+                    )}
+                  </>
+                }
+              />
+            ))}
+          </List>
         )}
-      </div>
-    </>
+      </Panel>
+    </div>
   );
 }

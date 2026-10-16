@@ -1,14 +1,12 @@
-export function LabelBadge({ name, color }: { name: string; color: string }) {
-  return (
-    <span
-      className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium leading-tight"
-      style={{
-        borderColor: `#${color}40`,
-        backgroundColor: `#${color}15`,
-        color: `#${color}`,
-      }}
-    >
-      {name}
-    </span>
-  );
+import { Badge } from "@/components/ui/Card";
+
+/**
+ * GitHub issue/PR label.
+ *
+ * GitHub returns an arbitrary hex colour per label. The design system allows a
+ * single decorative accent, so labels render as neutral badges and the colour
+ * stays in the data rather than the UI.
+ */
+export function LabelBadge({ name }: { name: string; color?: string }) {
+  return <Badge tone="neutral">{name}</Badge>;
 }

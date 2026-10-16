@@ -50,14 +50,42 @@ Do not invent new values — extend the token set in `globals.css` instead.
 
 | File | Exports |
 | --- | --- |
+| `PageHeader.tsx` | `PageHeader`, `MetaItem` |
+| `List.tsx` | `Panel`, `List`, `ListRow`, `ListGroupLabel`, `StatusDot`, `RowAvatar`, `Toolbar`, `MetricStrip` |
 | `Card.tsx` | `Card`, `CardHeader`, `CardTitle`, `CardBody`, `Badge`, `EmptyState`, `ErrorState`, `PermissionDenied`, `Skeleton`, `SkeletonRows` |
 | `Input.tsx` | `Input`, `Textarea`, `Select`, `Field`, `Switch` |
 | `Tabs.tsx` | `Tabs`, `TabPanel`, `Breadcrumbs`, `CommandPalette`, `useCommandPaletteKey` |
+| `RepoSwitcher.tsx` | `RepoSwitcher` |
 | `Button.tsx` | `Button` (prefer the `.btn` classes in existing screens) |
 
 Prefer these over ad-hoc markup. Legacy class-based components (`.btn`, `.chip`,
-`.app-tab`, `.status-pill`, `.empty-state`) are still supported and map to the
-same tokens.
+`.status-pill`, `.empty-state`) are still supported and map to the same tokens.
+
+### Page structure
+
+Every page follows the same shape:
+
+1. **`PageHeader`** — optional breadcrumb, one title, one line of description, a
+   `meta` row of small facts, and the page's actions. Never a large padded card,
+   never a marketing tagline.
+2. **`MetricStrip`** — a borderless row of label/value pairs when the page has
+   headline numbers. Do not use four identical stat cards.
+3. **`Panel` sections** — grouped content. A `Panel` owns its own header; do not
+   nest cards inside cards.
+4. **`List` / `ListRow`** — for anything that used to be a table. One row per
+   item: leading avatar or icon, primary text, muted metadata, right-aligned
+   status and actions. Tables are a last resort for genuinely tabular data.
+
+### Replacing tables
+
+The brief for this UI was explicitly "better than tables". Concretely:
+
+- Never render a `<table>` for a list of entities (repositories, users,
+  releases, sessions, devices, audit entries). Use `List` rows.
+- Never stack identical padded cards as a list. Use one `Panel` containing rows.
+- Status is a `StatusDot` (coloured dot + words) or a single `Badge` — not a
+  stack of three pills.
+
 
 ## Accessibility requirements
 

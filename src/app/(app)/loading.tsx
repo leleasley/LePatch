@@ -1,45 +1,34 @@
-"use client";
+import { Skeleton, SkeletonRows } from "@/components/ui/Card";
 
-import { usePathname } from "next/navigation";
-import { Spinner } from "@/components/Spinner";
-import { pendingAppNameStorageKey } from "@/lib/pending-navigation";
-
-const pageNames: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/apps": "Apps",
-  "/apps/search": "Search",
-  "/admin/settings": "Settings",
-  "/profile": "Profile",
-  "/profile/security": "Profile",
-  "/profile/notifications": "Notifications",
-  "/notifications": "Notifications",
-  "/users": "Users",
-};
-
-function getPageName(pathname: string): string {
-  if (pageNames[pathname]) return pageNames[pathname];
-  if (pathname.startsWith("/apps/") && pathname.endsWith("/releases")) return "Releases";
-  if (pathname.startsWith("/apps/")) return "App";
-  return "Page";
-}
-
+/**
+ * Route-level loading skeleton.
+ *
+ * A layout-shaped placeholder reads as "the page is arriving" rather than the
+ * generic centred spinner the app used to show, and it avoids the layout jump
+ * that a full-page spinner causes.
+ */
 export default function LoadingPage() {
-  const pathname = usePathname();
-
-  const defaultName = getPageName(pathname);
-  let name = defaultName;
-  if (pathname.startsWith("/apps/") && !pathname.endsWith("/releases")) {
-    try {
-      const pendingName = window.sessionStorage.getItem(pendingAppNameStorageKey);
-      if (pendingName) name = pendingName;
-    } catch {}
-  }
-
   return (
-    <div className="flex min-h-[70vh] items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <Spinner size="lg" />
-        <p className="text-sm text-text-muted animate-pulse">Loading {name}...</p>
+    <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading page">
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-6 w-56" />
+        <Skeleton className="h-4 w-80 max-w-full" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="flex flex-col gap-1.5">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-6 w-12" />
+          </div>
+        ))}
+      </div>
+
+      <div className="overflow-hidden rounded-lg border border-border bg-panel">
+        <div className="border-b border-border px-4 py-3">
+          <Skeleton className="h-4 w-40" />
+        </div>
+        <SkeletonRows rows={6} columns={3} />
       </div>
     </div>
   );

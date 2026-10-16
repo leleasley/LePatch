@@ -15,16 +15,6 @@ async function post(url: string, body?: unknown) {
   if (!response.ok) throw new Error((await response.json()).error || "Request failed");
 }
 
-function buttonSizeClasses(size: "sm" | "xs" | "icon") {
-  if (size === "icon") return "rounded-md p-1.5";
-  if (size === "xs") return "gap-1 rounded-md px-2 py-1 text-xs";
-  return "gap-1.5 rounded-md px-2.5 py-1.5 text-xs";
-}
-
-function iconSizeClasses(size: "sm" | "xs" | "icon") {
-  return size === "icon" ? "h-3.5 w-3.5" : size === "xs" ? "h-3 w-3" : "h-3.5 w-3.5";
-}
-
 export function AppActions({ appId, size = "sm" }: { appId: string; size?: "sm" | "xs" | "icon" }) {
   const router = useRouter();
 
@@ -32,51 +22,55 @@ export function AppActions({ appId, size = "sm" }: { appId: string; size?: "sm" 
     return (
       <div className="flex items-center gap-1">
         <button
+          type="button"
           title="Check for new release"
           aria-label="Check for new release"
-          className="focus-ring inline-flex items-center justify-center rounded-md border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] transition-all active:scale-95"
+          className="icon-button"
           onClick={async () => {
             await post(`/api/apps/${appId}/check`);
             router.refresh();
           }}
         >
-          <RefreshCw className="h-3.5 w-3.5" />
+          <RefreshCw className="h-4 w-4" aria-hidden="true" />
         </button>
         <button
+          type="button"
           title="Mark current release as seen"
           aria-label="Mark current release as seen"
-          className="focus-ring inline-flex items-center justify-center rounded-md border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:border-[color-mix(in_srgb,var(--color-border)_140%,transparent)] transition-all active:scale-95"
+          className="icon-button"
           onClick={async () => {
             await post("/api/releases/seen", { watchedAppId: appId });
             router.refresh();
           }}
         >
-          <Check className="h-3.5 w-3.5" />
+          <Check className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2">
       <button
-        className={`focus-ring inline-flex items-center font-medium bg-[var(--color-accent-muted)] text-[var(--color-accent)] border border-[var(--color-accent-border)] hover:bg-[color-mix(in_srgb,var(--color-accent)_18%,transparent)] transition-all duration-200 active:scale-95 ${buttonSizeClasses(size)}`}
+        type="button"
+        className="btn btn--secondary btn--sm"
         onClick={async () => {
           await post(`/api/apps/${appId}/check`);
           router.refresh();
         }}
       >
-        <RefreshCw className={iconSizeClasses(size)} />
+        <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
         Check
       </button>
       <button
-        className={`focus-ring inline-flex items-center font-medium bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] text-[var(--color-text-muted)] border border-[var(--color-border)] hover:text-[var(--color-text)] hover:border-[color-mix(in_srgb,var(--color-border)_140%,transparent)] transition-all duration-200 active:scale-95 ${buttonSizeClasses(size)}`}
+        type="button"
+        className="btn btn--ghost btn--sm"
         onClick={async () => {
           await post("/api/releases/seen", { watchedAppId: appId });
           router.refresh();
         }}
       >
-        <Check className={iconSizeClasses(size)} />
+        <Check className="h-3.5 w-3.5" aria-hidden="true" />
         Mark seen
       </button>
     </div>
@@ -89,11 +83,8 @@ export function RemoveAppButton({ appId, size = "sm" }: { appId: string; size?: 
 
   return (
     <>
-      <button
-        className={`focus-ring inline-flex items-center font-medium bg-[var(--theme-status-failure-bg)] text-[var(--color-status-danger)] border border-[var(--theme-status-failure-border)] hover:bg-[color-mix(in_srgb,var(--color-status-danger)_22%,transparent)] transition-all duration-200 active:scale-95 ${buttonSizeClasses(size)}`}
-        onClick={() => setConfirmOpen(true)}
-      >
-        <Trash2 className={iconSizeClasses(size)} />
+      <button type="button" className={`btn btn--danger ${size === "xs" ? "btn--sm" : ""}`} onClick={() => setConfirmOpen(true)}>
+        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
         Remove
       </button>
       <ConfirmDialog
@@ -122,10 +113,11 @@ export function DisableNotificationsButton({ appId, size = "sm" }: { appId: stri
   return (
     <>
       <button
-        className={`focus-ring inline-flex items-center font-medium bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] text-[var(--color-text-muted)] border border-[var(--color-border)] hover:text-[var(--color-text)] hover:border-[color-mix(in_srgb,var(--color-border)_140%,transparent)] transition-all duration-200 active:scale-95 ${buttonSizeClasses(size)}`}
+        type="button"
+        className={`btn btn--secondary ${size === "xs" ? "btn--sm" : ""}`}
         onClick={() => setConfirmOpen(true)}
       >
-        <BellOff className={iconSizeClasses(size)} />
+        <BellOff className="h-3.5 w-3.5" aria-hidden="true" />
         Disable notifications
       </button>
       <ConfirmDialog

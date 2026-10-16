@@ -6,6 +6,8 @@ import { useState, useEffect } from "react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Spinner } from "@/components/Spinner";
 import { csrfFetch } from "@/lib/csrf-client";
+import { List, ListRow, Panel, RowAvatar } from "@/components/ui/List";
+import { Switch } from "@/components/ui/Input";
 
 type Passkey = {
   id: string;
@@ -116,7 +118,31 @@ export function PasskeysSection({ passwordEnabled }: { passwordEnabled: boolean;
   }
 
   return (
-    <section className="rounded-lg border border-line bg-panel p-4">
+    <Panel
+      title="Passkeys"
+      description="Sign in with your device biometrics or PIN instead of a password."
+      actions={
+        <button
+          type="button"
+          onClick={registerPasskey}
+          disabled={registering}
+          className="btn btn--primary btn--sm"
+        >
+          {registering ? (
+            <>
+              <Spinner size="sm" />
+              Registering…
+            </>
+          ) : (
+            <>
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              Register passkey
+            </>
+          )}
+        </button>
+      }
+      flush
+    >
       <ConfirmDialog
         open={!!deletingId}
         title="Delete passkey"
@@ -133,87 +159,71 @@ export function PasskeysSection({ passwordEnabled }: { passwordEnabled: boolean;
         onCancel={() => setDeletingId(null)}
       />
 
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Key className="h-5 w-5 text-accent" />
-          <h2 className="text-lg font-medium">Passkeys</h2>
-        </div>
-        <button
-          onClick={registerPasskey}
-          disabled={registering}
-          className="focus-ring inline-flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground hover:bg-accent disabled:opacity-60 transition-colors"
-        >
-          {registering ? (
-            <>
-              <Spinner size="sm" />
-              Registering
-            </>
-          ) : (
-            <>
-              <Plus className="h-3 w-3" />
-              Register a new passkey
-            </>
-          )}
-        </button>
-      </div>
-
-      <p className="mb-4 text-sm text-text-muted">
-        Passkeys let you sign in using your device biometrics or PIN instead of a password. They are more secure and resistant to phishing.
-      </p>
-
       {loading ? (
-        <p className="text-sm text-text-muted">Loading passkeys...</p>
+        <p className="px-4 py-3 text-sm text-text-muted">Loading passkeys…</p>
       ) : passkeys.length === 0 ? (
-        <p className="text-sm text-text-muted">No passkeys registered</p>
+        <p className="px-4 py-3 text-sm text-text-muted">No passkeys registered.</p>
       ) : (
-        <div className="space-y-2">
+        <List>
           {passkeys.map((passkey) => (
-            <div key={passkey.id} className="flex items-center justify-between rounded-md border border-line bg-surface p-3 text-sm">
-              <div>
-                <span className="text-text">{passkey.deviceName || "Unnamed passkey"}</span>
-                <div className="mt-0.5 text-xs text-text-muted">
-                  Created {formatDate(passkey.createdAt)}
-                  {passkey.lastUsedAt && <> &middot; Last used {formatDate(passkey.lastUsedAt)}</>}
-                </div>
-              </div>
-              <button
-                onClick={() => setDeletingId(passkey.id)}
-                disabled={deleting}
-                className="focus-ring rounded p-1 text-text-muted hover:text-status-danger transition-colors disabled:opacity-50"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
+            <ListRow
+              key={passkey.id}
+              leading={
+                <RowAvatar tone="accent">
+                  <Key className="h-4 w-4" aria-hidden="true" />
+                </RowAvatar>
+              }
+              title={
+                <span className="truncate text-sm font-medium text-text">
+                  {passkey.deviceName || "Unnamed passkey"}
+                </span>
+              }
+              subtitle={`Created ${formatDate(passkey.createdAt)}${
+                passkey.lastUsedAt ? ` · Last used ${formatDate(passkey.lastUsedAt)}` : ""
+              }`}
+              trailing={
+                <button
+                  type="button"
+                  onClick={() => setDeletingId(passkey.id)}
+                  disabled={deleting}
+                  className="icon-button text-text-faint hover:text-status-danger disabled:opacity-50"
+                  aria-label={`Delete ${passkey.deviceName || "unnamed passkey"}`}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </button>
+              }
+            />
           ))}
-        </div>
+        </List>
       )}
 
-      <div className="mt-4 flex items-center justify-between border-t border-line pt-4">
-        <div>
-          <span className="text-sm text-text">Disable password login</span>
-          <p className="text-xs text-text-muted">Only allow sign-in via passkeys</p>
-        </div>
-        <button
-          onClick={togglePassword}
+      <div className="border-t border-border p-4">
+        <Switch
+          checked={!passwordLoginEnabled}
+          onChange={() => togglePassword()}
           disabled={toggling || passkeys.length === 0}
-          className={`focus-ring relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed ${
-            passwordLoginEnabled ? "bg-slate-600" : "bg-accent"
-          }`}
-        >
-          <span
-            className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ${
-              passwordLoginEnabled ? "translate-x-0" : "translate-x-5"
-            }`}
-          />
-        </button>
+          label="Disable password login"
+          description="Only allow sign-in via passkeys."
+        />
       </div>
 
       {error && (
-        <p className="mt-3 rounded-md border border-red-500/40 bg-status-danger/10 px-3 py-2 text-sm text-red-200">{error}</p>
+        <p
+          role="alert"
+          className="border-t border-border px-4 py-2.5 text-xs text-status-danger"
+        >
+          {error}
+        </p>
       )}
       {message && (
-        <p className="mt-3 rounded-md border border-emerald-500/40 bg-status-success/10 px-3 py-2 text-sm text-emerald-200">{message}</p>
+        <p
+          role="status"
+          aria-live="polite"
+          className="border-t border-border px-4 py-2.5 text-xs text-status-success"
+        >
+          {message}
+        </p>
       )}
-    </section>
+    </Panel>
   );
 }

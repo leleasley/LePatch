@@ -57,7 +57,7 @@ function formatBytes(bytes: number): string {
 }
 
 function FileIcon({ className }: { className?: string }) {
-  return <FileCode2 className={className} />;
+  return <FileCode2 className={className} aria-hidden="true" />;
 }
 
 export function FileViewer({
@@ -142,18 +142,18 @@ export function FileViewer({
       open={open}
       onClose={onClose}
       variant="fullscreen"
-      panelClassName="flex h-full w-full flex-col overflow-hidden rounded-xl border border-line/50 bg-transparent shadow-2xl lg:mx-auto lg:my-auto lg:h-[calc(100dvh-3rem)] lg:max-w-5xl"
+      panelClassName="flex h-full w-full flex-col overflow-hidden rounded-xl border border-border lg:mx-auto lg:my-auto lg:h-[calc(100dvh-3rem)] lg:max-w-5xl"
     >
         {/* Header */}
-        <div className="flex items-center gap-3 border-b border-line bg-panel/60 px-4 py-3 sm:px-5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#21262d]">
+        <div className="flex items-center gap-3 border-b border-border bg-panel px-4 py-3 sm:px-5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface">
             <FileIcon className="h-4 w-4 text-text-muted" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1 text-sm">
               {pathParts.map((part, i) => (
-                <span key={i} className="flex items-center gap-1">
-                  {i > 0 && <ChevronRight className="h-3 w-3 text-text-faint" />}
+                <span key={`${part}-${i}`} className="flex items-center gap-1">
+                  {i > 0 && <ChevronRight className="h-3 w-3 text-text-faint" aria-hidden="true" />}
                   <span className={i === pathParts.length - 1 ? "font-medium text-text" : "text-text-muted"}>
                     {part}
                   </span>
@@ -161,64 +161,70 @@ export function FileViewer({
               ))}
             </div>
             <div className="mt-0.5 flex items-center gap-2 text-xs text-text-muted">
-              <span className="inline-flex items-center rounded-md bg-[#21262d] px-1.5 py-0.5 font-medium text-text">
+              <span className="inline-flex items-center rounded-sm bg-surface px-1.5 py-0.5 font-medium text-text">
                 {language}
               </span>
               <span>{formatBytes(fileSize)}</span>
               {!loading && content && <span>{lineCount} lines</span>}
             </div>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex shrink-0 items-center gap-1.5">
             <a
               href={htmlUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#21262d] px-3 py-1.5 text-xs font-medium text-text transition-colors hover:border-[#484f58] hover:bg-[#30363d] hover:text-text"
+              aria-label="Open on GitHub"
+              className="btn btn--secondary btn--sm"
             >
-              <ExternalLink className="h-3.5 w-3.5" />
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">GitHub</span>
             </a>
             {content && !isBin && (
               <button
+                type="button"
                 onClick={handleCopy}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#21262d] px-3 py-1.5 text-xs font-medium text-text transition-colors hover:border-[#484f58] hover:bg-[#30363d] hover:text-text"
+                aria-label={copied ? "Copied to clipboard" : "Copy file contents"}
+                className="btn btn--secondary btn--sm"
               >
                 {copied ? (
-                  <Check className="h-3.5 w-3.5 text-status-success" />
+                  <Check className="h-3.5 w-3.5 text-status-success" aria-hidden="true" />
                 ) : (
-                  <Copy className="h-3.5 w-3.5" />
+                  <Copy className="h-3.5 w-3.5" aria-hidden="true" />
                 )}
                 <span className="hidden sm:inline">{copied ? "Copied" : "Copy"}</span>
               </button>
             )}
             <button
+              type="button"
               onClick={onClose}
-              className="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-[#21262d] hover:text-text"
+              aria-label="Close file preview"
+              className="icon-button"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto bg-panel">
           {loading && (
-            <div className="flex flex-col items-center justify-center gap-3 py-20">
-              <Loader2 className="h-6 w-6 animate-spin text-accent" />
-              <p className="text-sm text-text-muted">Loading file...</p>
+            <div
+              role="status"
+              aria-busy="true"
+              className="flex flex-col items-center justify-center gap-3 py-20"
+            >
+              <Loader2 className="h-6 w-6 animate-spin text-accent" aria-hidden="true" />
+              <p className="text-sm text-text-muted">Loading file</p>
             </div>
           )}
 
           {error && (
-            <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+            <div role="alert" className="flex flex-col items-center justify-center gap-3 py-20 text-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-status-danger/10">
-                <FileText className="h-6 w-6 text-status-danger" />
+                <FileText className="h-6 w-6 text-status-danger" aria-hidden="true" />
               </div>
               <p className="text-sm text-status-danger">{error}</p>
-              <button
-                onClick={loadContent}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#21262d] px-3 py-1.5 text-xs font-medium text-text transition-colors hover:border-[#484f58] hover:bg-[#30363d] hover:text-text"
-              >
+              <button type="button" onClick={loadContent} className="btn btn--secondary btn--sm">
                 Retry
               </button>
             </div>
@@ -226,8 +232,8 @@ export function FileViewer({
 
           {!loading && !error && isBin && (
             <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#21262d]">
-                <FileText className="h-8 w-8 text-text-muted" />
+              <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-border bg-surface">
+                <FileText className="h-8 w-8 text-text-muted" aria-hidden="true" />
               </div>
               <div>
                 <p className="text-sm font-medium text-text">Binary file</p>
@@ -237,9 +243,9 @@ export function FileViewer({
                 href={htmlUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent"
+                className="btn btn--primary"
               >
-                <ExternalLink className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4" aria-hidden="true" />
                 View on GitHub
               </a>
             </div>
@@ -259,18 +265,18 @@ export function FileViewer({
           {!loading && !error && content !== null && !isBin && !isMd && (
             <div className="flex font-mono text-[13px]">
               {/* Line numbers */}
-              <div className="hidden w-12 shrink-0 select-none border-r border-[#21262d] bg-[#0d1117] py-4 text-right sm:block">
+              <div className="hidden w-12 shrink-0 select-none border-r border-border bg-surface py-4 text-right sm:block">
                 {lines.map((_, i) => (
-                  <div key={i} className="px-3 leading-6 text-[#484f58]">{i + 1}</div>
+                  <div key={i} className="px-3 leading-6 text-text-faint">{i + 1}</div>
                 ))}
               </div>
               {/* Code */}
               <div className="flex-1 overflow-x-auto">
                 <pre className="py-4 pl-4 pr-6 sm:pl-4">
-                  <code className="leading-6 text-[#c9d1d9]">
+                  <code className="leading-6 text-text">
                     {lines.map((line, i) => (
                       <div key={i} className="flex">
-                        <span className="mr-4 inline-block w-8 text-right text-[#484f58] sm:hidden">{i + 1}</span>
+                        <span className="mr-4 inline-block w-8 text-right text-text-faint sm:hidden">{i + 1}</span>
                         <span>{line}</span>
                       </div>
                     ))}

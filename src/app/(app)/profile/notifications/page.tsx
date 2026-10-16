@@ -29,12 +29,8 @@ export default async function ProfileNotificationsPage() {
   ]);
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <NotificationPreferencesSection />
-      <div className="rounded-xl border border-line/50 bg-panel/80 p-5">
-        <h2 className="text-xl font-semibold text-text">Delivery History</h2>
-        <p className="mt-1 text-sm text-text-muted">Recent notification events from Discord and Telegram Bot release alerts.</p>
-      </div>
       <NotificationsClient initialData={{ events, total, pending, failed, sent }} />
     </div>
   );

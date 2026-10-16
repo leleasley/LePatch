@@ -5,6 +5,8 @@ import { Shield, ShieldCheck, ShieldOff, Copy, Check, RefreshCw, Download } from
 import { csrfFetch } from "@/lib/csrf-client";
 import { PasswordConfirmModal } from "@/components/PasswordConfirmModal";
 import { QrCode } from "@/components/QrCode";
+import { Panel } from "@/components/ui/List";
+import { Input } from "@/components/ui/Input";
 
 type MfaStatus = {
   enabled: boolean;
@@ -146,214 +148,238 @@ export function MfaSection({}: { userEmail: string }) {
     URL.revokeObjectURL(url);
   }
 
+  const backupCodeGrid = (codes: string[]) => (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+      {codes.map((code, i) => (
+        <div
+          key={i}
+          className="mono rounded-md border border-border bg-surface px-2 py-1.5 text-center text-xs text-text"
+        >
+          {code}
+        </div>
+      ))}
+    </div>
+  );
+
+  const codeActions = (
+    <div className="flex gap-1.5">
+      <button type="button" onClick={copyAllCodes} className="btn btn--ghost btn--sm">
+        {copiedCodes ? (
+          <Check className="h-3 w-3 text-status-success" aria-hidden="true" />
+        ) : (
+          <Copy className="h-3 w-3" aria-hidden="true" />
+        )}
+        {copiedCodes ? "Copied" : "Copy"}
+      </button>
+      <button type="button" onClick={downloadCodes} className="btn btn--ghost btn--sm">
+        <Download className="h-3 w-3" aria-hidden="true" />
+        Download
+      </button>
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="rounded-xl border border-line/50 bg-panel/80 backdrop-blur-sm p-5">
-        <div className="flex items-center gap-2 text-sm text-text-muted">
-          <RefreshCw className="h-4 w-4 animate-spin" />
-          Loading MFA status...
-        </div>
-      </div>
+      <Panel title="Multi-factor authentication">
+        <p className="flex items-center gap-2 text-sm text-text-muted">
+          <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
+          Loading MFA status…
+        </p>
+      </Panel>
     );
   }
 
   return (
-    <div className="rounded-xl border border-line/50 bg-panel/80 backdrop-blur-sm p-5">
-      <div className="flex items-center gap-3 mb-4">
-        <div className={`rounded-lg p-2 ${status?.enabled ? "bg-status-success/10 text-status-success" : "bg-status-warning/10 text-status-warning"}`}>
-          {status?.enabled ? <ShieldCheck className="h-5 w-5" /> : <Shield className="h-5 w-5" />}
-        </div>
-        <div>
-          <h3 className="font-semibold text-text">Multi-Factor Authentication</h3>
-          <p className="text-xs text-text-muted">
-            {status?.enabled
-              ? `Enabled · ${status.backupCodesRemaining} backup codes remaining`
-              : "Add an extra layer of security to your account"}
-          </p>
-        </div>
-      </div>
-
-      {error && (
-        <div className="mb-4 rounded-lg bg-status-danger/10 border border-status-danger/30 px-4 py-3 text-sm text-status-danger">
-          {error}
-        </div>
-      )}
-
-      {/* Setup Flow */}
-      {setupState === "idle" && !status?.enabled && (
-        <div>
-          <p className="mb-4 text-sm text-text-muted">
-            TOTP MFA requires an authenticator app like Google Authenticator, Authy, or 1Password.
-            Once enabled, you&apos;ll need to enter a code from your app every time you sign in.
-          </p>
-          <button
-            onClick={startSetup}
-            className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground shadow-lg shadow-cyan-500/20 transition-all hover:bg-accent"
-          >
-            <Shield className="h-4 w-4" />
+    <Panel
+      title="Multi-factor authentication"
+      description={
+        status?.enabled
+          ? `Enabled · ${status.backupCodesRemaining} backup codes remaining`
+          : "Require a code from an authenticator app at sign-in."
+      }
+      actions={
+        !status?.enabled && setupState === "idle" ? (
+          <button type="button" onClick={startSetup} className="btn btn--primary btn--sm">
+            <Shield className="h-3.5 w-3.5" aria-hidden="true" />
             Enable MFA
           </button>
-        </div>
+        ) : undefined
+      }
+      className="flex flex-col"
+    >
+      {error && (
+        <p
+          role="alert"
+          className="mb-4 rounded-md border border-status-danger/40 bg-status-danger/10 px-3 py-2 text-sm text-status-danger"
+        >
+          {error}
+        </p>
+      )}
+
+      {/* Setup flow */}
+      {setupState === "idle" && !status?.enabled && (
+        <p className="text-sm text-text-muted">
+          TOTP MFA requires an authenticator app such as Google Authenticator, Authy or 1Password.
+          Once enabled, you will need a code from the app every time you sign in.
+        </p>
       )}
 
       {setupState === "setup" && (
-        <div className="space-y-4">
-          <div className="rounded-lg bg-black/30 border border-line/30 p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-text-muted mb-2">Step 1: Add to authenticator</p>
-            <p className="text-sm text-text mb-3">
-              Scan this QR code with your authenticator app, or enter the secret manually:
-              Authenticator apps will show this as <strong className="text-text">{issuer}</strong>.
+        <div className="flex flex-col gap-4">
+          <div className="rounded-md border border-border bg-surface p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-text-faint">
+              Step 1 · Add to your authenticator
             </p>
-            <div className="flex flex-col items-center gap-3">
+            <p className="mt-1.5 text-sm text-text-muted">
+              Scan this QR code with your authenticator app, or enter the key manually.
+              Authenticator apps will show this as <strong className="font-medium text-text">{issuer}</strong>.
+            </p>
+            <div className="mt-3 flex flex-col items-center gap-3">
               <QrCode value={otpauthUrl} size={180} className="p-3" />
               <div className="w-full">
-                <p className="text-xs text-text-muted mb-1">Manual entry key:</p>
-                <div className="flex items-center gap-2 rounded-lg bg-white/5 border border-line/30 px-3 py-2">
-                  <code className="flex-1 text-sm font-mono text-accent break-all">{secret}</code>
+                <p className="mb-1 text-xs text-text-muted">Manual entry key</p>
+                <div className="flex items-center gap-2 rounded-md border border-border bg-surface-elevated px-3 py-2">
+                  <code className="mono flex-1 break-all text-sm text-accent">{secret}</code>
                   <button
+                    type="button"
                     onClick={() => navigator.clipboard.writeText(secret)}
-                    className="shrink-0 rounded p-1 text-text-muted hover:text-text transition-colors"
+                    className="icon-button h-7 w-7 shrink-0"
+                    aria-label="Copy secret key"
                   >
-                    <Copy className="h-4 w-4" />
+                    <Copy className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg bg-black/30 border border-line/30 p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-text-muted mb-2">Step 2: Verify</p>
-            <p className="text-sm text-text mb-3">
-              Enter the 6-digit code from your authenticator app to confirm setup:
+          <div className="rounded-md border border-border bg-surface p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-text-faint">
+              Step 2 · Verify
             </p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                value={verifyCode}
-                onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="000000"
-                maxLength={6}
-                className="flex-1 rounded-lg border border-line/50 bg-white/5 px-4 py-2.5 text-center text-lg font-mono tracking-[0.3em] text-text placeholder-slate-600 focus:border-cyan-500/50 focus:outline-none"
-              />
+            <p className="mt-1.5 text-sm text-text-muted">
+              Enter the 6-digit code from your authenticator app to confirm setup.
+            </p>
+            <div className="mt-3 flex items-end gap-2">
+              <div className="flex-1">
+                <Input
+                  label="Verification code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={verifyCode}
+                  onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="000000"
+                  maxLength={6}
+                  className="mono text-center tracking-[0.3em]"
+                />
+              </div>
               <button
+                type="button"
                 onClick={verifyAndEnable}
                 disabled={verifyCode.length !== 6}
-                className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground transition-all hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn btn--primary"
               >
-                Verify & Enable
+                Verify and enable
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Setup Complete — Show Backup Codes */}
+      {/* Setup complete — show backup codes */}
       {setupState === "done" && backupCodes.length > 0 && (
-        <div className="space-y-4">
-          <div className="rounded-lg bg-status-success/10 border border-status-success/30 px-4 py-3">
-            <p className="text-sm font-medium text-status-success">MFA enabled successfully!</p>
-          </div>
-          <div className="rounded-lg bg-black/30 border border-line/30 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-medium uppercase tracking-wider text-text-muted">Backup Codes</p>
-              <div className="flex gap-2">
-                <button onClick={copyAllCodes} className="inline-flex items-center gap-1 rounded border border-line/50 px-2 py-1 text-xs text-text-muted hover:text-text transition-colors">
-                  {copiedCodes ? <Check className="h-3 w-3 text-status-success" /> : <Copy className="h-3 w-3" />}
-                  {copiedCodes ? "Copied" : "Copy"}
-                </button>
-                <button onClick={downloadCodes} className="inline-flex items-center gap-1 rounded border border-line/50 px-2 py-1 text-xs text-text-muted hover:text-text transition-colors">
-                  <Download className="h-3 w-3" />
-                  Download
-                </button>
-              </div>
+        <div className="flex flex-col gap-4">
+          <p className="rounded-md border border-status-success/40 bg-status-success/10 px-3 py-2 text-sm text-status-success">
+            MFA enabled successfully.
+          </p>
+          <div className="rounded-md border border-border bg-surface p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-faint">
+                Backup codes
+              </p>
+              {codeActions}
             </div>
             <p className="mb-3 text-sm text-text-muted">
-              Save these codes somewhere safe. Each code can only be used once. If you lose access to your authenticator, you can use these to sign in.
+              Save these codes somewhere safe. Each code can only be used once. If you lose access to
+              your authenticator, you can use one of these to sign in.
             </p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-              {backupCodes.map((code, i) => (
-                <div key={i} className="rounded bg-white/5 border border-line/30 px-2 py-1.5 text-center font-mono text-sm text-accent">
-                  {code}
-                </div>
-              ))}
-            </div>
+            {backupCodeGrid(backupCodes)}
           </div>
-          <button
-            onClick={() => { setSetupState("idle"); setBackupCodes([]); }}
-            className="rounded-lg bg-white/5 border border-line/50 px-4 py-2 text-sm text-text hover:bg-white/10 transition-colors"
-          >
-            Done
-          </button>
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setSetupState("idle");
+                setBackupCodes([]);
+              }}
+              className="btn btn--secondary"
+            >
+              Done
+            </button>
+          </div>
         </div>
       )}
 
-      {/* MFA Enabled — Management */}
+      {/* MFA enabled — management */}
       {status?.enabled && setupState === "idle" && (
-        <div className="space-y-4">
-          <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/10 px-4 py-3 flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-status-success" />
-            <span className="text-sm text-status-success">MFA is enabled on your account</span>
-          </div>
+        <div className="flex flex-col gap-4">
+          <p className="flex items-center gap-2 text-sm text-status-success">
+            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+            MFA is enabled on your account.
+          </p>
 
-          {/* Regenerate Backup Codes */}
-          <div className="rounded-lg bg-black/30 border border-line/30 p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-text-muted mb-2">Regenerate Backup Codes</p>
-            <p className="text-sm text-text-muted mb-3">
-              {status.backupCodesRemaining} backup codes remaining. Regenerating will invalidate all existing codes.
+          <div className="rounded-md border border-border bg-surface p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-text-faint">
+              Regenerate backup codes
+            </p>
+            <p className="mt-1.5 mb-3 text-sm text-text-muted">
+              {status.backupCodesRemaining} backup codes remaining. Regenerating will invalidate all
+              existing codes.
             </p>
             <button
+              type="button"
               onClick={() => setPasswordModal("regen")}
               disabled={regenerating}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 border border-line/50 px-4 py-2 text-sm text-text hover:bg-white/10 transition-colors disabled:opacity-50"
+              className="btn btn--secondary btn--sm"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${regenerating ? "animate-spin" : ""}`} />
-              Regen
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${regenerating ? "animate-spin" : ""}`}
+                aria-hidden="true"
+              />
+              Regenerate
             </button>
           </div>
 
-          {/* Show current backup codes if we just regenerated */}
-          {backupCodes.length > 0 && setupState === "idle" && (
-            <div className="rounded-lg bg-black/30 border border-line/30 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-medium uppercase tracking-wider text-text-muted">New Backup Codes</p>
-                <div className="flex gap-2">
-                  <button onClick={copyAllCodes} className="inline-flex items-center gap-1 rounded border border-line/50 px-2 py-1 text-xs text-text-muted hover:text-text transition-colors">
-                    {copiedCodes ? <Check className="h-3 w-3 text-status-success" /> : <Copy className="h-3 w-3" />}
-                    {copiedCodes ? "Copied" : "Copy"}
-                  </button>
-                  <button onClick={downloadCodes} className="inline-flex items-center gap-1 rounded border border-line/50 px-2 py-1 text-xs text-text-muted hover:text-text transition-colors">
-                    <Download className="h-3 w-3" />
-                    Download
-                  </button>
-                </div>
+          {backupCodes.length > 0 && (
+            <div className="rounded-md border border-border bg-surface p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-faint">
+                  New backup codes
+                </p>
+                {codeActions}
               </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                {backupCodes.map((code, i) => (
-                  <div key={i} className="rounded bg-white/5 border border-line/30 px-2 py-1.5 text-center font-mono text-sm text-accent">
-                    {code}
-                  </div>
-                ))}
-              </div>
+              {backupCodeGrid(backupCodes)}
             </div>
           )}
 
-          {/* Disable MFA */}
-          <div className="rounded-lg bg-black/30 border border-red-500/10 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <ShieldOff className="h-4 w-4 text-status-danger" />
-              <p className="text-xs font-medium uppercase tracking-wider text-status-danger">Disable MFA</p>
-            </div>
-            <p className="text-sm text-text-muted mb-3">
-              This will remove the TOTP requirement from your account. You can re-enable it at any time.
+          <div className="rounded-md border border-status-danger/30 bg-status-danger/10 p-4">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-status-danger">
+              <ShieldOff className="h-4 w-4" aria-hidden="true" />
+              Disable MFA
+            </p>
+            <p className="mt-1.5 mb-3 text-sm text-text-muted">
+              This removes the TOTP requirement from your account. You can re-enable it at any time.
             </p>
             <button
+              type="button"
               onClick={() => setPasswordModal("disable")}
               disabled={disabling}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-status-danger/10 border border-status-danger/30 px-4 py-2 text-sm text-status-danger hover:bg-red-500/20 transition-colors disabled:opacity-50"
+              className="btn btn--danger btn--sm"
             >
-              <ShieldOff className={`h-3.5 w-3.5 ${disabling ? "animate-spin" : ""}`} />
+              <ShieldOff
+                className={`h-3.5 w-3.5 ${disabling ? "animate-spin" : ""}`}
+                aria-hidden="true"
+              />
               Disable
             </button>
           </div>
@@ -365,7 +391,7 @@ export function MfaSection({}: { userEmail: string }) {
         title="Regenerate backup codes"
         description="Enter your password to invalidate the existing backup codes and generate a new set."
         confirmLabel="Regenerate"
-        busyLabel="Regenerating..."
+        busyLabel="Regenerating…"
         busy={regenerating}
         error={passwordModal === "regen" ? error : undefined}
         onCancel={() => {
@@ -382,7 +408,7 @@ export function MfaSection({}: { userEmail: string }) {
         title="Disable MFA"
         description="Enter your password to remove TOTP sign-in protection from this account."
         confirmLabel="Disable MFA"
-        busyLabel="Disabling..."
+        busyLabel="Disabling…"
         busy={disabling}
         error={passwordModal === "disable" ? error : undefined}
         onCancel={() => {
@@ -393,6 +419,6 @@ export function MfaSection({}: { userEmail: string }) {
         }}
         onConfirm={disableMfa}
       />
-    </div>
+    </Panel>
   );
 }
