@@ -1,0 +1,402 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CheckStatus {
+  never
+  success
+  failed
+  no_releases
+}
+
+enum NotificationType {
+  discord
+  telegram
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  failed
+}
+
+enum UserRole {
+  administrator
+  moderator
+  user
+  restricted
+}
+
+model User {
+  id              String              @id @default(cuid())
+  name            String
+  email           String              @unique
+  passwordHash    String
+  passwordEnabled Boolean             @default(true)
+  role            UserRole            @default(user)
+  theme           String              @default("dark")
+  totpSecret      String?
+  totpEnabled     Boolean             @default(false)
+  totpBackupCodes String[]
+  sessions        Session[]
+  trustedDevices  TrustedDevice[]
+  passkeys        PasskeyCredential[]
+  telegramLink    TelegramLink?
+  telegramTokens  TelegramLinkToken[]
+  githubLink      GitHubLink?
+  trackedIssues   TrackedIssue[]
+  issueNotificationSettings IssueNotificationSetting[]
+  suggestions           CatalogueSuggestion[]
+  reviewedSuggestions   CatalogueSuggestion[] @relation("SuggestionReviewer")
+  auditLogs             AuditLog[]
+  notificationPreference NotificationPreference?
+  watchedApps           WatchedApp[]
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  lastUsedAt DateTime?
+   userAgent String?
+  ipAddress String?
+  deviceName String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model TrustedDevice {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  name      String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+}
+
+model PasskeyCredential {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId String   @unique
+  publicKey    Bytes
+  counter      Int      @default(0)
+  transports   String[]
+  deviceName   String?
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime?
+
+  @@index([userId])
+}
+
+model WatchedApp {
+  id                    String      @id @default(cuid())
+  name                  String
+  slug                  String
+  repoOwner             String
+  repoName              String
+  repoFullName          String
+  githubUrl             String
+  description           String?
+  homepageUrl           String?
+  latestSeenReleaseId   String?
+  latestSeenTag         String?
+  lastNotifiedReleaseId String?
+  lastNotifiedTag       String?
+  includePrereleases    Boolean     @default(false)
+  notificationsEnabled  Boolean     @default(true)
+  updateAvailable       Boolean     @default(false)
+  checkIntervalMinutes  Int         @default(360)
+  catalogueEntryId      String?
+  catalogueEntry        CatalogueEntry? @relation(fields: [catalogueEntryId], references: [id], onDelete: SetNull)
+  lastCheckedAt         DateTime?
+  checkStatus           CheckStatus @default(never)
+  checkError            String?
+  userId                String
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  releases              Release[]
+
+  @@unique([userId, slug])
+  @@unique([userId, repoFullName])
+  @@index([userId, repoOwner, repoName])
+  @@index([updateAvailable])
+  @@index([catalogueEntryId])
+}
+
+model Release {
+  id                 String              @id @default(cuid())
+  watchedAppId       String
+  watchedApp         WatchedApp          @relation(fields: [watchedAppId], references: [id], onDelete: Cascade)
+  githubReleaseId    String
+  tagName            String
+  name               String?
+  body               String?
+  htmlUrl            String
+  prerelease         Boolean
+  draft              Boolean
+  releaseType        String?             // "major", "minor", "patch", "prerelease"
+  changelogSummary   String?
+  changelogSections  Json?               // structured sections like [{heading, body}]
+  publishedAt        DateTime?
+  detectedAt         DateTime            @default(now())
+  ignored            Boolean             @default(false)
+  notificationSent   Boolean             @default(false)
+  notificationEvents NotificationEvent[]
+
+  @@unique([watchedAppId, githubReleaseId])
+  @@index([watchedAppId, publishedAt])
+}
+
+model NotificationChannel {
+  id                 String              @id @default(cuid())
+  type               NotificationType
+  name               String
+  enabled            Boolean             @default(false)
+  configJson         Json
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  notificationEvents NotificationEvent[]
+
+  @@unique([type, name])
+}
+
+model NotificationPreference {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enabled           Boolean  @default(true)
+  digestInterval    Int?     // minutes; null = instant
+  quietHoursStart   String?  // "HH:MM" in 24h format
+  quietHoursEnd     String?  // "HH:MM"
+  timezone          String   @default("UTC")
+  severityFilters   Json?    // array of severities to receive (e.g. ["major","minor","patch"])
+  issueComments     Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model NotificationEvent {
+  id        String             @id @default(cuid())
+  releaseId String
+  release   Release            @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  channelId String
+  channel   NotificationChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  status    NotificationStatus @default(pending)
+  error     String?
+  sentAt    DateTime?
+  createdAt DateTime           @default(now())
+
+  @@index([status])
+  @@unique([releaseId, channelId])
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  encrypted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model IntegrationSetting {
+  id        String   @id @default(cuid())
+  provider  String
+  key       String
+  value     String
+  encrypted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, key])
+  @@index([provider])
+}
+
+model TelegramLink {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  telegramUserId String   @unique
+  chatId         String   @unique
+  username       String?
+  firstName      String?
+  lastName       String?
+  linkedAt       DateTime @default(now())
+  lastSeenAt     DateTime @default(now())
+
+  @@index([chatId])
+}
+
+model TelegramLinkToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+model GitHubLink {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  githubUserId   Int      @unique
+  githubUsername String
+  accessToken    String
+  linkedAt       DateTime @default(now())
+  lastUsedAt     DateTime?
+}
+
+model TrackedIssue {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  owner            String
+  repo             String
+  issueNumber      Int
+  issueTitle       String
+  lastCommentCount Int      @default(0)
+  lastCheckedAt    DateTime @default(now())
+  createdAt        DateTime @default(now())
+
+  @@unique([owner, repo, issueNumber])
+  @@index([userId])
+  @@index([lastCheckedAt])
+}
+
+model IssueNotificationSetting {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  owner            String
+  repo             String
+  issueNumber      Int
+  issueTitle       String
+  level            String   // "participating" | "all_activity" | "ignore"
+  lastCommentCount Int      @default(0)
+  lastCheckedAt    DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([userId, owner, repo, issueNumber])
+  @@index([userId])
+  @@index([owner, repo, issueNumber])
+  @@index([lastCheckedAt])
+}
+
+model CatalogueEntry {
+  id             String   @id @default(cuid())
+  name           String
+  repoFullName   String   @unique
+  description    String
+  category       String
+  packageNames   String[]
+  homepageUrl    String?
+  logoUrl        String?
+  featured       Boolean  @default(false)
+  featuredOrder  Int?
+  isActive       Boolean  @default(true)
+  verified       Boolean  @default(false)
+  installCount   Int      @default(0)
+  addCount       Int      @default(0)
+  githubStars    Int?
+  latestReleaseTag String?
+  latestReleaseAt  DateTime?
+  githubStatsAt  DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  watchedApps    WatchedApp[]
+
+  @@index([category])
+  @@index([featured])
+  @@index([isActive])
+}
+
+enum SuggestionStatus {
+  pending
+  approved
+  rejected
+}
+
+model CatalogueSuggestion {
+  id           String           @id @default(cuid())
+  name         String
+  repoFullName String
+  description  String
+  category     String
+  packageNames String[]
+  submittedBy  String?
+  submitter    User?            @relation(fields: [submittedBy], references: [id], onDelete: SetNull)
+  status       SuggestionStatus @default(pending)
+  notes        String?
+  reviewedBy   String?
+  reviewer     User?            @relation("SuggestionReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([status])
+  @@index([submittedBy])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  target    String?
+  targetId  String?
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([createdAt, action])
+}
+
+// Future deployment models intentionally omitted from MVP implementation:
+// DeploymentTarget, DeploymentJob.
+
+enum BackupStatus {
+  pending
+  running
+  completed
+  failed
+}
+
+model Backup {
+  id          String       @id @default(cuid())
+  status      BackupStatus @default(pending)
+  type        String       @default("manual")
+  filename    String
+  filepath    String
+  sizeBytes   BigInt?
+  createdAt   DateTime     @default(now())
+  completedAt DateTime?
+  error       String?
+
+  @@index([createdAt])
+}
+

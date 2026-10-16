@@ -1,0 +1,16 @@
+node_modules
+.next
+.env
+.env.*
+.git
+.agents
+.codex
+coverage
+*.log
+*.md
+tests
+Dockerfile
+docker-compose*
+.editorconfig
+.eslintrc*
+.prettierrc*

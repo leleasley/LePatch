@@ -1,0 +1,5 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <image href="/assets/dark_desktop_background.png" x="0" y="0" width="1280" height="720" preserveAspectRatio="xMidYMid slice"/>
+  <rect x="440" y="160" width="400" height="400" rx="48" fill="rgba(4,10,20,0.52)"/>
+  <image href="/assets/Logo.png" x="500" y="220" width="280" height="280" preserveAspectRatio="xMidYMid meet"/>
+</svg>

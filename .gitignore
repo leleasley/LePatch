@@ -1,0 +1,20 @@
+node_modules
+.next
+.env
+.env*.local
+dist
+coverage
+*.log
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Runtime data (database backups are generated at runtime)
+data/backups/*
+!data/backups/.gitkeep
+
+# Editor / OS
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json

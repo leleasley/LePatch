@@ -1,0 +1,51 @@
+{
+  "name": "LePatch",
+  "short_name": "LePatch",
+  "description": "Self-hosted release monitoring and update notifications",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#050b14",
+  "theme_color": "#050b14",
+  "categories": ["utilities", "developer tools"],
+  "screenshots": [
+    {
+      "src": "/assets/splash-dark.svg",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "label": "LePatch dark splash"
+    },
+    {
+      "src": "/assets/splash-light.svg",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "label": "LePatch light splash"
+    },
+    {
+      "src": "/assets/splash-dark-mobile.svg",
+      "sizes": "720x1280",
+      "type": "image/svg+xml",
+      "label": "LePatch dark mobile splash"
+    },
+    {
+      "src": "/assets/splash-light-mobile.svg",
+      "sizes": "720x1280",
+      "type": "image/svg+xml",
+      "label": "LePatch light mobile splash"
+    }
+  ],
+  "icons": [
+    {
+      "src": "/assets/Logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/Logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

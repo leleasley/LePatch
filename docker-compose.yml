@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lepatch
+      POSTGRES_USER: lepatch
+      POSTGRES_PASSWORD: lepatch
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lepatch -d lepatch"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  lepatch:
+    image: lepatch-app:latest
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://lepatch:lepatch@postgres:5432/lepatch
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "3000:3000"
+    volumes:
+      - backup-data:/app/data/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    command: sh -c "npx prisma migrate deploy && npx tsx prisma/seed.ts && npm start"
+    # NOTE: prisma/seed.ts is first-run safe — it only creates a default admin
+    # when the User table is empty. It never overwrites existing users.
+    # Set DEFAULT_ADMIN_EMAIL and DEFAULT_ADMIN_PASSWORD env vars to customise.
+
+  worker:
+    image: lepatch-app:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://lepatch:lepatch@postgres:5432/lepatch
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - backup-data:/app/data/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      lepatch:
+        condition: service_started
+    command: sh -c "npx prisma migrate deploy && npm run worker"
+
+volumes:
+  postgres-data:
+  redis-data:
+  backup-data:
