@@ -50,7 +50,7 @@ export default async function RepoPreviewPage({
   ]);
 
   const repoData = snapshot.repo;
-  const activeTab = (TAB_KEYS.includes(tab ?? "") ? tab : "readme") as AppTab;
+  const activeTab = (TAB_KEYS.includes(tab ?? "") ? tab : "releases") as AppTab;
 
   const displayReleases = snapshot.releases.map((release) => ({
     id: `github-${release.id}`,

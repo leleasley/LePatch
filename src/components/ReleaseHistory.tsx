@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
+import Link from "next/link";
 import { BellOff, BellRing, ChevronDown, EyeOff, Tag } from "lucide-react";
 import { ReleaseNotes } from "@/components/ReleaseNotes";
 import { List, Panel, StatusDot, type StatusTone } from "@/components/ui/List";
@@ -51,7 +52,7 @@ function kind(release: ReleaseRow): string {
  * One row per release with an inline expander for the notes — no table, no
  * accordion of full-width cards.
  */
-export function ReleaseHistory({ releases }: { releases: ReleaseRow[] }) {
+export function ReleaseHistory({ releases, appId }: { releases: ReleaseRow[]; appId?: string }) {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -136,7 +137,16 @@ export function ReleaseHistory({ releases }: { releases: ReleaseRow[] }) {
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="mono truncate text-sm font-medium text-text">{release.tagName}</span>
+                        {appId && !release.id.startsWith("github-") ? (
+                          <Link
+                            href={`/apps/${appId}/releases/${release.id}`}
+                            className="mono truncate text-sm font-medium text-text transition-colors hover:text-accent"
+                          >
+                            {release.tagName}
+                          </Link>
+                        ) : (
+                          <span className="mono truncate text-sm font-medium text-text">{release.tagName}</span>
+                        )}
                         <StatusDot tone={tone(release)}>{kind(release)}</StatusDot>
                         {release.draft && <StatusDot tone="neutral">draft</StatusDot>}
                       </div>

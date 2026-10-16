@@ -251,7 +251,7 @@ export function AppDetailTabs({
             previousTag={previousTag ?? null}
             updateAvailable={updateAvailable ?? false}
           />
-          <ReleaseHistory releases={releases} />
+          <ReleaseHistory releases={releases} appId={appId} />
         </div>
       )}
 

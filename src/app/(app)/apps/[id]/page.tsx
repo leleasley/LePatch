@@ -75,7 +75,7 @@ export default async function AppDetailPage({
   });
   if (!app) notFound();
 
-  const activeTab = (TAB_KEYS.includes(tab ?? "") ? tab : "readme") as AppTab;
+  const activeTab = (TAB_KEYS.includes(tab ?? "") ? tab : "releases") as AppTab;
 
   // Private repos resolve via the viewer's own token. If GitHub is unreachable,
   // degrade to stored releases rather than failing the page.

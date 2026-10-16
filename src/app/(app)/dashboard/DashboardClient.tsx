@@ -77,7 +77,7 @@ function ReleaseEntry({ release }: { release: FeedItem }) {
             {release.watchedApp.name}
           </Link>
           <Link
-            href={`/apps/${release.watchedApp.id}/releases`}
+            href={`/apps/${release.watchedApp.id}/releases/${release.id}`}
             className="mono text-sm font-semibold text-accent hover:underline"
           >
             {release.tagName}
@@ -100,7 +100,7 @@ function ReleaseEntry({ release }: { release: FeedItem }) {
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-text-faint">
           <span>{formatRelativeTime(release.detectedAt)}</span>
           <span className="mono">{owner}/{release.watchedApp.repoFullName.split("/")[1] ?? ""}</span>
-          <Link href={`/apps/${release.watchedApp.id}/releases`} className="transition-colors hover:text-accent">
+          <Link href={`/apps/${release.watchedApp.id}/releases/${release.id}`} className="transition-colors hover:text-accent">
             Release notes
           </Link>
           <a href={release.htmlUrl} target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-accent">
@@ -212,7 +212,7 @@ export function DashboardClient({
         <div className="max-w-3xl">
           {groups.map((group) => (
             <section key={group.key} aria-label={group.label} className="mb-2">
-              <h2 className="sticky top-0 border-b border-border bg-canvas/95 py-2 text-xs font-semibold uppercase tracking-wide text-text-faint backdrop-blur-sm">
+              <h2 className="border-b border-border bg-canvas py-2 text-xs font-semibold uppercase tracking-wide text-text-faint lg:sticky lg:top-0">
                 {group.label}
               </h2>
               <div className="divide-y divide-divider">

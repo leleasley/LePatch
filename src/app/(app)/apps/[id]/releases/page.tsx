@@ -85,7 +85,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ id: s
           }
         />
       ) : (
-        <ReleaseHistory releases={releases} />
+        <ReleaseHistory releases={releases} appId={id} />
       )}
     </>
   );
