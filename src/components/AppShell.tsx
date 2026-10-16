@@ -20,6 +20,7 @@ import {
 import { LogoutButton } from "@/components/LogoutButton";
 import { ModalShell } from "@/components/ModalShell";
 import { CommandPalette, useCommandPaletteKey, type Command } from "@/components/ui/Tabs";
+import { RepoSwitcher } from "@/components/ui/RepoSwitcher";
 import { isAdministrator, isModerator, roleLabels } from "@/lib/rbac";
 import { cn } from "@/lib/cn";
 import type { UserRole } from "@prisma/client";
@@ -278,6 +279,7 @@ export function AppShell({ children, userRole = null, userName = null }: { child
             <span className="text-lg font-semibold tracking-tight text-text">LePatch</span>
           </Link>
           <UserSwitcher currentName={userName} role={userRole} />
+          <RepoSwitcher className="mt-2" />
         </div>
         <div className="flex-1 overflow-y-auto px-2 pb-4">
           {groups.map((group) => (
