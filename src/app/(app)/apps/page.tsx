@@ -6,7 +6,10 @@ import { PageHeader } from "@/components/ui/PageHeader";
 export const metadata = { title: "Watched repositories" };
 export const dynamic = "force-dynamic";
 
-export default async function AppsPage() {
+const FILTER_KEYS = new Set(["all", "attention", "updates", "failed", "muted", "fresh"]);
+
+export default async function AppsPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
+  const { filter } = await searchParams;
   const userSession = await requirePageCanManageApps();
   const apps = await prisma.watchedApp.findMany({
     where: { userId: userSession.id },
@@ -34,6 +37,7 @@ export default async function AppsPage() {
       <AppsClient
         initialApps={appData}
         initialTotal={appData.length}
+        initialFilter={FILTER_KEYS.has(filter ?? "") ? (filter as "all" | "attention" | "updates" | "failed" | "muted" | "fresh") : "all"}
         watchedApps={appData.map((a) => ({ id: a.id, repoFullName: a.repoFullName }))}
       />
     </>

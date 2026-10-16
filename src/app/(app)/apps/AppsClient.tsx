@@ -73,18 +73,20 @@ function status(app: WatchedAppRow): { tone: StatusTone; label: string } {
 
 export function AppsClient({
   initialApps,
+  initialFilter = "all",
   watchedApps = [],
   canAdd = true,
 }: {
   initialApps: WatchedAppRow[];
   initialTotal: number;
+  initialFilter?: FilterKey;
   watchedApps?: { id: string; repoFullName: string }[];
   canAdd?: boolean;
 }) {
   const router = useRouter();
   const { addToast } = useToast();
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<FilterKey>("all");
+  const [filter, setFilter] = useState<FilterKey>(initialFilter);
   const [sortBy, setSortBy] = useState<SortKey>("attention");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<WatchedAppRow | null>(null);

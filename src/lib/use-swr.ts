@@ -30,6 +30,7 @@ export function useDashboard() {
     total: number;
     updates: number;
     failed: number;
+    stale: number;
     recent: Array<{
       id: string;
       tagName: string;
@@ -38,51 +39,13 @@ export function useDashboard() {
       prerelease: boolean;
       publishedAt: Date | null;
       detectedAt: Date;
+      changelogSummary: string | null;
       watchedApp: {
         id: string;
         name: string;
         repoFullName: string;
-        updateAvailable: boolean;
       };
     }>;
-    lastCheckedAt: Date | null;
-    pendingEvents: number;
-    successCount: number;
-    noReleasesCount: number;
-    recentlyCheckedCount: number;
-    releasesThisWeek: number;
-    prereleasesThisWeek: number;
-    activity: Array<{ date: string; label: string; count: number; prereleases: number }>;
-    prereleases: Array<{
-      id: string;
-      tagName: string;
-      name: string | null;
-      htmlUrl: string;
-      publishedAt: Date | null;
-      detectedAt: Date;
-      watchedApp: { id: string; name: string; repoFullName: string };
-    }>;
-    mostActive: Array<{ watchedAppId: string; name: string; repoFullName: string; releaseCount: number }>;
-    notificationsDisabled: number;
-    staleApps: number;
-    attentionApps: Array<{
-      id: string;
-      name: string;
-      repoOwner?: string;
-      repoName?: string;
-      repoFullName: string;
-      latestSeenTag: string | null;
-      lastCheckedAt: Date | null;
-      checkStatus: string;
-      checkError: string | null;
-      updateAvailable: boolean;
-      notificationsEnabled: boolean;
-      includePrereleases: boolean;
-      updatedAt: Date;
-    }>;
-    neverChecked: number;
-    statusHealthy: boolean;
-    lastCheckContext: string;
   }>("/api/dashboard", {
     refreshInterval: 60000,
   });

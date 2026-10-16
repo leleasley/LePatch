@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useCallback, startTransition } from "react
 import type { ComponentType, ReactNode } from "react";
 import {
   Boxes,
-  Gauge,
+  Rss,
   Library,
   Search,
   User,
@@ -36,7 +36,7 @@ type NavItem = {
 function buildNav(role: string | null) {
   const mainNav: NavItem[] = [];
   if (role !== "restricted") {
-    mainNav.push({ href: "/dashboard", label: "Overview", icon: Gauge });
+    mainNav.push({ href: "/dashboard", label: "Feed", icon: Rss });
     mainNav.push({ href: "/apps", label: "Watched apps", icon: Boxes, exact: true });
   }
 
@@ -226,7 +226,7 @@ function MobileDrawer({
             pathname === homeHref ? "bg-accent/10 text-accent" : "text-text-muted hover:bg-surface-elevated hover:text-text"
           )}
         >
-          <Gauge className={cn("h-4 w-4", pathname === homeHref ? "text-accent" : "text-text-faint")} />
+          <Rss className={cn("h-4 w-4", pathname === homeHref ? "text-accent" : "text-text-faint")} />
           Home
         </Link>
         {groups.map((group) => (
