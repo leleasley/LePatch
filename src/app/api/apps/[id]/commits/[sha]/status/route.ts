@@ -13,7 +13,7 @@ export async function GET(
   if (limited) return limited;
   const { id, sha } = await params;
   const app = await prisma.watchedApp.findUnique({
-    where: { id },
+    where: { id, userId: session.userId },
     select: { id: true, repoOwner: true, repoName: true },
   });
   if (!app) {

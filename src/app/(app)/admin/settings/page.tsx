@@ -30,8 +30,6 @@ export default async function SettingsPage() {
     passwordEnabled: boolean;
   }[] = [];
 
-  let categories: string[] = [];
-
   if (admin) {
     const rawUsers = await prisma.user.findMany({
       orderBy: { createdAt: "asc" },
@@ -52,12 +50,6 @@ export default async function SettingsPage() {
     }));
   }
 
-  const categoryGroups = await prisma.catalogueEntry.groupBy({
-    by: ["category"],
-    _count: true,
-  });
-  categories = categoryGroups.map((c) => c.category);
-
   return (
     <>
       <HeroCard
@@ -70,7 +62,6 @@ export default async function SettingsPage() {
         role={user.role}
         users={users}
         currentUserId={user.id}
-        initialCategories={categories}
       />
     </>
   );

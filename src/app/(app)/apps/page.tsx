@@ -28,13 +28,6 @@ export default async function AppsPage() {
       updateAvailable: app.updateAvailable,
       notificationsEnabled: app.notificationsEnabled,
       includePrereleases: app.includePrereleases,
-      serverInstallCount: 0,
-      serverBehindCount: 0,
-      servers: [] as Array<{
-        server: { id: string; name: string; status: string; lastSeenAt: string | null; isLePatchHost: boolean };
-        packages: Array<{ id: string; serverId: string; name: string; currentVersion: string | null; latestVersion: string | null; manager: string; updateAvailable: boolean }>;
-        updateAvailable: boolean;
-      }>,
     };
   });
 
@@ -84,8 +77,8 @@ export default async function AppsPage() {
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/apps/catalogue" className="btn btn--ghost btn--sm">
-              Browse catalogue
+            <Link href="/apps/search" className="btn btn--ghost btn--sm">
+              Find repositories
             </Link>
             <AddAppButton
               watchedApps={appData.map((a) => ({ id: a.id, repoFullName: a.repoFullName }))}

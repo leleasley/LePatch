@@ -6,10 +6,6 @@ export function getCsrfToken(): string {
   return match ? decodeURIComponent(match[1]) : "";
 }
 
-export function csrfHeaders(): Record<string, string> {
-  return { "X-CSRF-Token": getCsrfToken() };
-}
-
 export async function csrfFetch(url: string, init?: RequestInit): Promise<Response> {
   const headers = new Headers(init?.headers);
   headers.set("X-CSRF-Token", getCsrfToken());

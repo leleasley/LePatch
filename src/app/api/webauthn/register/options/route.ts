@@ -4,10 +4,7 @@ import { handleApiError } from "@/lib/http";
 import { validateCsrf, rejectedCsrfResponse } from "@/lib/csrf";
 import { generatePasskeyRegistrationOptions } from "@/lib/webauthn";
 import { checkPasskeyOptionsRateLimit } from "@/lib/api-rate-limit";
-
-function rpId(req: NextRequest): string {
-  return (req.headers.get("x-forwarded-host") || req.headers.get("host") || "").split(":")[0];
-}
+import { webauthnRpId } from "@/lib/webauthn-origin";
 
 export async function POST(request: NextRequest) {
   if (!validateCsrf(request)) return rejectedCsrfResponse();
@@ -16,7 +13,7 @@ export async function POST(request: NextRequest) {
     const limited = await checkPasskeyOptionsRateLimit(request, "webauthn-register-options");
     if (limited) return limited;
     const user = await getCurrentUser();
-    const options = await generatePasskeyRegistrationOptions(user.id, rpId(request));
+    const options = await generatePasskeyRegistrationOptions(user.id, webauthnRpId(request));
     return NextResponse.json(options);
   } catch (error) {
     return handleApiError(error);

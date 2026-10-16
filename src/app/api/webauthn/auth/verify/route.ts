@@ -11,16 +11,7 @@ import { handleApiError } from "@/lib/http";
 import { validateCsrf, rejectedCsrfResponse } from "@/lib/csrf";
 import { verifyPasskeyAuth } from "@/lib/webauthn";
 import { prisma } from "@/lib/prisma";
-
-function rpId(req: NextRequest): string {
-  return (req.headers.get("x-forwarded-host") || req.headers.get("host") || "").split(":")[0];
-}
-
-function origin(req: NextRequest): string {
-  const proto = req.headers.get("x-forwarded-proto") || "http";
-  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
-  return `${proto}://${host}`;
-}
+import { webauthnRpId, webauthnAllowedOrigins } from "@/lib/webauthn-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +20,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { flowId, ...response } = body;
-    const userId = await verifyPasskeyAuth(flowId, response, rpId(request), origin(request));
+    const userId = await verifyPasskeyAuth(flowId, response, webauthnRpId(request), webauthnAllowedOrigins);
 
     const user = await prisma.user.findUnique({
       where: { id: userId },

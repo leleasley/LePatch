@@ -100,27 +100,6 @@ export function useApps() {
       updateAvailable: boolean;
       notificationsEnabled: boolean;
       includePrereleases: boolean;
-      serverInstallCount: number;
-      serverBehindCount: number;
-      servers: Array<{
-        server: {
-          id: string;
-          name: string;
-          status: string;
-          lastSeenAt: string | null;
-          isLePatchHost: boolean;
-        };
-        packages: Array<{
-          id: string;
-          serverId: string;
-          name: string;
-          currentVersion: string | null;
-          latestVersion: string | null;
-          manager: string;
-          updateAvailable: boolean;
-        }>;
-        updateAvailable: boolean;
-      }>;
     }>;
   }>("/api/apps", {
     refreshInterval: 60000,

@@ -1,93 +1,88 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { catalogueApps } from "../data/catalogue";
+import { encryptJson, decryptJson } from "../src/lib/encryption";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
-async function main() {
-  // Seed catalogue entries first (no env vars needed — safe upsert)
-  const catalogueCount = await prisma.catalogueEntry.count();
-  if (catalogueCount === 0) {
-    for (const app of catalogueApps) {
-      await prisma.catalogueEntry.upsert({
-        where: { repoFullName: app.repoFullName },
-        update: {},
-        create: {
-          name: app.name,
-          repoFullName: app.repoFullName,
-          description: app.description,
-          category: app.category,
-          packageNames: app.packageNames,
-        },
-      });
-    }
-    console.log(`Seeded ${catalogueApps.length} catalogue entries`);
-  }
+/**
+ * Channel configs used to be written as plaintext JSON, which meant the Discord
+ * webhook URL and Telegram bot token sat in the database unencrypted. This
+ * upgrades any legacy plaintext row in place and always writes encrypted values.
+ */
+async function upsertChannel(type: "discord" | "telegram", name: string, enabled: boolean, config: Record<string, string>) {
+  const row = await prisma.notificationChannel.findUnique({
+    where: { type_name: { type, name } },
+    select: { id: true, configJson: true },
+  });
 
-  const email = process.env.DEFAULT_ADMIN_EMAIL;
-  const password = process.env.DEFAULT_ADMIN_PASSWORD;
-  if (!email || !password) {
-    console.log("DEFAULT_ADMIN_EMAIL and DEFAULT_ADMIN_PASSWORD must be set to seed the first admin user");
+  if (row) {
+    if (typeof row.configJson === "string") {
+      // Already encrypted.
+      await prisma.notificationChannel.update({ where: { id: row.id }, data: { enabled } });
+      return;
+    }
+    await prisma.notificationChannel.update({
+      where: { id: row.id },
+      data: { enabled, configJson: encryptJson(config) },
+    });
     return;
   }
 
-  const userCount = await prisma.user.count();
-  if (userCount > 0) {
-    return; // Users already exist — never overwrite them
-  }
-
-  await prisma.user.create({
-    data: {
-      name: "Admin",
-      email,
-      passwordHash: await bcrypt.hash(password, 12),
-      role: "administrator"
-    }
-  });
-
-  await prisma.notificationChannel.upsert({
-    where: { type_name: { type: "discord", name: "Discord" } },
-    update: {
-      enabled: Boolean(process.env.DISCORD_WEBHOOK_URL),
-      configJson: { webhookUrl: process.env.DISCORD_WEBHOOK_URL || "" }
-    },
-    create: {
-      type: "discord",
-      name: "Discord",
-      enabled: Boolean(process.env.DISCORD_WEBHOOK_URL),
-      configJson: { webhookUrl: process.env.DISCORD_WEBHOOK_URL || "" }
-    }
-  });
-
-  await prisma.notificationChannel.upsert({
-    where: { type_name: { type: "telegram", name: "Telegram" } },
-    update: {
-      enabled: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID),
-      configJson: {
-        botToken: process.env.TELEGRAM_BOT_TOKEN || "",
-        chatId: process.env.TELEGRAM_CHAT_ID || ""
-      }
-    },
-    create: {
-      type: "telegram",
-      name: "Telegram",
-      enabled: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID),
-      configJson: {
-        botToken: process.env.TELEGRAM_BOT_TOKEN || "",
-        chatId: process.env.TELEGRAM_CHAT_ID || ""
-      }
-    }
+  await prisma.notificationChannel.create({
+    data: { type, name, enabled, configJson: encryptJson(config) },
   });
 }
 
+async function main() {
+  const email = process.env.DEFAULT_ADMIN_EMAIL;
+  const password = process.env.DEFAULT_ADMIN_PASSWORD;
+
+  const userCount = await prisma.user.count();
+  if (userCount === 0) {
+    if (!email || !password) {
+      console.log("DEFAULT_ADMIN_EMAIL and DEFAULT_ADMIN_PASSWORD must be set to seed the first admin user");
+    } else {
+      await prisma.user.create({
+        data: {
+          name: "Admin",
+          email: email.toLowerCase(),
+          passwordHash: await bcrypt.hash(password, 12),
+          role: "administrator",
+        },
+      });
+      console.log("Created the initial administrator account");
+    }
+  }
+
+  // Never overwrite user rows — only ensure channel config is encrypted and
+  // initialised from the environment on first run.
+  const discordUrl = process.env.DISCORD_WEBHOOK_URL || "";
+  const telegramToken = process.env.TELEGRAM_BOT_TOKEN || "";
+  const telegramChatId = process.env.TELEGRAM_CHAT_ID || "";
+
+  await upsertChannel("discord", "Discord", Boolean(discordUrl), { webhookUrl: discordUrl });
+  await upsertChannel(
+    "telegram",
+    "Telegram",
+    Boolean(telegramToken && telegramChatId),
+    { botToken: telegramToken, chatId: telegramChatId }
+  );
+
+  // Sanity check that the encryption key round-trips before we mark rows done.
+  if (!process.env.ENCRYPTION_KEY) {
+    console.warn("ENCRYPTION_KEY is not set — notification secrets cannot be encrypted at rest");
+  } else {
+    decryptJson(encryptJson({ probe: true }));
+  }
+}
+
 main()
+  .catch(() => {
+    console.error("Seed failed");
+    process.exitCode = 1;
+  })
   .finally(async () => {
     await prisma.$disconnect();
-  })
-  .catch(async () => {
-    console.error("Seed failed");
-    await prisma.$disconnect();
-    process.exit(1);
   });

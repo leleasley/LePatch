@@ -39,8 +39,8 @@ function buildNav(role: string | null) {
   }
 
   const discoverNav: NavItem[] = [
-    { href: "/apps/search", label: "Search repos", icon: Search },
-    { href: "/apps/catalogue", label: "Catalogue", icon: Library },
+    { href: "/apps/search", label: "Find repositories", icon: Search },
+    { href: "/profile/repos", label: "My repositories", icon: Library },
   ];
 
   const utilityNav: NavItem[] = [{ href: "/profile/security", label: "Profile", icon: User }];

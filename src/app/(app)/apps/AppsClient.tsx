@@ -20,13 +20,6 @@ type App = {
   updateAvailable: boolean;
   notificationsEnabled: boolean;
   includePrereleases: boolean;
-  serverInstallCount: number;
-  serverBehindCount: number;
-  servers: Array<{
-    server: { id: string; name: string; status: string; lastSeenAt: string | null; isLePatchHost: boolean };
-    packages: Array<{ id: string; serverId: string; name: string; currentVersion: string | null; latestVersion: string | null; manager: string; updateAvailable: boolean }>;
-    updateAvailable: boolean;
-  }>;
 };
 
 type FilterKey = "all" | "updates" | "failed" | "quiet" | "notificationsOff" | "stale";
@@ -525,10 +518,10 @@ export function AppsClient({ initialApps, watchedApps = [], canAdd = true }: { i
               <span className="text-[var(--theme-text-faint)]">→</span>
             </button>
             <a
-              href="/apps/catalogue"
+              href="/apps/search"
               className="flex items-center justify-between rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] px-3 py-2 text-sm text-[var(--theme-text)] hover:border-[var(--theme-accent-border)] hover:text-[var(--theme-accent)] transition-colors"
             >
-              <span>Catalogue</span>
+              <span>Find repositories</span>
               <span className="text-[var(--theme-text-faint)]">→</span>
             </a>
             <a

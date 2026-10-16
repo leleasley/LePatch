@@ -6,7 +6,6 @@ import { validateCsrf, rejectedCsrfResponse } from "@/lib/csrf";
 import {
   getReleaseCheckQueue,
   getNotificationSendQueue,
-  getCatalogueStatsQueue,
   getIssueCommentCheckQueue,
   getBackupQueue,
 } from "@/lib/queues";
@@ -17,7 +16,6 @@ export const dynamic = "force-dynamic";
 const QUEUES = [
   { name: "release-check", getter: getReleaseCheckQueue },
   { name: "notification-send", getter: getNotificationSendQueue },
-  { name: "catalogue-stats", getter: getCatalogueStatsQueue },
   { name: "issue-comment-check", getter: getIssueCommentCheckQueue },
   { name: "backup", getter: getBackupQueue },
 ] as const;

@@ -274,12 +274,20 @@ async function getVersionTags(appId: string, currentTag: string, lastNotifiedTag
   return versions;
 }
 
-export async function sendNotificationEvent(eventId: string) {
+export async function sendNotificationEvent(eventId: string, options: { finalAttempt?: boolean } = {}) {
   const event = await prisma.notificationEvent.findUnique({
     where: { id: eventId },
     include: { channel: true, release: { include: { watchedApp: true } } }
   });
   if (!event) throw new Error("Notification event not found");
+
+  // Idempotency guard. BullMQ re-delivers jobs whose worker died after the
+  // HTTP POST but before the status write; without this check the user gets
+  // the same alert twice.
+  if (event.status === "sent") {
+    logger.info("Skipping already-sent notification event", { eventId });
+    return;
+  }
 
   const { channel, release } = event;
   const app = release.watchedApp;
@@ -308,10 +316,19 @@ export async function sendNotificationEvent(eventId: string) {
       }
     });
   } catch (error) {
-    await prisma.notificationEvent.update({
-      where: { id: event.id },
-      data: { status: "failed", error: error instanceof Error ? error.message : "Notification failed" }
-    });
+    // Only mark the event failed once BullMQ has exhausted its retries,
+    // otherwise a transient Discord 429 would permanently lose the alert.
+    if (options.finalAttempt) {
+      await prisma.notificationEvent.update({
+        where: { id: event.id },
+        data: {
+          status: "failed",
+          error: error instanceof Error ? error.message : "Notification failed",
+        },
+      });
+    } else {
+      logger.warn("Notification send failed, will retry", { eventId, error });
+    }
     throw error;
   }
 }

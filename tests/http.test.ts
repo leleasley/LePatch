@@ -43,11 +43,27 @@ describe("handleApiError", () => {
     expect(body.error).toBe("That record already exists");
   });
 
-  it("handles generic errors with 400", async () => {
-    const res = handleApiError(new Error("Something went wrong"));
+  it("does not leak generic internal messages to the client", async () => {
+    const res = handleApiError(new Error("ENCRYPTION_KEY environment variable is not set"));
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("Something went wrong");
+    expect(body.error).toBe("Request failed");
+    expect(body.error).not.toContain("ENCRYPTION_KEY");
+  });
+
+  it("passes through messages that are safe to surface", async () => {
+    const res = handleApiError(new Error("User not found"));
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe("User not found");
+  });
+
+  it("does not leak Prisma invocation errors", async () => {
+    const res = handleApiError(
+      new Error("Invalid `prisma.user.findMany()` invocation: connection string missing")
+    );
+    const body = await res.json();
+    expect(body.error).toBe("Request failed");
   });
 
   it("handles unknown errors with 500", async () => {

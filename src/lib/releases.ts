@@ -134,7 +134,19 @@ export async function checkWatchedApp(watchedAppId: string) {
               // Already queued or sent — never send twice for the same release.
               return;
             }
-            await getNotificationSendQueue().add("send", { eventId: event.id });
+            // Idempotency key: a stable jobId means a retry (or a stalled-job
+            // replay) cannot enqueue a second delivery for the same event.
+            await getNotificationSendQueue().add(
+              "send",
+              { eventId: event.id },
+              {
+                jobId: `notify-${event.id}`,
+                attempts: 5,
+                backoff: { type: "exponential", delay: 5_000 },
+                removeOnComplete: { count: 500 },
+                removeOnFail: { count: 1_000 },
+              }
+            );
           })
         );
       }

@@ -7,26 +7,6 @@ import { AppDetailLink } from "@/components/AppDetailLink";
 import { LiveTimestamp } from "@/components/LiveTimestamp";
 import type { ReactNode } from "react";
 
-type ServerEntry = {
-  server: {
-    id: string;
-    name: string;
-    status: string;
-    lastSeenAt: string | null;
-    isLePatchHost: boolean;
-  };
-  packages: Array<{
-    id: string;
-    serverId: string;
-    name: string;
-    currentVersion: string | null;
-    latestVersion: string | null;
-    manager: string;
-    updateAvailable: boolean;
-  }>;
-  updateAvailable: boolean;
-};
-
 type App = {
   id: string;
   name: string;
@@ -37,9 +17,6 @@ type App = {
   updateAvailable: boolean;
   notificationsEnabled: boolean;
   includePrereleases: boolean;
-  serverInstallCount: number;
-  serverBehindCount: number;
-  servers: ServerEntry[];
 };
 
 function statusNode(app: App): { label: string; tone: "success" | "warning" | "error" | "muted"; borderColor: string } {

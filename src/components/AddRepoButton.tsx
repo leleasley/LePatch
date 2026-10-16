@@ -15,7 +15,7 @@ function iconSizeClasses(size: "sm" | "xs") {
   return size === "xs" ? "h-3.5 w-3.5" : "h-4 w-4";
 }
 
-export function AddRepoButton({ repoFullName, name, initialAdded = false, appId, size = "sm", catalogueEntryId, canAdd = true }: { repoFullName: string; name?: string; initialAdded?: boolean; appId?: string; size?: "sm" | "xs"; catalogueEntryId?: string; canAdd?: boolean }) {
+export function AddRepoButton({ repoFullName, name, initialAdded = false, appId, size = "sm", canAdd = true }: { repoFullName: string; name?: string; initialAdded?: boolean; appId?: string; size?: "sm" | "xs"; canAdd?: boolean }) {
   const [loading, setLoading] = useState(false);
   const [added, setAdded] = useState(initialAdded);
   const [watchedAppId, setWatchedAppId] = useState(appId);
@@ -28,7 +28,7 @@ export function AddRepoButton({ repoFullName, name, initialAdded = false, appId,
     const response = await csrfFetch("/api/apps", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ repoFullName, name, ...(catalogueEntryId ? { catalogueEntryId } : {}) })
+      body: JSON.stringify({ repoFullName, name })
     });
     setLoading(false);
     if (!response.ok) {

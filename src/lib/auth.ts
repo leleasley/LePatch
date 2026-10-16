@@ -10,6 +10,7 @@ import { env } from "@/lib/env";
 import { generateCsrfToken, setCsrfCookie, clearCsrfCookie } from "@/lib/csrf";
 import { logger } from "@/lib/logger";
 import { canBrowseApps, canManageApps, isAdministrator, isModerator } from "@/lib/rbac";
+import { resolveClientIp } from "@/lib/request-ip";
 
 const DEFAULT_SESSION_DURATION_HOURS = 24;
 const DEFAULT_TRUSTED_DEVICE_DAYS = 30;
@@ -381,11 +382,46 @@ export async function requirePageSession() {
   return session;
 }
 
+/**
+ * Browsers only honour `__Host-` prefixed cookies over HTTPS, so plain-HTTP
+ * self-hosted installs need the unprefixed variant. Previously both cookies
+ * were always written with the same token, which meant a `secure: false`
+ * duplicate was transmitted in cleartext even on HTTPS deployments. The
+ * insecure copy is now only emitted when the app is actually served over HTTP.
+ */
+function shouldEmitInsecureCookie(): boolean {
+  return !env.appUrl.startsWith("https://");
+}
+
+function sessionCookieTargets(): string[] {
+  return shouldEmitInsecureCookie() ? [plainSessionCookie] : [];
+}
+
+function setCookieVariants(
+  response: NextResponse,
+  hostName: string,
+  plainName: string,
+  value: string,
+  options: { httpOnly: boolean; sameSite: "lax" | "strict"; path: string; maxAge: number }
+) {
+  response.cookies.set(hostName, value, { ...options, secure: true });
+  for (const name of sessionCookieTargets()) {
+    response.cookies.set(name, value, { ...options, secure: false });
+  }
+  // Always expire the insecure variant so an upgraded deployment drops it.
+  if (!shouldEmitInsecureCookie()) {
+    response.cookies.set(plainName, "", { ...options, maxAge: 0, secure: false });
+  }
+}
+
 export function setSessionCookie(response: NextResponse, token: string, durationSeconds?: number) {
   const maxAge = durationSeconds ?? 86400;
-  const base = { httpOnly: true, sameSite: "lax" as const, path: "/", maxAge };
-  response.cookies.set(hostSessionCookie, token, { ...base, secure: true });
-  response.cookies.set(plainSessionCookie, token, { ...base, secure: false });
+  setCookieVariants(response, hostSessionCookie, plainSessionCookie, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge,
+  });
 }
 
 export function clearSessionCookie(response: NextResponse) {
@@ -490,11 +526,7 @@ export async function requirePageCanBrowseApps() {
 }
 
 export function requestIp(request: NextRequest) {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "local"
-  );
+  return resolveClientIp(request);
 }
 
 export function requestUserAgent(request: NextRequest) {
@@ -652,9 +684,12 @@ export function clearMfaAttempts(userId: string): void {
 
 export function setTrustedDeviceCookie(response: NextResponse, token: string, durationMs: number) {
   const maxAge = Math.floor(durationMs / 1000);
-  const base = { httpOnly: true, sameSite: "lax" as const, path: "/", maxAge };
-  response.cookies.set(hostTrustedDeviceCookie, token, { ...base, secure: true });
-  response.cookies.set(plainTrustedDeviceCookie, token, { ...base, secure: false });
+  setCookieVariants(response, hostTrustedDeviceCookie, plainTrustedDeviceCookie, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge,
+  });
 }
 
 export function clearTrustedDeviceCookie(response: NextResponse) {
@@ -712,8 +747,12 @@ export async function getTrustedDeviceFromRequest(
   return verifyTrustedDevice(raw, userId);
 }
 
-export async function revokeTrustedDevice(deviceId: string) {
-  await prisma.trustedDevice.deleteMany({ where: { id: deviceId } });
+export async function revokeTrustedDevice(deviceId: string, userId?: string) {
+  // Scoping by userId is what makes this safe to expose from a self-service
+  // route: without it any authenticated user could revoke anyone else's device.
+  await prisma.trustedDevice.deleteMany({
+    where: userId ? { id: deviceId, userId } : { id: deviceId },
+  });
 }
 
 export async function revokeAllTrustedDevices(userId: string) {

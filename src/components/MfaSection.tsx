@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Shield, ShieldCheck, ShieldOff, Copy, Check, RefreshCw, Download } from "lucide-react";
 import { csrfFetch } from "@/lib/csrf-client";
 import { PasswordConfirmModal } from "@/components/PasswordConfirmModal";
+import { QrCode } from "@/components/QrCode";
 
 type MfaStatus = {
   enabled: boolean;
@@ -204,13 +205,7 @@ export function MfaSection({}: { userEmail: string }) {
               Authenticator apps will show this as <strong className="text-white">{issuer}</strong>.
             </p>
             <div className="flex flex-col items-center gap-3">
-              <div className="rounded-lg bg-white p-3">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(otpauthUrl)}`}
-                  alt="MFA QR Code"
-                  className="h-[180px] w-[180px]"
-                />
-              </div>
+              <QrCode value={otpauthUrl} size={180} className="p-3" />
               <div className="w-full">
                 <p className="text-xs text-slate-500 mb-1">Manual entry key:</p>
                 <div className="flex items-center gap-2 rounded-lg bg-white/5 border border-line/30 px-3 py-2">

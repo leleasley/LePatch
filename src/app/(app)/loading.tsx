@@ -8,7 +8,6 @@ const pageNames: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/apps": "Apps",
   "/apps/search": "Search",
-  "/apps/catalogue": "Catalogue",
   "/admin/settings": "Settings",
   "/profile": "Profile",
   "/profile/security": "Profile",

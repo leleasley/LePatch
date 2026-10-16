@@ -67,7 +67,7 @@ export async function verifyPasskeyRegistration(
   userId: string,
   response: RegistrationResponseJSON,
   rpId: string,
-  origin: string
+  origin: string | string[]
 ) {
   const expectedChallenge = getChallenge(userId);
 
@@ -113,7 +113,7 @@ export async function verifyPasskeyAuth(
   flowId: string,
   response: AuthenticationResponseJSON,
   rpId: string,
-  origin: string
+  origin: string | string[]
 ) {
   const expectedChallenge = getChallenge(flowId);
 

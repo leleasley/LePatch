@@ -15,7 +15,7 @@ export async function GET(
   if (limited) return limited;
 
   const app = await prisma.watchedApp.findUnique({
-    where: { id },
+    where: { id, userId: session.userId },
     select: { id: true, repoOwner: true, repoName: true, userId: true },
   });
   if (!app) {

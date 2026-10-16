@@ -14,7 +14,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id } = await params;
     const app = await prisma.watchedApp.findUnique({ where: { id, userId: session.userId }, select: { id: true } });
     if (!app) throw new Error("Watched app not found");
-    await getReleaseCheckQueue().add("manual-check", { watchedAppId: id, manual: true });
+    await getReleaseCheckQueue().add(
+      "manual-check",
+      { watchedAppId: id, manual: true },
+      {
+        // Dedupe manual clicks so a double-tap cannot queue two checks.
+        jobId: `manual-${id}-${Math.floor(Date.now() / 10000)}`,
+        attempts: 2,
+        backoff: { type: "exponential", delay: 15_000 },
+        removeOnComplete: { count: 200 },
+        removeOnFail: { count: 500 },
+      }
+    );
     createAuditLog({ userId: session.userId, action: "app.check_triggered", targetId: id }).catch(() => {});return NextResponse.json({ queued: true });
   } catch (error) {
     return handleApiError(error);

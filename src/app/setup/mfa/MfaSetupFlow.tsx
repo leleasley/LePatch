@@ -6,6 +6,7 @@ import { Shield, ShieldCheck, Copy, Check, Download, Eye, EyeOff } from "lucide-
 import { Spinner } from "@/components/Spinner";
 import { OtpCodeInput } from "@/components/OtpCodeInput";
 import { csrfFetch } from "@/lib/csrf-client";
+import { QrCode } from "@/components/QrCode";
 
 export function MfaSetupFlow({ setupToken }: { email: string; setupToken: string }) {
   const router = useRouter();
@@ -151,13 +152,7 @@ export function MfaSetupFlow({ setupToken }: { email: string; setupToken: string
 
           {/* QR Code */}
           <div className="flex justify-center">
-            <div className="rounded-xl bg-white p-3">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otpauthUrl)}`}
-                alt="MFA QR Code"
-                className="h-[200px] w-[200px]"
-              />
-            </div>
+            <QrCode value={otpauthUrl} size={200} className="p-3" />
           </div>
 
           {/* Manual Secret */}
