@@ -1,4 +1,9 @@
-"use client";
+/**
+ * Relative-time helpers. Pure functions safe to call from server components,
+ * client components, and plain modules. Do NOT add a "use client" directive
+ * here — server pages import these directly and the build fails if they live
+ * in a client module.
+ */
 
 export function formatRelativeTime(value: Date | string): string {
   const date = typeof value === "string" ? new Date(value) : value;
