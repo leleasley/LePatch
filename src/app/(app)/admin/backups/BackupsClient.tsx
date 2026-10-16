@@ -238,13 +238,20 @@ export function BackupsClient() {
             { label: "Last backup", value: stats?.lastBackupAt ? formatDate(stats.lastBackupAt) : "Never" },
             {
               label: "Next backup",
-              value: showNextBackup
-                ? msUntilNext !== null
-                  ? formatRemaining(msUntilNext)
-                  : "—"
-                : schedule?.enabled
-                  ? "Calculating…"
-                  : "Disabled",
+              // Countdown depends on the current time, so the server render and
+              // hydration can disagree at a minute boundary. Opt out of the
+              // check for this value rather than breaking hydration.
+              value: (
+                <span suppressHydrationWarning>
+                  {showNextBackup
+                    ? msUntilNext !== null
+                      ? formatRemaining(msUntilNext)
+                      : "—"
+                    : schedule?.enabled
+                      ? "Calculating…"
+                      : "Disabled"}
+                </span>
+              ),
             },
           ]}
         />

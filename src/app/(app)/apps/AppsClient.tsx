@@ -22,7 +22,7 @@ import { Input, Select } from "@/components/ui/Input";
 import { useApps } from "@/lib/use-swr";
 import { csrfFetch } from "@/lib/csrf-client";
 import { useToast } from "@/lib/toast";
-import { formatRelativeTime } from "@/lib/time-ago";
+import { RelativeTime } from "@/components/RelativeTime";
 import { cn } from "@/lib/cn";
 
 export type WatchedAppRow = {
@@ -334,7 +334,7 @@ export function AppsClient({
                         <span className="mono">{app.latestSeenTag ?? "no release yet"}</span>
                         <span className="inline-flex items-center gap-1.5">
                           <Clock className="h-3 w-3" aria-hidden="true" />
-                          {app.lastCheckedAt ? `checked ${formatRelativeTime(app.lastCheckedAt)}` : "never checked"}
+                          {app.lastCheckedAt ? <>checked <RelativeTime value={app.lastCheckedAt} /></> : "never checked"}
                         </span>
                         {app.includePrereleases && <span>pre-releases on</span>}
                       </>

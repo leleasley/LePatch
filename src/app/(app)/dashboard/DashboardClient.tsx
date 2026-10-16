@@ -6,7 +6,7 @@ import { Plus, Search } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState, ErrorState } from "@/components/ui/Card";
 import { useDashboard } from "@/lib/use-swr";
-import { formatRelativeTime } from "@/lib/time-ago";
+import { RelativeTime } from "@/components/RelativeTime";
 
 type FeedItem = {
   id: string;
@@ -98,7 +98,7 @@ function ReleaseEntry({ release }: { release: FeedItem }) {
         )}
 
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-text-faint">
-          <span>{formatRelativeTime(release.detectedAt)}</span>
+          <RelativeTime value={release.detectedAt} />
           <span className="mono">{owner}/{release.watchedApp.repoFullName.split("/")[1] ?? ""}</span>
           <Link href={`/apps/${release.watchedApp.id}/releases/${release.id}`} className="transition-colors hover:text-accent">
             Release notes

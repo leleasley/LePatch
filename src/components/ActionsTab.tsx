@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Workflow } from "lucide-react";
 import { List, StatusDot, type StatusTone } from "@/components/ui/List";
-import { formatRelativeTime } from "@/lib/time-ago";
+import { RelativeTime } from "@/components/RelativeTime";
 
 type WorkflowRun = {
   id: number;
@@ -113,7 +113,7 @@ export function ActionsTab({ owner, repo }: { owner: string; repo: string }) {
                   <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
                     <StatusDot tone={tone} pulse={run.status === "in_progress"}>{label}</StatusDot>
                     <time dateTime={run.created_at} className="text-xs text-text-faint">
-                      {formatRelativeTime(run.created_at)}
+                      <RelativeTime value={run.created_at} />
                     </time>
                   </div>
                 </a>

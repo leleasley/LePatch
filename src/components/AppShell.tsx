@@ -270,7 +270,7 @@ export function AppShell({ children, userRole = null, userName = null }: { child
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-canvas">
       {/* Desktop sidebar */}
       <aside className="desktop-sidebar fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-border bg-surface lg:flex">
         <div className="shrink-0 p-4">

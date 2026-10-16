@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ChevronDown, ChevronRight, GitCommit, ExternalLink, Copy, Check } from "lucide-react";
 import { StatusDot, type StatusTone } from "@/components/ui/List";
 import { cn } from "@/lib/cn";
+import { RelativeTime } from "@/components/RelativeTime";
 import type { CommitWithStatus } from "@/lib/commit-snapshot";
 
 const STATUS_TONE: Record<string, StatusTone> = {
@@ -29,22 +30,6 @@ const STATUS_DOT_BG: Record<StatusTone, string> = {
   accent: "bg-accent",
 };
 
-function formatRelativeTime(iso: string | null): string {
-  if (!iso) return "";
-  const ts = new Date(iso).getTime();
-  const diff = Date.now() - ts;
-  if (Number.isNaN(diff)) return "";
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  return new Date(iso).toLocaleDateString();
-}
 
 function getInitials(name: string): string {
   if (!name) return "?";
@@ -144,13 +129,7 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
           {commit.author.date && (
             <>
               <span aria-hidden="true" className="text-text-faint">·</span>
-              <time
-                dateTime={commit.author.date}
-                className="text-text-faint"
-                title={new Date(commit.author.date).toLocaleString()}
-              >
-                {formatRelativeTime(commit.author.date)}
-              </time>
+              <RelativeTime value={commit.author.date} className="text-text-faint" />
             </>
           )}
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { KeyRound, ArrowRight } from "lucide-react";
 import { Spinner } from "@/components/Spinner";
@@ -14,7 +14,14 @@ export function LoginForm({ githubOAuthEnabled = false }: { githubOAuthEnabled?:
   const [loading, setLoading] = useState(false);
   const [webauthnLoading, setWebauthnLoading] = useState(false);
   const [webauthnError, setWebauthnError] = useState("");
-  const [webauthnAvailable] = useState(() => typeof window !== "undefined" && !!window.PublicKeyCredential);
+  // Read after mount: the server has no `window`, so an initializer that
+  // touches it would render different HTML and break hydration.
+  const [webauthnAvailable, setWebauthnAvailable] = useState(false);
+  useEffect(() => {
+    // Mount-only browser capability check — intentionally not derived from props.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setWebauthnAvailable(!!window.PublicKeyCredential);
+  }, []);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

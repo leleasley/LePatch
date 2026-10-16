@@ -4,7 +4,7 @@ import { AlertTriangle, Bell, CheckCircle2, Clock } from "lucide-react";
 import { List, ListRow, MetricStrip, Panel, StatusDot, type StatusTone } from "@/components/ui/List";
 import { EmptyState } from "@/components/ui/Card";
 import { useNotifications } from "@/lib/use-swr";
-import { formatRelativeTime } from "@/lib/time-ago";
+import { RelativeTime } from "@/components/RelativeTime";
 
 type NotificationEvent = {
   id: string;
@@ -92,12 +92,12 @@ export function NotificationsClient({
                     <span className="capitalize">{event.channel.name}</span>
                     <span className="inline-flex items-center gap-1.5">
                       <Clock className="h-3 w-3" aria-hidden="true" />
-                      queued {formatRelativeTime(event.createdAt)}
+                      queued <RelativeTime value={event.createdAt} />
                     </span>
                     {event.sentAt && (
                       <span className="inline-flex items-center gap-1.5 text-status-success">
                         <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
-                        sent {formatRelativeTime(event.sentAt)}
+                        sent <RelativeTime value={event.sentAt} />
                       </span>
                     )}
                     {event.error && (

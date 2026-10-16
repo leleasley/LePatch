@@ -9,7 +9,7 @@ import { Badge, EmptyState, SkeletonRows } from "@/components/ui/Card";
 import { List, Panel, StatusDot } from "@/components/ui/List";
 import { Input, Select } from "@/components/ui/Input";
 import { csrfFetch } from "@/lib/csrf-client";
-import { timeAgo } from "@/lib/time-ago";
+import { RelativeTime } from "@/components/RelativeTime";
 import { cn } from "@/lib/cn";
 
 type Issue = {
@@ -114,7 +114,7 @@ function IssueRow({
               <span>{issue.user.login}</span>
             </span>
           )}
-          <span>updated {timeAgo(issue.updated_at)}</span>
+          <span>updated <RelativeTime value={issue.updated_at} /></span>
           {issue.comments > 0 && (
             <span className="inline-flex items-center gap-1">
               <MessageSquare className="h-3 w-3" aria-hidden="true" />

@@ -24,6 +24,7 @@ import { List, ListRow, MetricStrip, Panel, RowAvatar, StatusDot, Toolbar, type 
 import { Input, Select } from "@/components/ui/Input";
 import { cn } from "@/lib/cn";
 import type { UserRole } from "@prisma/client";
+import { RelativeTime } from "@/components/RelativeTime";
 
 type User = {
   id: string;
@@ -44,22 +45,6 @@ function roleTone(role: string): StatusTone {
   return "neutral";
 }
 
-function timeAgo(dateStr: string): string {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-  const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  return `${Math.floor(months / 12)}y ago`;
-}
 
 function PasswordBadge({ enabled }: { enabled: boolean }) {
   return (
@@ -571,7 +556,7 @@ export function UsersClient({ users: initialUsers, currentUserId }: { users: Use
                     <>
                       <StatusDot tone={roleTone(user.role)}>{roleLabels[user.role]}</StatusDot>
                       <PasswordBadge enabled={user.passwordEnabled} />
-                      <span>added {timeAgo(user.createdAt)}</span>
+                      <span>added <RelativeTime value={user.createdAt} /></span>
                     </>
                   }
                   trailing={

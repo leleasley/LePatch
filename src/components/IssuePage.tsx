@@ -17,6 +17,7 @@ import { List as ListContainer, Panel, StatusDot } from "@/components/ui/List";
 import { ErrorState, Skeleton } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/cn";
+import { RelativeTime } from "@/components/RelativeTime";
 
 type IssueData = {
   id: number;
@@ -74,19 +75,6 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function timeAgo(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? "" : "s"} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
-  if (diffDays < 30) return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
-  return formatDate(dateStr);
-}
 
 function MarkdownToolbar({ onInsert }: { onInsert: (before: string, after?: string) => void }) {
   const btnClass = "rounded p-1 text-text-muted transition-colors hover:bg-surface hover:text-text";
@@ -155,7 +143,7 @@ function AuthorLine({
   timestamp,
 }: {
   user: { login: string; avatar_url: string; html_url: string } | null;
-  action: string;
+  action: React.ReactNode;
   timestamp: string;
 }) {
   return (
@@ -359,7 +347,7 @@ export function IssuePage({
             <StatusDot tone={isOpen ? "success" : "neutral"}>{isOpen ? "Open" : "Closed"}</StatusDot>
             <span className="mono">#{issue.number}</span>
             <span>{issue.comments} comment{issue.comments !== 1 ? "s" : ""}</span>
-            {issue.user && <span>opened by {issue.user.login} {timeAgo(issue.created_at)}</span>}
+            {issue.user && <span>opened by {issue.user.login} {<RelativeTime value={issue.created_at} />}</span>}
           </>
         }
         actions={
@@ -382,7 +370,7 @@ export function IssuePage({
             <div className="flex items-center gap-2 border-b border-border px-4 py-3">
               <AuthorLine
                 user={issue.user}
-                action={`opened this issue ${timeAgo(issue.created_at)}`}
+                action={<>opened this issue <RelativeTime value={issue.created_at} /></>}
                 timestamp={issue.created_at}
               />
             </div>
@@ -410,7 +398,7 @@ export function IssuePage({
                   <li key={comment.id} className="px-4 py-4">
                     <AuthorLine
                       user={comment.user}
-                      action={`commented ${timeAgo(comment.created_at)}${comment.updated_at !== comment.created_at ? " (edited)" : ""}`}
+                      action={<>commented <RelativeTime value={comment.created_at} />{comment.updated_at !== comment.created_at ? " (edited)" : ""}</>}
                       timestamp={comment.created_at}
                     />
                     <div className="mt-3">

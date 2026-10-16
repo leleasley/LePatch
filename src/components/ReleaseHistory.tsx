@@ -7,7 +7,7 @@ import { ReleaseNotes } from "@/components/ReleaseNotes";
 import { List, Panel, StatusDot, type StatusTone } from "@/components/ui/List";
 import { EmptyState } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
-import { formatRelativeTime } from "@/lib/time-ago";
+import { RelativeTime } from "@/components/RelativeTime";
 
 export type ReleaseRow = {
   id: string;
@@ -156,9 +156,9 @@ export function ReleaseHistory({ releases, appId }: { releases: ReleaseRow[]; ap
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-faint">
                         <span>
                           published{" "}
-                          {release.publishedAt ? formatRelativeTime(release.publishedAt) : "unknown"}
+                          <RelativeTime value={release.publishedAt} />
                         </span>
-                        <span>detected {formatRelativeTime(release.detectedAt)}</span>
+                        <span>detected <RelativeTime value={release.detectedAt} /></span>
                         {release.notificationSent ? (
                           <span className="inline-flex items-center gap-1 text-status-success">
                             <BellRing className="h-3 w-3" aria-hidden="true" /> notified
