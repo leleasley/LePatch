@@ -181,6 +181,7 @@ const issueCommentCheckWorker = new Worker<IssueCommentCheckJob>(
           select: {
             id: true,
             name: true,
+            notificationPreference: { select: { enabled: true, issueComments: true } },
             githubLink: {
               select: {
                 githubUsername: true,
@@ -192,6 +193,17 @@ const issueCommentCheckWorker = new Worker<IssueCommentCheckJob>(
       },
     });
     if (!setting || setting.level === "ignore") return;
+
+    // Per-user preference: `issueComments` (and the master switch) were stored
+    // but never consulted.
+    const issuePrefs = setting.user.notificationPreference;
+    if (issuePrefs && (!issuePrefs.enabled || !issuePrefs.issueComments)) {
+      await prisma.issueNotificationSetting.update({
+        where: { id: setting.id },
+        data: { lastCheckedAt: new Date() },
+      });
+      return;
+    }
 
     const username = setting.user.githubLink?.githubUsername;
     const accessToken = setting.user.githubLink?.accessToken;

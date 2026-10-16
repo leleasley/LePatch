@@ -58,7 +58,7 @@ export function MfaSetupFlow({ setupToken }: { email: string; setupToken: string
       const res = await csrfFetch("/api/account/mfa/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: verifyCode, secret, setupToken }),
+        body: JSON.stringify({ code: verifyCode, setupToken }),
       });
       const data = await res.json();
       if (res.ok && data.success) {

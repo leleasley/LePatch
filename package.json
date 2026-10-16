@@ -13,8 +13,9 @@
     "seed": "tsx prisma/seed.ts",
     "test": "vitest run",
     "lint": "eslint .",
-    "check": "npm run lint && npm test && npm run build",
-    "deps:outdated": "npm outdated --long"
+    "check": "npm run lint && npm run typecheck && npm test && npm run build",
+    "deps:outdated": "npm outdated --long",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
