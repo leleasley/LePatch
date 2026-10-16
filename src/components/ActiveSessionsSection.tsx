@@ -90,22 +90,22 @@ export function ActiveSessionsSection({ currentSessionId }: { currentSessionId?:
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-medium text-white">Active Sessions</h2>
-          <p className="mt-1 text-sm text-slate-400">
+          <h2 className="text-lg font-medium text-text">Active Sessions</h2>
+          <p className="mt-1 text-sm text-text-muted">
             Sessions now expire from when they were created, not from recent activity.
           </p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={loadSessions}
-            className="focus-ring inline-flex items-center gap-1 rounded-md border border-line px-3 py-1.5 text-sm text-slate-300 transition-colors hover:text-white"
+            className="focus-ring inline-flex items-center gap-1 rounded-md border border-line px-3 py-1.5 text-sm text-text transition-colors hover:text-text"
           >
             <RefreshCw className="h-3 w-3" />
             Refresh
           </button>
           <button
             onClick={() => setConfirmLogoutAll(true)}
-            className="focus-ring inline-flex items-center gap-1 rounded-md border border-red-500/40 px-3 py-1.5 text-sm text-red-300 transition-colors hover:bg-red-500/10"
+            className="focus-ring inline-flex items-center gap-1 rounded-md border border-red-500/40 px-3 py-1.5 text-sm text-status-danger transition-colors hover:bg-status-danger/10"
           >
             <LogOut className="h-3 w-3" />
             Logout all
@@ -114,9 +114,9 @@ export function ActiveSessionsSection({ currentSessionId }: { currentSessionId?:
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-400">Loading sessions...</p>
+        <p className="text-sm text-text-muted">Loading sessions...</p>
       ) : sessions.length === 0 ? (
-        <p className="text-sm text-slate-500">No active sessions</p>
+        <p className="text-sm text-text-muted">No active sessions</p>
       ) : (
         <div className="space-y-3">
           {sessions.map((session) => {
@@ -129,46 +129,46 @@ export function ActiveSessionsSection({ currentSessionId }: { currentSessionId?:
                 className="rounded-xl border border-line/60 bg-surface/80 p-3 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]"
               >
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-300">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
                     <Icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium text-slate-200">
+                        <div className="truncate font-medium text-text">
                           {session.deviceName || truncateUserAgent(session.userAgent)}
                         </div>
                         {session.userAgent && session.deviceName ? (
-                          <div className="mt-0.5 truncate text-xs text-slate-500" title={session.userAgent}>
+                          <div className="mt-0.5 truncate text-xs text-text-muted" title={session.userAgent}>
                             {truncateUserAgent(session.userAgent, 90)}
                           </div>
                         ) : null}
                       </div>
                       {isCurrent ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-status-success/30 bg-status-success/10 px-2 py-0.5 text-xs font-medium text-status-success">
                           <ShieldCheck className="h-3 w-3" />
                           Current
                         </span>
                       ) : null}
                     </div>
 
-                    <div className="mt-3 grid gap-2 text-xs text-slate-400 sm:grid-cols-3">
+                    <div className="mt-3 grid gap-2 text-xs text-text-muted sm:grid-cols-3">
                       <div className="rounded-lg border border-line/50 bg-black/20 px-3 py-2">
-                        <div className="text-[11px] uppercase tracking-wide text-slate-500">Last used</div>
-                        <div className="mt-1 text-slate-300">{formatDate(session.lastUsedAt)}</div>
+                        <div className="text-[11px] uppercase tracking-wide text-text-muted">Last used</div>
+                        <div className="mt-1 text-text">{formatDate(session.lastUsedAt)}</div>
                       </div>
                       <div className="rounded-lg border border-line/50 bg-black/20 px-3 py-2">
-                        <div className="text-[11px] uppercase tracking-wide text-slate-500">Created</div>
-                        <div className="mt-1 text-slate-300">{formatDate(session.createdAt)}</div>
+                        <div className="text-[11px] uppercase tracking-wide text-text-muted">Created</div>
+                        <div className="mt-1 text-text">{formatDate(session.createdAt)}</div>
                       </div>
                       <div className="rounded-lg border border-line/50 bg-black/20 px-3 py-2">
-                        <div className="text-[11px] uppercase tracking-wide text-slate-500">Expires</div>
-                        <div className="mt-1 text-slate-300">{formatDate(session.expiresAt)}</div>
+                        <div className="text-[11px] uppercase tracking-wide text-text-muted">Expires</div>
+                        <div className="mt-1 text-text">{formatDate(session.expiresAt)}</div>
                       </div>
                     </div>
 
                     {session.ipAddress ? (
-                      <div className="mt-2 text-xs text-slate-500">IP: {session.ipAddress}</div>
+                      <div className="mt-2 text-xs text-text-muted">IP: {session.ipAddress}</div>
                     ) : null}
                   </div>
                 </div>
@@ -182,8 +182,8 @@ export function ActiveSessionsSection({ currentSessionId }: { currentSessionId?:
         <p
           className={`mt-3 rounded-md border p-3 text-sm ${
             message.includes("failed") || message.includes("Failed")
-              ? "border-red-500/40 bg-red-500/10 text-red-200"
-              : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+              ? "border-red-500/40 bg-status-danger/10 text-red-200"
+              : "border-emerald-500/40 bg-status-success/10 text-emerald-200"
           }`}
         >
           {message}

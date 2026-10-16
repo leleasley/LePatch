@@ -96,48 +96,48 @@ function LabelBadge({ label }: { label: { name: string; color: string } }) {
 function MarkdownToolbar({ onInsert }: { onInsert: (before: string, after?: string) => void }) {
   return (
     <div className="flex items-center gap-0.5 border-b border-line px-3 py-1.5 flex-wrap">
-      <button type="button" onClick={() => onInsert("**", "**")} className="rounded p-1 text-slate-400 hover:bg-surface hover:text-white" title="Bold (Ctrl+B)">
+      <button type="button" onClick={() => onInsert("**", "**")} className="rounded p-1 text-text-muted hover:bg-surface hover:text-text" title="Bold (Ctrl+B)">
         <Bold className="h-4 w-4" />
       </button>
-      <button type="button" onClick={() => onInsert("*", "*")} className="rounded p-1 text-slate-400 hover:bg-surface hover:text-white" title="Italic (Ctrl+I)">
+      <button type="button" onClick={() => onInsert("*", "*")} className="rounded p-1 text-text-muted hover:bg-surface hover:text-text" title="Italic (Ctrl+I)">
         <Italic className="h-4 w-4" />
       </button>
-      <button type="button" onClick={() => onInsert("~~", "~~")} className="rounded p-1 text-slate-400 hover:bg-surface hover:text-white" title="Strikethrough">
+      <button type="button" onClick={() => onInsert("~~", "~~")} className="rounded p-1 text-text-muted hover:bg-surface hover:text-text" title="Strikethrough">
         <Strikethrough className="h-4 w-4" />
       </button>
       <div className="mx-1 h-5 w-px bg-line/50" />
-      <button type="button" onClick={() => onInsert("# ")} className="rounded p-1 text-slate-400 hover:bg-surface hover:text-white" title="Heading">
+      <button type="button" onClick={() => onInsert("# ")} className="rounded p-1 text-text-muted hover:bg-surface hover:text-text" title="Heading">
         <Heading className="h-4 w-4" />
       </button>
-      <button type="button" onClick={() => onInsert("`", "`")} className="rounded p-1 text-slate-400 hover:bg-surface hover:text-white" title="Inline code">
+      <button type="button" onClick={() => onInsert("`", "`")} className="rounded p-1 text-text-muted hover:bg-surface hover:text-text" title="Inline code">
         <Code className="h-4 w-4" />
       </button>
-      <button type="button" onClick={() => onInsert("\n```\n", "\n```\n")} className="rounded p-1 text-slate-400 hover:bg-surface hover:text-white" title="Code block">
+      <button type="button" onClick={() => onInsert("\n```\n", "\n```\n")} className="rounded p-1 text-text-muted hover:bg-surface hover:text-text" title="Code block">
         <Terminal className="h-4 w-4" />
       </button>
       <div className="mx-1 h-5 w-px bg-line/50" />
-      <button type="button" onClick={() => onInsert("[", "](url)")} className="rounded p-1 text-slate-400 hover:bg-surface hover:text-white" title="Link">
+      <button type="button" onClick={() => onInsert("[", "](url)")} className="rounded p-1 text-text-muted hover:bg-surface hover:text-text" title="Link">
         <LinkIcon className="h-4 w-4" />
       </button>
-      <button type="button" onClick={() => onInsert("\n- ")} className="rounded p-1 text-slate-400 hover:bg-surface hover:text-white" title="Unordered list">
+      <button type="button" onClick={() => onInsert("\n- ")} className="rounded p-1 text-text-muted hover:bg-surface hover:text-text" title="Unordered list">
         <List className="h-4 w-4" />
       </button>
-      <button type="button" onClick={() => onInsert("\n1. ")} className="rounded p-1 text-slate-400 hover:bg-surface hover:text-white" title="Ordered list">
+      <button type="button" onClick={() => onInsert("\n1. ")} className="rounded p-1 text-text-muted hover:bg-surface hover:text-text" title="Ordered list">
         <ListOrdered className="h-4 w-4" />
       </button>
-      <button type="button" onClick={() => onInsert("\n- [ ] ")} className="rounded p-1 text-slate-400 hover:bg-surface hover:text-white" title="Task list">
+      <button type="button" onClick={() => onInsert("\n- [ ] ")} className="rounded p-1 text-text-muted hover:bg-surface hover:text-text" title="Task list">
         <CheckSquare className="h-4 w-4" />
       </button>
       <div className="mx-1 h-5 w-px bg-line/50" />
-      <button type="button" onClick={() => onInsert("\n> ")} className="rounded p-1 text-slate-400 hover:bg-surface hover:text-white" title="Quote">
+      <button type="button" onClick={() => onInsert("\n> ")} className="rounded p-1 text-text-muted hover:bg-surface hover:text-text" title="Quote">
         <Quote className="h-4 w-4" />
       </button>
       <button type="button" onClick={() => onInsert(
         "\n| Column 1 | Column 2 | Column 3 |\n|----------|----------|----------|\n| Cell     | Cell     | Cell     |\n"
-      )} className="rounded p-1 text-slate-400 hover:bg-surface hover:text-white" title="Table">
+      )} className="rounded p-1 text-text-muted hover:bg-surface hover:text-text" title="Table">
         <Table className="h-4 w-4" />
       </button>
-      <button type="button" onClick={() => onInsert("@")} className="rounded p-1 text-slate-400 hover:bg-surface hover:text-white" title="Mention someone">
+      <button type="button" onClick={() => onInsert("@")} className="rounded p-1 text-text-muted hover:bg-surface hover:text-text" title="Mention someone">
         <AtSign className="h-4 w-4" />
       </button>
     </div>
@@ -303,10 +303,10 @@ export function IssuePage({
     return (
       <div className="min-h-screen bg-transparent pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <div className="px-4 py-6 sm:px-6 lg:px-8">
-          <button onClick={() => router.back()} className="mb-4 inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white">
+          <button onClick={() => router.back()} className="mb-4 inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text">
             <ArrowLeft className="h-4 w-4" /> Back
           </button>
-          <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <div className="rounded-lg border border-red-500/40 bg-status-danger/10 px-4 py-3 text-sm text-red-200">
             {error || "Issue not found"}
           </div>
         </div>
@@ -319,19 +319,19 @@ export function IssuePage({
       {/* Breadcrumb header — full width */}
       <div className="sticky top-0 z-40 border-b border-line bg-transparent/95 backdrop-blur supports-[backdrop-filter]:bg-transparent/80">
         <div className="flex items-center gap-2 px-4 py-3 sm:px-6 lg:px-8">
-          <button onClick={() => router.back()} className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-surface hover:text-white">
+          <button onClick={() => router.back()} className="shrink-0 rounded-md p-1 text-text-muted hover:bg-surface hover:text-text">
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div className="min-w-0 text-sm">
-            <span className="text-slate-400">{owner}/{repo}</span>
-            <span className="mx-1.5 text-slate-600">/</span>
-            <span className="text-slate-400">Issues</span>
-            <span className="mx-1.5 text-slate-600">/</span>
-            <span className="font-semibold text-white">#{issue.number}</span>
+            <span className="text-text-muted">{owner}/{repo}</span>
+            <span className="mx-1.5 text-text-faint">/</span>
+            <span className="text-text-muted">Issues</span>
+            <span className="mx-1.5 text-text-faint">/</span>
+            <span className="font-semibold text-text">#{issue.number}</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <a href={issue.html_url} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:border-line hover:bg-surface hover:text-white">
+              className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-text transition-colors hover:border-line hover:bg-surface hover:text-text">
               <ExternalLink className="h-3.5 w-3.5" /> GitHub
             </a>
           </div>
@@ -343,14 +343,14 @@ export function IssuePage({
         <div className="px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 shrink-0">
-              {issue.state === "open" ? <CircleDot className="h-6 w-6 text-emerald-400" /> : <CheckCircle2 className="h-6 w-6 text-purple-400" />}
+              {issue.state === "open" ? <CircleDot className="h-6 w-6 text-status-success" /> : <CheckCircle2 className="h-6 w-6 text-purple-400" />}
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-semibold text-white leading-tight">{issue.title}</h1>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-400">
+              <h1 className="text-2xl font-semibold text-text leading-tight">{issue.title}</h1>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-text-muted">
                 <span>#{issue.number}</span>
                 <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                  issue.state === "open" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" : "bg-purple-500/10 text-purple-400 border border-purple-500/30"
+                  issue.state === "open" ? "bg-status-success/10 text-status-success border border-emerald-500/30" : "bg-purple-500/10 text-purple-400 border border-purple-500/30"
                 }`}>
                   {issue.state === "open" ? <CircleDot className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
                   {issue.state === "open" ? "Open" : "Closed"}
@@ -368,7 +368,7 @@ export function IssuePage({
                 </div>
               )}
             </div>
-            <button onClick={() => setShowSidebarInfo(true)} className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-surface hover:text-white sm:hidden">
+            <button onClick={() => setShowSidebarInfo(true)} className="shrink-0 rounded-md p-1.5 text-text-muted hover:bg-surface hover:text-text sm:hidden">
               <Info className="h-5 w-5" />
             </button>
           </div>
@@ -385,13 +385,13 @@ export function IssuePage({
               {issue.user && (
                 <>
                   <img src={issue.user.avatar_url} alt="" className="h-6 w-6 rounded-full" />
-                  <a href={issue.user.html_url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-white hover:text-cyan-300">
+                  <a href={issue.user.html_url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-text hover:text-accent">
                     {issue.user.login}
                   </a>
                 </>
               )}
-              <span className="text-xs text-slate-500">opened this issue {timeAgo(issue.created_at)}</span>
-              {issue.user && <span className="ml-auto text-xs text-slate-600">{formatDate(issue.created_at)}</span>}
+              <span className="text-xs text-text-muted">opened this issue {timeAgo(issue.created_at)}</span>
+              {issue.user && <span className="ml-auto text-xs text-text-faint">{formatDate(issue.created_at)}</span>}
             </div>
             <div className="px-4 pb-5 sm:px-6 lg:px-8">
               {issue.body ? (
@@ -399,7 +399,7 @@ export function IssuePage({
                   linkBaseUrl={`https://github.com/${owner}/${repo}/blob/HEAD`}
                   imageBaseUrl={`https://raw.githubusercontent.com/${owner}/${repo}/HEAD`} />
               ) : (
-                <p className="text-sm text-slate-500 italic">No description provided.</p>
+                <p className="text-sm text-text-muted italic">No description provided.</p>
               )}
             </div>
           </div>
@@ -411,14 +411,14 @@ export function IssuePage({
                 {comment.user && (
                   <>
                     <img src={comment.user.avatar_url} alt="" className="h-6 w-6 rounded-full" />
-                    <a href={comment.user.html_url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-white hover:text-cyan-300">
+                    <a href={comment.user.html_url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-text hover:text-accent">
                       {comment.user.login}
                     </a>
                   </>
                 )}
-                <span className="text-xs text-slate-500">commented {timeAgo(comment.created_at)}</span>
-                {comment.updated_at !== comment.created_at && <span className="text-xs text-slate-600">(edited)</span>}
-                <span className="ml-auto text-xs text-slate-600">{formatDate(comment.created_at)}</span>
+                <span className="text-xs text-text-muted">commented {timeAgo(comment.created_at)}</span>
+                {comment.updated_at !== comment.created_at && <span className="text-xs text-text-faint">(edited)</span>}
+                <span className="ml-auto text-xs text-text-faint">{formatDate(comment.created_at)}</span>
               </div>
               <div className="px-4 pb-5 sm:px-6 lg:px-8">
                 <MarkdownContent body={comment.body} emptyMessage=""
@@ -433,17 +433,17 @@ export function IssuePage({
             <div className="border-b border-line">
               <div className="flex items-center gap-2 px-4 py-2 sm:px-6 lg:px-8">
                 <img src={`https://github.com/${githubUsername}.png`} alt="" className="h-5 w-5 rounded-full" />
-                <span className="text-xs text-slate-400">
-                  Commenting as <span className="font-medium text-white">@{githubUsername}</span>
+                <span className="text-xs text-text-muted">
+                  Commenting as <span className="font-medium text-text">@{githubUsername}</span>
                 </span>
               </div>
               <div className="flex border-b border-line">
                 <button onClick={() => setCommentTab("write")}
-                  className={`px-4 py-2 text-sm font-medium transition-colors ${commentTab === "write" ? "border-b-2 border-cyan-400 text-white" : "text-slate-400 hover:text-white"}`}>
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${commentTab === "write" ? "border-b-2 border-accent text-text" : "text-text-muted hover:text-text"}`}>
                   Write
                 </button>
                 <button onClick={() => setCommentTab("preview")}
-                  className={`px-4 py-2 text-sm font-medium transition-colors ${commentTab === "preview" ? "border-b-2 border-cyan-400 text-white" : "text-slate-400 hover:text-white"}`}>
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${commentTab === "preview" ? "border-b-2 border-accent text-text" : "text-text-muted hover:text-text"}`}>
                   Preview
                 </button>
               </div>
@@ -452,25 +452,25 @@ export function IssuePage({
                 {commentTab === "write" ? (
                   <textarea id="comment-textarea" value={commentBody} onChange={(e) => setCommentBody(e.target.value)}
                     placeholder="Write a comment..." rows={6}
-                    className="w-full rounded-md border border-line bg-transparent px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/50 focus:outline-none resize-y" />
+                    className="w-full rounded-md border border-line bg-transparent px-3 py-2 text-sm text-text placeholder:text-text-faint focus:border-cyan-500/50 focus:outline-none resize-y" />
                 ) : (
                   <div className="min-h-[150px] rounded-md border border-line bg-transparent px-3 py-2">
-                    {commentBody.trim() ? <MarkdownContent body={commentBody} emptyMessage="Nothing to preview" /> : <p className="text-sm text-slate-500 italic">Nothing to preview</p>}
+                    {commentBody.trim() ? <MarkdownContent body={commentBody} emptyMessage="Nothing to preview" /> : <p className="text-sm text-text-muted italic">Nothing to preview</p>}
                   </div>
                 )}
               </div>
               <div className="flex items-center justify-between border-t border-line px-4 py-3 sm:px-6 lg:px-8">
-                <span className="text-xs text-slate-600">Markdown supported</span>
+                <span className="text-xs text-text-faint">Markdown supported</span>
                 <button onClick={submitComment} disabled={submittingComment || !commentBody.trim()}
-                  className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50">
+                  className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-text hover:bg-green-500 disabled:opacity-50">
                   {submittingComment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   Comment
                 </button>
               </div>
             </div>
           ) : (
-            <div className="border-b border-line px-4 py-5 text-center text-sm text-slate-500 sm:px-6 lg:px-8">
-              <a href="/profile/security" className="text-cyan-400 hover:underline">Connect GitHub</a> to comment on issues.
+            <div className="border-b border-line px-4 py-5 text-center text-sm text-text-muted sm:px-6 lg:px-8">
+              <a href="/profile/security" className="text-accent hover:underline">Connect GitHub</a> to comment on issues.
             </div>
           )}
 
@@ -480,17 +480,17 @@ export function IssuePage({
               {issue.state === "open" ? (
                 !showCloseReason ? (
                   <button onClick={() => setShowCloseReason(true)}
-                    className="inline-flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-300 hover:bg-amber-500/20">
+                    className="inline-flex items-center gap-2 rounded-md border border-amber-500/40 bg-status-warning/10 px-4 py-2 text-sm font-medium text-status-warning hover:bg-amber-500/20">
                     <X className="h-4 w-4" /> Close issue
                   </button>
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-sm font-medium text-slate-300">Close with reason</p>
+                    <p className="text-sm font-medium text-text">Close with reason</p>
                     <div className="flex flex-wrap gap-2">
                       {CLOSE_REASONS.map((r) => (
                         <button key={r.value} onClick={() => setCloseReason(r.value)}
                           className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                            closeReason === r.value ? "bg-amber-500/20 text-amber-300 border border-amber-500/40" : "border border-line text-slate-400 hover:border-line hover:text-white"
+                            closeReason === r.value ? "bg-amber-500/20 text-status-warning border border-amber-500/40" : "border border-line text-text-muted hover:border-line hover:text-text"
                           }`}>
                           {r.label}
                         </button>
@@ -499,15 +499,15 @@ export function IssuePage({
                     {closeReason === "custom" && (
                       <input type="text" value={closeCustomReason} onChange={(e) => setCloseCustomReason(e.target.value)}
                         placeholder="Enter reason..."
-                        className="w-full rounded-md border border-line bg-transparent px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/50 focus:outline-none" />
+                        className="w-full rounded-md border border-line bg-transparent px-3 py-2 text-sm text-text placeholder:text-text-faint focus:border-cyan-500/50 focus:outline-none" />
                     )}
                     <div className="flex items-center gap-2">
                       <button onClick={closeIssue} disabled={closing || (closeReason === "custom" && !closeCustomReason.trim())}
-                        className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50">
+                        className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-text hover:bg-red-500 disabled:opacity-50">
                         {closing ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />} Close issue
                       </button>
                       <button onClick={() => { setShowCloseReason(false); setCloseReason(""); setCloseCustomReason(""); }}
-                        className="rounded-md px-4 py-2 text-sm text-slate-400 hover:text-white">
+                        className="rounded-md px-4 py-2 text-sm text-text-muted hover:text-text">
                         Cancel
                       </button>
                     </div>
@@ -515,7 +515,7 @@ export function IssuePage({
                 )
               ) : (
                 <button onClick={reopenIssue} disabled={closing}
-                  className="inline-flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50">
+                  className="inline-flex items-center gap-2 rounded-md border border-emerald-500/40 bg-status-success/10 px-4 py-2 text-sm font-medium text-status-success hover:bg-emerald-500/20 disabled:opacity-50">
                   {closing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Reopen issue
                 </button>
               )}
@@ -527,57 +527,57 @@ export function IssuePage({
         <div className="hidden w-72 shrink-0 border-l border-line lg:block">
           <div className="sticky top-[52px] space-y-0">
             <div className="border-b border-line px-4 py-4">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Assignees</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Assignees</h3>
               {issue.assignees.length > 0 ? (
                 <div className="space-y-2">
                   {issue.assignees.map((a) => (
                     <div key={a.login} className="flex items-center gap-2">
                       <img src={a.avatar_url} alt="" className="h-5 w-5 rounded-full" />
-                      <span className="text-sm text-white">{a.login}</span>
+                      <span className="text-sm text-text">{a.login}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">None yet</p>
+                <p className="text-sm text-text-muted">None yet</p>
               )}
             </div>
             <div className="border-b border-line px-4 py-4">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Labels</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Labels</h3>
               {issue.labels.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {issue.labels.map((label) => <LabelBadge key={label.name} label={label} />)}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">None yet</p>
+                <p className="text-sm text-text-muted">None yet</p>
               )}
             </div>
             <div className="border-b border-line px-4 py-4">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Type</h3>
-              <p className="text-sm text-slate-400">{issue.pull_request ? "Pull Request" : "Issue"}</p>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Type</h3>
+              <p className="text-sm text-text-muted">{issue.pull_request ? "Pull Request" : "Issue"}</p>
             </div>
             <div className="border-b border-line px-4 py-4">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Milestone</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Milestone</h3>
               {issue.milestone ? (
-                <p className="text-sm text-slate-300">{issue.milestone.title}</p>
+                <p className="text-sm text-text">{issue.milestone.title}</p>
               ) : (
-                <p className="text-sm text-slate-500">None</p>
+                <p className="text-sm text-text-muted">None</p>
               )}
             </div>
             <div className="border-b border-line px-4 py-4">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Linked Pull Requests</h3>
-              <p className="text-sm text-slate-500">None</p>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Linked Pull Requests</h3>
+              <p className="text-sm text-text-muted">None</p>
             </div>
             <div className="border-b border-line px-4 py-4">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Project</h3>
-              <p className="text-sm text-slate-500">None</p>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Project</h3>
+              <p className="text-sm text-text-muted">None</p>
             </div>
             <div className="border-b border-line px-4 py-4">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Parent Issue</h3>
-              <p className="text-sm text-slate-500">None</p>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Parent Issue</h3>
+              <p className="text-sm text-text-muted">None</p>
             </div>
             {githubLinked && (
               <div className="border-b border-line px-4 py-4">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Notifications</h3>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Notifications</h3>
                 <div className="space-y-1">
                   {(["participating", "all_activity", "ignore"] as const).map((level) => {
                     const current = isTracked ? "participating" : "ignore";
@@ -585,8 +585,8 @@ export function IssuePage({
                       <button key={level} onClick={() => toggleTracking(level)}
                         className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                           current === level
-                            ? "bg-cyan-500/10 text-cyan-300"
-                            : "text-slate-400 hover:bg-surface hover:text-white"
+                            ? "bg-accent/10 text-accent"
+                            : "text-text-muted hover:bg-surface hover:text-text"
                         }`}>
                         {level === "participating" && <Bell className="h-3.5 w-3.5" />}
                         {level === "all_activity" && <BellDot className="h-3.5 w-3.5" />}
@@ -613,60 +613,60 @@ export function IssuePage({
           overlayClassName="sm:hidden"
         >
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white">Issue Details</h3>
-              <button onClick={() => setShowSidebarInfo(false)} className="rounded p-1 text-slate-400 hover:text-white">
+              <h3 className="text-sm font-semibold text-text">Issue Details</h3>
+              <button onClick={() => setShowSidebarInfo(false)} className="rounded p-1 text-text-muted hover:text-text">
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">Assignees</h4>
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-text-muted">Assignees</h4>
                 {issue.assignees.length > 0 ? (
                   <div className="space-y-1.5">
                     {issue.assignees.map((a) => (
                       <div key={a.login} className="flex items-center gap-2">
                         <img src={a.avatar_url} alt="" className="h-5 w-5 rounded-full" />
-                        <span className="text-sm text-white">{a.login}</span>
+                        <span className="text-sm text-text">{a.login}</span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500">None yet</p>
+                  <p className="text-sm text-text-muted">None yet</p>
                 )}
               </div>
               <div>
-                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">Labels</h4>
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-text-muted">Labels</h4>
                 {issue.labels.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {issue.labels.map((label) => <LabelBadge key={label.name} label={label} />)}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500">None yet</p>
+                  <p className="text-sm text-text-muted">None yet</p>
                 )}
               </div>
               <div>
-                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">Type</h4>
-                <p className="text-sm text-slate-400">{issue.pull_request ? "Pull Request" : "Issue"}</p>
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-text-muted">Type</h4>
+                <p className="text-sm text-text-muted">{issue.pull_request ? "Pull Request" : "Issue"}</p>
               </div>
               <div>
-                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">Milestone</h4>
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-text-muted">Milestone</h4>
                 {issue.milestone ? (
-                  <p className="text-sm text-slate-300">{issue.milestone.title}</p>
+                  <p className="text-sm text-text">{issue.milestone.title}</p>
                 ) : (
-                  <p className="text-sm text-slate-500">None</p>
+                  <p className="text-sm text-text-muted">None</p>
                 )}
               </div>
               <div>
-                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">Linked Pull Requests</h4>
-                <p className="text-sm text-slate-500">None</p>
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-text-muted">Linked Pull Requests</h4>
+                <p className="text-sm text-text-muted">None</p>
               </div>
               <div>
-                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">Project</h4>
-                <p className="text-sm text-slate-500">None</p>
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-text-muted">Project</h4>
+                <p className="text-sm text-text-muted">None</p>
               </div>
               <div>
-                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">Parent Issue</h4>
-                <p className="text-sm text-slate-500">None</p>
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-text-muted">Parent Issue</h4>
+                <p className="text-sm text-text-muted">None</p>
               </div>
             </div>
         </ModalShell>

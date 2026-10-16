@@ -76,18 +76,18 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
             href={commit.htmlUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm font-medium text-[var(--theme-text)] hover:text-[var(--theme-accent)] transition-colors truncate max-w-full"
+            className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-accent)] transition-colors truncate max-w-full"
           >
             {commit.messageHeadline}
           </Link>
           {commit.status.total > 0 && (
-            <span className="text-[0.7rem] text-[var(--theme-text-faint)]">
+            <span className="text-[0.7rem] text-[var(--color-text-faint)]">
               {commit.status.total} check{commit.status.total === 1 ? "" : "s"}
             </span>
           )}
         </div>
 
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.78rem] text-[var(--theme-text-muted)]">
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.78rem] text-[var(--color-text-muted)]">
           <span className="truncate max-w-[12rem] sm:max-w-[16rem]">
             {commit.author.login ? (
               <Link
@@ -102,12 +102,12 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
               <span>{commit.author.name}</span>
             )}
           </span>
-          <span className="text-[var(--theme-text-faint)]">·</span>
+          <span className="text-[var(--color-text-faint)]">·</span>
           <span className="app-mono text-[0.72rem] inline-flex items-center gap-1">
             <button
               type="button"
               onClick={copySha}
-              className="inline-flex items-center gap-1 text-[var(--theme-text-faint)] hover:text-[var(--theme-text)] transition-colors"
+              className="inline-flex items-center gap-1 text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors"
               title="Copy full SHA"
             >
               {copied ? <Check className="h-3 w-3" /> : <GitCommit className="h-3 w-3" />}
@@ -116,8 +116,8 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
           </span>
           {commit.author.date && (
             <>
-              <span className="text-[var(--theme-text-faint)]">·</span>
-              <span className="text-[var(--theme-text-faint)]" title={new Date(commit.author.date).toLocaleString()}>
+              <span className="text-[var(--color-text-faint)]">·</span>
+              <span className="text-[var(--color-text-faint)]" title={new Date(commit.author.date).toLocaleString()}>
                 {formatRelativeTime(commit.author.date)}
               </span>
             </>
@@ -129,7 +129,7 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
             <button
               type="button"
               onClick={() => setExpanded((e) => !e)}
-              className="mt-1.5 inline-flex items-center gap-1 text-[0.72rem] text-[var(--theme-text-faint)] hover:text-[var(--theme-text-muted)] transition-colors"
+              className="mt-1.5 inline-flex items-center gap-1 text-[0.72rem] text-[var(--color-text-faint)] hover:text-[var(--color-text-muted)] transition-colors"
             >
               {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
               {hasMultipleChecks
@@ -142,7 +142,7 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
             </button>
 
             {expanded && (
-              <div className="mt-2 rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] p-3 space-y-2 text-[0.78rem]">
+              <div className="mt-2 rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] p-3 space-y-2 text-[0.78rem]">
                 {hasMultipleChecks && (
                   <div className="flex flex-wrap gap-1.5">
                     {commit.status.checks.map((check) =>
@@ -172,7 +172,7 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
                   </div>
                 )}
                 {commit.message.includes("\n") && (
-                  <pre className="whitespace-pre-wrap break-words font-sans text-[0.78rem] leading-relaxed text-[var(--theme-text-muted)] m-0">
+                  <pre className="whitespace-pre-wrap break-words font-sans text-[0.78rem] leading-relaxed text-[var(--color-text-muted)] m-0">
                     {commit.message}
                   </pre>
                 )}
@@ -181,16 +181,16 @@ export function CommitRow({ commit, expanded: defaultExpanded }: { commit: Commi
                     href={commit.htmlUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[0.72rem] text-[var(--theme-text-faint)] hover:text-[var(--theme-text)] transition-colors"
+                    className="inline-flex items-center gap-1 text-[0.72rem] text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors"
                   >
                     <ExternalLink className="h-3 w-3" />
                     View on GitHub
                   </Link>
-                  <span className="text-[var(--theme-text-faint)]">·</span>
+                  <span className="text-[var(--color-text-faint)]">·</span>
                   <button
                     type="button"
                     onClick={copySha}
-                    className="inline-flex items-center gap-1 text-[0.72rem] text-[var(--theme-text-faint)] hover:text-[var(--theme-text)] transition-colors"
+                    className="inline-flex items-center gap-1 text-[0.72rem] text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors"
                   >
                     {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                     Copy SHA

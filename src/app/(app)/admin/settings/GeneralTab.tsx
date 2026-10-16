@@ -78,26 +78,26 @@ export function GeneralTab({ initialSettings }: { initialSettings: Record<string
     <div className="space-y-6">
       <div className="rounded-xl border border-line/50 bg-panel/80 backdrop-blur-sm p-5">
         <div className="flex items-center gap-3 mb-4">
-          <div className="rounded-lg bg-cyan-500/10 p-2">
-            <Globe className="h-4 w-4 text-cyan-400" />
+          <div className="rounded-lg bg-accent/10 p-2">
+            <Globe className="h-4 w-4 text-accent" />
           </div>
           <div>
-            <h3 className="font-semibold text-white">Application</h3>
-            <p className="text-xs text-slate-400">Core application settings</p>
+            <h3 className="font-semibold text-text">Application</h3>
+            <p className="text-xs text-text-muted">Core application settings</p>
           </div>
         </div>
         <div className="space-y-4">
           <label className="block text-sm">
-            <span className="text-slate-300">Public App URL</span>
+            <span className="text-text">Public App URL</span>
             <input
               value={appUrl}
               onChange={(e) => setAppUrl(e.target.value)}
               placeholder="https://lepatch.example.com"
-              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
             />
           </label>
           <label className="block text-sm">
-            <span className="text-slate-300">Default release check interval (minutes)</span>
+            <span className="text-text">Default release check interval (minutes)</span>
             <select
               value={intervalMode === "custom" ? "custom" : String(checkInterval)}
               onChange={(e) => {
@@ -109,7 +109,7 @@ export function GeneralTab({ initialSettings }: { initialSettings: Record<string
                 setIntervalMode("preset");
                 setCheckInterval(Number(e.target.value));
               }}
-              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
             >
               {intervalPresets.map((preset) => (
                 <option key={preset.value} value={preset.value}>{preset.label}</option>
@@ -123,10 +123,10 @@ export function GeneralTab({ initialSettings }: { initialSettings: Record<string
                 max={10080}
                 value={checkInterval}
                 onChange={(e) => setCheckInterval(Math.min(10080, Math.max(1, parseInt(e.target.value, 10) || 5)))}
-                className="focus-ring mt-2 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+                className="focus-ring mt-2 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
               />
             )}
-            <p className="mt-1 text-xs text-slate-500">Saving this updates the global default and all watched apps.</p>
+            <p className="mt-1 text-xs text-text-muted">Saving this updates the global default and all watched apps.</p>
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -135,28 +135,28 @@ export function GeneralTab({ initialSettings }: { initialSettings: Record<string
               onChange={(e) => setIncludePrereleases(e.target.checked)}
               className="rounded border-line"
             />
-            <span className="text-slate-300">Include prereleases in global checks</span>
+            <span className="text-text">Include prereleases in global checks</span>
           </label>
         </div>
       </div>
 
       <div className="rounded-xl border border-line/50 bg-panel/80 backdrop-blur-sm p-5">
         <div className="flex items-center gap-3 mb-4">
-          <div className="rounded-lg bg-cyan-500/10 p-2">
-            <Clock className="h-4 w-4 text-cyan-400" />
+          <div className="rounded-lg bg-accent/10 p-2">
+            <Clock className="h-4 w-4 text-accent" />
           </div>
           <div>
-            <h3 className="font-semibold text-white">User Experience</h3>
-            <p className="text-xs text-slate-400">Session, timezone, and device preferences</p>
+            <h3 className="font-semibold text-text">User Experience</h3>
+            <p className="text-xs text-text-muted">Session, timezone, and device preferences</p>
           </div>
         </div>
         <div className="space-y-4">
           <label className="block text-sm">
-            <span className="text-slate-300">Timezone</span>
+            <span className="text-text">Timezone</span>
             <select
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
-              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
             >
               {timezones.map((tz) => (
                 <option key={tz} value={tz}>{tz}</option>
@@ -164,30 +164,30 @@ export function GeneralTab({ initialSettings }: { initialSettings: Record<string
             </select>
           </label>
           <label className="block text-sm">
-            <span className="text-slate-300">Session duration</span>
+            <span className="text-text">Session duration</span>
             <select
               value={String(sessionDuration)}
               onChange={(e) => setSessionDuration(Number(e.target.value))}
-              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
             >
               {sessionDurationPresets.map((preset) => (
                 <option key={preset.value} value={preset.value}>{preset.label}</option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-slate-500">How long a user stays logged in before they must sign in again.</p>
+            <p className="mt-1 text-xs text-text-muted">How long a user stays logged in before they must sign in again.</p>
           </label>
           <label className="block text-sm">
-            <span className="text-slate-300">Remember device duration</span>
+            <span className="text-text">Remember device duration</span>
             <select
               value={String(trustedDeviceDays)}
               onChange={(e) => setTrustedDeviceDays(Number(e.target.value))}
-              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
             >
               {trustedDevicePresets.map((preset) => (
                 <option key={preset.value} value={preset.value}>{preset.label}</option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-slate-500">How long a trusted device skips MFA after &quot;Remember this device&quot; is checked.</p>
+            <p className="mt-1 text-xs text-text-muted">How long a trusted device skips MFA after &quot;Remember this device&quot; is checked.</p>
           </label>
         </div>
       </div>
@@ -196,7 +196,7 @@ export function GeneralTab({ initialSettings }: { initialSettings: Record<string
         <button
           onClick={save}
           disabled={saving}
-          className="focus-ring inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-medium text-slate-950 hover:bg-cyan-400 transition-colors disabled:opacity-50"
+          className="focus-ring inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent transition-colors disabled:opacity-50"
         >
           <Save className="h-4 w-4" />
           {saving ? "Saving..." : "Save"}

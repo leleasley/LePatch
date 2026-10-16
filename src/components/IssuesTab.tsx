@@ -144,14 +144,14 @@ export function IssuesTab({ owner, repo, appId }: { owner: string; repo: string;
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] p-0.5">
+          <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] p-0.5">
             {(["open", "closed", "all"] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setState(s)}
                 data-active={state === s}
-                className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[0.78rem] font-medium transition-colors text-[var(--theme-text-muted)] hover:text-[var(--theme-text)]"
-                style={state === s ? { background: "var(--theme-accent)", color: "var(--theme-accent-text)" } : undefined}
+                className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[0.78rem] font-medium transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                style={state === s ? { background: "var(--color-accent)", color: "var(--color-accent-foreground)" } : undefined}
               >
                 {s === "open" && <CircleDot className="h-3 w-3" />}
                 {s === "closed" && <CheckCircle2 className="h-3 w-3" />}
@@ -174,20 +174,20 @@ export function IssuesTab({ owner, repo, appId }: { owner: string; repo: string;
           )}
         </div>
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--theme-text-faint)]" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-text-faint)]" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filter issues…"
-            className="w-full rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] py-1.5 pl-9 pr-3 text-[0.82rem] text-[var(--theme-text)] placeholder:text-[var(--theme-text-faint)] focus:border-[var(--theme-accent-border)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-focus-ring)] transition-all sm:w-64"
+            className="w-full rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] py-1.5 pl-9 pr-3 text-[0.82rem] text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] focus:border-[var(--color-accent-border)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-focus-ring)] transition-all sm:w-64"
           />
         </div>
         <div className="relative">
-          <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--theme-text-faint)]" />
+          <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-text-faint)]" />
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as "created" | "comments")}
-            className="appearance-none rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] py-1.5 pl-9 pr-8 text-[0.82rem] text-[var(--theme-text)] focus:border-[var(--theme-accent-border)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-focus-ring)] transition-all"
+            className="appearance-none rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] py-1.5 pl-9 pr-8 text-[0.82rem] text-[var(--color-text)] focus:border-[var(--color-accent-border)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-focus-ring)] transition-all"
           >
             <option value="created">Newest</option>
             <option value="comments">Most commented</option>
@@ -196,7 +196,7 @@ export function IssuesTab({ owner, repo, appId }: { owner: string; repo: string;
       </div>
 
       {error && (
-        <div className="rounded-lg border border-[var(--theme-status-failure-border)] bg-[var(--theme-status-failure-bg)] p-3 text-sm text-[var(--theme-status-failure)]">
+        <div className="rounded-lg border border-[var(--theme-status-failure-border)] bg-[var(--theme-status-failure-bg)] p-3 text-sm text-[var(--color-status-danger)]">
           {error}
         </div>
       )}
@@ -242,36 +242,36 @@ export function IssuesTab({ owner, repo, appId }: { owner: string; repo: string;
               <button
                 type="button"
                 onClick={() => (appId ? router.push(`/apps/${appId}/issues/${issue.number}`) : undefined)}
-                className={`app-shell-card group block w-full p-4 text-left transition-all hover:border-[color-mix(in_srgb,var(--theme-accent)_30%,transparent)] ${!appId ? "cursor-default" : ""}`}
+                className={`app-shell-card group block w-full p-4 text-left transition-all hover:border-[color-mix(in_srgb,var(--color-accent)_30%,transparent)] ${!appId ? "cursor-default" : ""}`}
               >
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 shrink-0">
                     {issue.pull_request ? (
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--theme-accent-border)] bg-[var(--theme-accent-bg)]">
-                        <GitPullRequest className="h-3 w-3 text-[var(--theme-accent)]" />
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--color-accent-border)] bg-[var(--color-accent-muted)]">
+                        <GitPullRequest className="h-3 w-3 text-[var(--color-accent)]" />
                       </span>
                     ) : issue.state === "open" ? (
                       <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--theme-status-success-border)] bg-[var(--theme-status-success-bg)]">
-                        <CircleDot className="h-3 w-3 text-[var(--theme-status-success)]" />
+                        <CircleDot className="h-3 w-3 text-[var(--color-status-success)]" />
                       </span>
                     ) : (
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--theme-accent-border)] bg-[var(--theme-accent-bg)]">
-                        <CheckCircle2 className="h-3 w-3 text-[var(--theme-accent)]" />
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--color-accent-border)] bg-[var(--color-accent-muted)]">
+                        <CheckCircle2 className="h-3 w-3 text-[var(--color-accent)]" />
                       </span>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start gap-2">
-                      <h3 className="text-sm font-semibold text-[var(--theme-text)] group-hover:text-[var(--theme-accent)] transition-colors line-clamp-1">
+                      <h3 className="text-sm font-semibold text-[var(--color-text)] group-hover:text-[var(--color-accent)] transition-colors line-clamp-1">
                         {issue.title}
                       </h3>
-                      <span className="shrink-0 text-[0.7rem] text-[var(--theme-text-faint)] app-mono">#{issue.number}</span>
+                      <span className="shrink-0 text-[0.7rem] text-[var(--color-text-faint)] app-mono">#{issue.number}</span>
                       {issue.pull_request && (
-                        <span className="shrink-0 rounded-full border border-[var(--theme-accent-border)] bg-[var(--theme-accent-bg)] px-1.5 py-0.5 text-[9px] font-medium text-[var(--theme-accent)]">PR</span>
+                        <span className="shrink-0 rounded-full border border-[var(--color-accent-border)] bg-[var(--color-accent-muted)] px-1.5 py-0.5 text-[9px] font-medium text-[var(--color-accent)]">PR</span>
                       )}
                     </div>
                     {issue.body && (
-                      <p className="mt-1 text-[0.78rem] text-[var(--theme-text-muted)] line-clamp-2 leading-relaxed">
+                      <p className="mt-1 text-[0.78rem] text-[var(--color-text-muted)] line-clamp-2 leading-relaxed">
                         {stripMarkdown(issue.body)}
                       </p>
                     )}
@@ -281,13 +281,13 @@ export function IssuesTab({ owner, repo, appId }: { owner: string; repo: string;
                           <LabelBadge key={label.name} name={label.name} color={label.color} />
                         ))}
                         {issue.labels.length > 5 && (
-                          <span className="text-[0.7rem] text-[var(--theme-text-faint)]">
+                          <span className="text-[0.7rem] text-[var(--color-text-faint)]">
                             +{issue.labels.length - 5} more
                           </span>
                         )}
                       </div>
                     )}
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.72rem] text-[var(--theme-text-faint)]">
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.72rem] text-[var(--color-text-faint)]">
                       {issue.user && (
                         <span className="inline-flex items-center gap-1.5">
                           <img
@@ -301,7 +301,7 @@ export function IssuesTab({ owner, repo, appId }: { owner: string; repo: string;
                       )}
                       {issue.assignees && issue.assignees.length > 0 && (
                         <span className="inline-flex items-center gap-1">
-                          <span className="text-[var(--theme-text-faint)]">→</span>
+                          <span className="text-[var(--color-text-faint)]">→</span>
                           {issue.assignees.slice(0, 3).map((a) => (
                             <img
                               key={a.login}
@@ -326,26 +326,26 @@ export function IssuesTab({ owner, repo, appId }: { owner: string; repo: string;
                       )}
                     </div>
                   </div>
-                  <ExternalLink className="h-4 w-4 shrink-0 text-[var(--theme-text-faint)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ExternalLink className="h-4 w-4 shrink-0 text-[var(--color-text-faint)] opacity-0 group-hover:opacity-100 transition-opacity" />
                   {githubLinked && (
                     <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => setActiveBell(activeBell === issue.number ? null : issue.number)}
-                        className="text-[var(--theme-text-faint)] hover:text-[var(--theme-accent)] transition-colors"
+                        className="text-[var(--color-text-faint)] hover:text-[var(--color-accent)] transition-colors"
                       >
                         {notificationSettings[`${owner}/${repo}/${issue.number}`] === "ignore" ||
                         !notificationSettings[`${owner}/${repo}/${issue.number}`] ? (
                           <BellOff className="h-4 w-4" />
                         ) : notificationSettings[`${owner}/${repo}/${issue.number}`] === "all_activity" ? (
-                          <BellDot className="h-4 w-4 text-[var(--theme-accent)]" />
+                          <BellDot className="h-4 w-4 text-[var(--color-accent)]" />
                         ) : (
-                          <Bell className="h-4 w-4 text-[var(--theme-accent)]" />
+                          <Bell className="h-4 w-4 text-[var(--color-accent)]" />
                         )}
                       </button>
                       {activeBell === issue.number && (
                         <>
                           <div className="fixed inset-0 z-40" onClick={() => setActiveBell(null)} />
-                          <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_95%,transparent)] shadow-xl">
+                          <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_95%,transparent)] shadow-xl">
                             <div className="p-1">
                               {(["participating", "all_activity", "ignore"] as const).map((level) => {
                                 const current = notificationSettings[`${owner}/${repo}/${issue.number}`] || "ignore";
@@ -355,8 +355,8 @@ export function IssuesTab({ owner, repo, appId }: { owner: string; repo: string;
                                     onClick={(e) => setNotificationLevel(e, issue.number, level)}
                                     className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[0.78rem] font-medium transition-colors ${
                                       current === level
-                                        ? "bg-[var(--theme-accent-bg)] text-[var(--theme-accent)]"
-                                        : "text-[var(--theme-text-muted)] hover:bg-[color-mix(in_srgb,var(--theme-text)_5%,transparent)] hover:text-[var(--theme-text)]"
+                                        ? "bg-[var(--color-accent-muted)] text-[var(--color-accent)]"
+                                        : "text-[var(--color-text-muted)] hover:bg-[color-mix(in_srgb,var(--color-text)_5%,transparent)] hover:text-[var(--color-text)]"
                                     }`}
                                   >
                                     {level === "participating" && <Bell className="h-3.5 w-3.5" />}

@@ -278,18 +278,18 @@ export function AppsClient({ initialApps, watchedApps = [], canAdd = true }: { i
         <div className="app-shell-card p-3.5 sm:p-4">
           <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
             <div className="relative min-w-0 flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--theme-text-faint)]" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-faint)]" />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search apps, repos, versions…"
-                className="w-full rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] py-2.5 pl-10 pr-9 text-sm text-[var(--theme-text)] placeholder:text-[var(--theme-text-faint)] focus:border-[var(--theme-accent-border)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-focus-ring)] transition-all"
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] py-2.5 pl-10 pr-9 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] focus:border-[var(--color-accent-border)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-focus-ring)] transition-all"
               />
               {query && (
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-[var(--theme-text-faint)] hover:bg-[color-mix(in_srgb,var(--theme-text)_5%,transparent)] hover:text-[var(--theme-text)]"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-[var(--color-text-faint)] hover:bg-[color-mix(in_srgb,var(--color-text)_5%,transparent)] hover:text-[var(--color-text)]"
                   aria-label="Clear filter"
                 >
                   <X className="h-4 w-4" />
@@ -306,19 +306,19 @@ export function AppsClient({ initialApps, watchedApps = [], canAdd = true }: { i
                 <SlidersHorizontal className="h-3.5 w-3.5" />
                 Filters
                 {filter !== "all" && (
-                  <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--theme-accent)] px-1.5 text-[0.62rem] font-semibold text-[var(--theme-accent-text)]">
+                  <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--color-accent)] px-1.5 text-[0.62rem] font-semibold text-[var(--color-accent-foreground)]">
                     1
                   </span>
                 )}
               </button>
 
-              <label className="inline-flex items-center gap-2 rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_40%,transparent)] px-2.5 py-2 text-xs text-[var(--theme-text-muted)]">
-                <ArrowUpDown className="h-3.5 w-3.5 text-[var(--theme-text-faint)]" />
+              <label className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_40%,transparent)] px-2.5 py-2 text-xs text-[var(--color-text-muted)]">
+                <ArrowUpDown className="h-3.5 w-3.5 text-[var(--color-text-faint)]" />
                 <span className="hidden sm:inline">Sort</span>
                 <select
                   value={sortBy}
                   onChange={(event) => setSortBy(event.target.value as SortKey)}
-                  className="bg-transparent text-sm text-[var(--theme-text)] focus:outline-none"
+                  className="bg-transparent text-sm text-[var(--color-text)] focus:outline-none"
                 >
                   <option value="status">Status</option>
                   <option value="name">Name</option>
@@ -367,10 +367,10 @@ export function AppsClient({ initialApps, watchedApps = [], canAdd = true }: { i
             </div>
           )}
 
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.72rem] text-[var(--theme-text-faint)]">
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.72rem] text-[var(--color-text-faint)]">
             <span>
-              Showing <span className="text-[var(--theme-text)] font-medium">{filteredApps.length}</span> of{" "}
-              <span className="text-[var(--theme-text)] font-medium">{counts.total}</span>
+              Showing <span className="text-[var(--color-text)] font-medium">{filteredApps.length}</span> of{" "}
+              <span className="text-[var(--color-text)] font-medium">{counts.total}</span>
             </span>
             {activeFilter && activeFilter.key !== "all" && (
               <>
@@ -378,7 +378,7 @@ export function AppsClient({ initialApps, watchedApps = [], canAdd = true }: { i
                 <button
                   type="button"
                   onClick={() => setFilter("all")}
-                  className="inline-flex items-center gap-1 rounded-md border border-[var(--theme-line)] px-1.5 py-0.5 hover:border-[var(--theme-text-faint)]"
+                  className="inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] px-1.5 py-0.5 hover:border-[var(--color-text-faint)]"
                 >
                   {activeFilter.label} <X className="h-3 w-3" />
                 </button>
@@ -387,7 +387,7 @@ export function AppsClient({ initialApps, watchedApps = [], canAdd = true }: { i
             {selectedCount > 0 && (
               <>
                 <span>·</span>
-                <span className="text-[var(--theme-accent)]">{selectedCount} selected</span>
+                <span className="text-[var(--color-accent)]">{selectedCount} selected</span>
               </>
             )}
           </div>
@@ -395,7 +395,7 @@ export function AppsClient({ initialApps, watchedApps = [], canAdd = true }: { i
 
         {selectedCount > 0 && (
           <div className="sticky-action-bar">
-            <span className="text-[0.82rem] text-[var(--theme-text)] mr-1">
+            <span className="text-[0.82rem] text-[var(--color-text)] mr-1">
               <span className="font-semibold">{selectedCount}</span> selected
             </span>
             <div className="ml-auto flex flex-wrap items-center gap-1.5">
@@ -426,7 +426,7 @@ export function AppsClient({ initialApps, watchedApps = [], canAdd = true }: { i
 
         {topAttention.length > 0 && (
           <div className="mb-3 xl:hidden rounded-xl border border-[var(--theme-status-pending-border)] bg-[var(--theme-status-pending-bg)] px-4 py-3">
-            <p className="text-xs font-semibold text-[var(--theme-status-pending)]">
+            <p className="text-xs font-semibold text-[var(--color-status-warning)]">
               {topAttention.length} app{topAttention.length === 1 ? "" : "s"} need{topAttention.length === 1 ? "s" : ""} attention
             </p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -434,13 +434,13 @@ export function AppsClient({ initialApps, watchedApps = [], canAdd = true }: { i
                 <a
                   key={app.id}
                   href={`/apps/${app.id}`}
-                  className="inline-flex items-center gap-1 rounded-md border border-[var(--theme-status-pending-border)] bg-[color-mix(in_srgb,var(--theme-status-pending)_8%,transparent)] px-2 py-0.5 text-[0.7rem] font-medium text-[var(--theme-status-pending)] hover:bg-[color-mix(in_srgb,var(--theme-status-pending)_15%,transparent)] transition-colors"
+                  className="inline-flex items-center gap-1 rounded-md border border-[var(--theme-status-pending-border)] bg-[color-mix(in_srgb,var(--color-status-warning)_8%,transparent)] px-2 py-0.5 text-[0.7rem] font-medium text-[var(--color-status-warning)] hover:bg-[color-mix(in_srgb,var(--color-status-warning)_15%,transparent)] transition-colors"
                 >
                   {app.name}
                 </a>
               ))}
               {topAttention.length > 4 && (
-                <span className="inline-flex items-center px-2 py-0.5 text-[0.7rem] text-[var(--theme-status-pending)]">
+                <span className="inline-flex items-center px-2 py-0.5 text-[0.7rem] text-[var(--color-status-warning)]">
                   +{topAttention.length - 4} more
                 </span>
               )}
@@ -464,12 +464,12 @@ export function AppsClient({ initialApps, watchedApps = [], canAdd = true }: { i
 
       <aside className="space-y-4 desktop-only">
         <div className="app-shell-card p-4">
-          <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">
+          <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
             Needs attention
           </h3>
           <div className="mt-3 space-y-2">
             {topAttention.length === 0 ? (
-              <p className="text-sm text-[var(--theme-text-muted)]">Nothing needs attention right now.</p>
+              <p className="text-sm text-[var(--color-text-muted)]">Nothing needs attention right now.</p>
             ) : (
               topAttention.map((app) => {
                 const stale = isStale(app);
@@ -477,16 +477,16 @@ export function AppsClient({ initialApps, watchedApps = [], canAdd = true }: { i
                   <a
                     key={app.id}
                     href={`/apps/${app.id}`}
-                    className="block rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] p-3 transition-all hover:border-[color-mix(in_srgb,var(--theme-line)_140%,transparent)] hover:bg-[color-mix(in_srgb,var(--theme-surface-elevated)_80%,transparent)]"
+                    className="block rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] p-3 transition-all hover:border-[color-mix(in_srgb,var(--color-border)_140%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-surface-elevated)_80%,transparent)]"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-[var(--theme-text)]">{app.name}</div>
-                        <div className="mt-0.5 truncate text-[0.72rem] text-[var(--theme-text-faint)] app-mono">
+                        <div className="truncate text-sm font-semibold text-[var(--color-text)]">{app.name}</div>
+                        <div className="mt-0.5 truncate text-[0.72rem] text-[var(--color-text-faint)] app-mono">
                           {app.repoFullName}
                         </div>
                       </div>
-                      <span className="text-[0.7rem] text-[var(--theme-text-faint)]">
+                      <span className="text-[0.7rem] text-[var(--color-text-faint)]">
                         {app.checkStatus === "failed"
                           ? "Failed"
                           : app.updateAvailable
@@ -506,36 +506,36 @@ export function AppsClient({ initialApps, watchedApps = [], canAdd = true }: { i
         </div>
 
         <div className="app-shell-card p-4">
-          <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">
+          <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
             Quick links
           </h3>
           <div className="mt-3 space-y-1.5">
             <button
               onClick={() => setAddAppModalOpen(true)}
-              className="flex items-center justify-between rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] px-3 py-2 text-sm text-[var(--theme-text)] hover:border-[var(--theme-accent-border)] hover:text-[var(--theme-accent)] transition-colors w-full text-left"
+              className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] px-3 py-2 text-sm text-[var(--color-text)] hover:border-[var(--color-accent-border)] hover:text-[var(--color-accent)] transition-colors w-full text-left"
             >
               <span>Add app</span>
-              <span className="text-[var(--theme-text-faint)]">→</span>
+              <span className="text-[var(--color-text-faint)]">→</span>
             </button>
             <a
               href="/apps/search"
-              className="flex items-center justify-between rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] px-3 py-2 text-sm text-[var(--theme-text)] hover:border-[var(--theme-accent-border)] hover:text-[var(--theme-accent)] transition-colors"
+              className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] px-3 py-2 text-sm text-[var(--color-text)] hover:border-[var(--color-accent-border)] hover:text-[var(--color-accent)] transition-colors"
             >
               <span>Find repositories</span>
-              <span className="text-[var(--theme-text-faint)]">→</span>
+              <span className="text-[var(--color-text-faint)]">→</span>
             </a>
             <a
               href="/admin/settings"
-              className="flex items-center justify-between rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] px-3 py-2 text-sm text-[var(--theme-text)] hover:border-[var(--theme-accent-border)] hover:text-[var(--theme-accent)] transition-colors"
+              className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] px-3 py-2 text-sm text-[var(--color-text)] hover:border-[var(--color-accent-border)] hover:text-[var(--color-accent)] transition-colors"
             >
               <span>Audit log</span>
-              <span className="text-[var(--theme-text-faint)]">→</span>
+              <span className="text-[var(--color-text-faint)]">→</span>
             </a>
           </div>
         </div>
 
         <div className="app-shell-card p-4">
-          <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">
+          <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
             Health snapshot
           </h3>
           <div className="mt-3 grid grid-cols-2 gap-2">
@@ -572,12 +572,12 @@ export function AppsClient({ initialApps, watchedApps = [], canAdd = true }: { i
 
 function Stat({ label, value, tone = "default" }: { label: string; value: number; tone?: "default" | "success" | "warning" | "error" | "stale" | "muted" }) {
   const colors = {
-    default: "var(--theme-text)",
-    success: "var(--theme-status-success)",
-    warning: "var(--theme-status-pending)",
-    error: "var(--theme-status-failure)",
-    stale: "var(--theme-status-pending)",
-    muted: "var(--theme-text-muted)",
+    default: "var(--color-text)",
+    success: "var(--color-status-success)",
+    warning: "var(--color-status-warning)",
+    error: "var(--color-status-danger)",
+    stale: "var(--color-status-warning)",
+    muted: "var(--color-text-muted)",
   }[tone];
   return (
     <div className="app-stat !p-2.5">

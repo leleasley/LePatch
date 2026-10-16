@@ -4,7 +4,7 @@ export function Spinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   const dim = sizes[size];
   return (
     <svg
-      className="animate-spin text-cyan-400"
+      className="animate-spin text-accent"
       width={dim}
       height={dim}
       viewBox="0 0 24 24"

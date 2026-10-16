@@ -51,19 +51,19 @@ export function MfaVerifyForm({ token }: { token: string }) {
         <div className="relative">
           <div className="mb-6 flex items-start gap-4 sm:mb-8">
             <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3">
-              <Shield className="h-6 w-6 text-cyan-300" />
+              <Shield className="h-6 w-6 text-accent" />
             </div>
             <div>
               <p className="hidden text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300/80 sm:block">Security Check</p>
-              <h1 className="mt-1 text-2xl font-semibold text-white sm:mt-2 sm:text-3xl">Confirm it&apos;s you</h1>
-              <p className="mt-2 hidden text-sm leading-6 text-slate-400 sm:block">
+              <h1 className="mt-1 text-2xl font-semibold text-text sm:mt-2 sm:text-3xl">Confirm it&apos;s you</h1>
+              <p className="mt-2 hidden text-sm leading-6 text-text-muted sm:block">
                 Enter the code from your authenticator app. The verification step now lives on its own dedicated route.
               </p>
             </div>
           </div>
 
           {mfaError && (
-            <p className="mb-5 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            <p className="mb-5 rounded-2xl border border-red-500/30 bg-status-danger/10 px-4 py-3 text-sm text-red-200">
               {mfaError}
             </p>
           )}
@@ -80,7 +80,7 @@ export function MfaVerifyForm({ token }: { token: string }) {
               <button
                 onClick={verifyMfa}
                 disabled={mfaCode.length !== 6 || mfaLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-4 py-3.5 font-medium text-slate-950 transition-all hover:bg-cyan-300 disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3.5 font-medium text-accent-foreground transition-all hover:bg-cyan-300 disabled:opacity-60"
               >
                 {mfaLoading ? <><Spinner size="sm" /> Verifying</> : "Continue"}
               </button>
@@ -88,7 +88,7 @@ export function MfaVerifyForm({ token }: { token: string }) {
           ) : (
             <div className="space-y-5">
               <label className="block text-sm">
-                <span className="mb-2 block font-medium text-slate-200">Backup code</span>
+                <span className="mb-2 block font-medium text-text">Backup code</span>
                 <input
                   type="text"
                   value={mfaBackupCode}
@@ -96,13 +96,13 @@ export function MfaVerifyForm({ token }: { token: string }) {
                   placeholder="XXXXXXXX"
                   maxLength={8}
                   autoFocus
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-center font-mono text-lg tracking-[0.28em] text-white placeholder:text-slate-600 focus:border-cyan-400/50 focus:outline-none"
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-center font-mono text-lg tracking-[0.28em] text-text placeholder:text-text-faint focus:border-cyan-400/50 focus:outline-none"
                 />
               </label>
               <button
                 onClick={verifyMfa}
                 disabled={mfaBackupCode.length !== 8 || mfaLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-4 py-3.5 font-medium text-slate-950 transition-all hover:bg-cyan-300 disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3.5 font-medium text-accent-foreground transition-all hover:bg-cyan-300 disabled:opacity-60"
               >
                 {mfaLoading ? <><Spinner size="sm" /> Verifying</> : "Use Backup Code"}
               </button>
@@ -110,12 +110,12 @@ export function MfaVerifyForm({ token }: { token: string }) {
           )}
 
           <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <label className="flex items-center gap-3 text-sm text-slate-300">
+            <label className="flex items-center gap-3 text-sm text-text">
               <input
                 type="checkbox"
                 checked={rememberDevice}
                 onChange={(event) => setRememberDevice(event.target.checked)}
-                className="h-4 w-4 rounded border-white/20 bg-slate-900 text-cyan-400"
+                className="h-4 w-4 rounded border-white/20 bg-surface text-accent"
               />
               Remember this device for 30 days
             </label>
@@ -129,13 +129,13 @@ export function MfaVerifyForm({ token }: { token: string }) {
                 setMfaCode("");
                 setMfaBackupCode("");
               }}
-              className="text-left text-slate-400 transition-colors hover:text-cyan-300"
+              className="text-left text-text-muted transition-colors hover:text-accent"
             >
               {mfaBackupMode ? "Use authenticator app instead" : "Use a backup code instead"}
             </button>
             <button
               onClick={() => router.push("/login")}
-              className="inline-flex items-center gap-2 text-left text-slate-500 transition-colors hover:text-slate-300"
+              className="inline-flex items-center gap-2 text-left text-text-muted transition-colors hover:text-text"
             >
               <KeyRound className="h-4 w-4" />
               Back to login

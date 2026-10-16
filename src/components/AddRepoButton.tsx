@@ -50,7 +50,7 @@ export function AddRepoButton({ repoFullName, name, initialAdded = false, appId,
           Added
         </span>
         {watchedAppId && (
-          <AppDetailLink href={`/apps/${watchedAppId}`} appName={name || repoFullName} className={`focus-ring border border-line text-slate-200 hover:bg-white/5 ${buttonSizeClasses(size)}`}>
+          <AppDetailLink href={`/apps/${watchedAppId}`} appName={name || repoFullName} className={`focus-ring border border-line text-text hover:bg-white/5 ${buttonSizeClasses(size)}`}>
             View
           </AppDetailLink>
         )}
@@ -65,12 +65,12 @@ export function AddRepoButton({ repoFullName, name, initialAdded = false, appId,
       <button
         onClick={add}
         disabled={loading}
-        className={`focus-ring inline-flex items-center bg-cyan-500 font-medium text-slate-950 hover:bg-cyan-400 disabled:opacity-60 ${buttonSizeClasses(size)}`}
+        className={`focus-ring inline-flex items-center bg-accent font-medium text-accent-foreground hover:bg-accent disabled:opacity-60 ${buttonSizeClasses(size)}`}
       >
         <Plus className={iconSizeClasses(size)} />
         {loading ? "Adding" : "Add"}
       </button>
-      {message && <span className="text-xs text-slate-400">{message}</span>}
+      {message && <span className="text-xs text-text-muted">{message}</span>}
     </div>
   );
 }

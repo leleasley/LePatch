@@ -184,7 +184,7 @@ export default async function AppDetailPage({
               href={app.githubUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-md border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] px-2.5 py-1 text-[0.78rem] text-[var(--theme-text-muted)] hover:text-[var(--theme-accent)] hover:border-[var(--theme-accent-border)] transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] px-2.5 py-1 text-[0.78rem] text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] transition-colors"
             >
               <GitFork className="h-3 w-3" />
               <span className="app-mono">{app.repoFullName}</span>
@@ -193,7 +193,7 @@ export default async function AppDetailPage({
             {app.updateAvailable && (
               <span
                 className="status-pill status-pill--pending ml-1"
-                style={{ background: "var(--theme-status-pending-bg)", color: "var(--theme-status-pending)" }}
+                style={{ background: "var(--theme-status-pending-bg)", color: "var(--color-status-warning)" }}
               >
                 <span className="pulse-dot" />
                 Update available
@@ -296,17 +296,17 @@ export default async function AppDetailPage({
         </SideCard>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-[0.78rem] text-[var(--theme-text-faint)]">
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-[0.78rem] text-[var(--color-text-faint)]">
         <Link
           href={`/apps/repo/${encodeURIComponent(app.repoOwner)}/${encodeURIComponent(app.repoName)}`}
-          className="inline-flex items-center gap-1 hover:text-[var(--theme-text-muted)] transition-colors"
+          className="inline-flex items-center gap-1 hover:text-[var(--color-text-muted)] transition-colors"
         >
           View public repo preview <ArrowUpRight className="h-3 w-3" />
         </Link>
         <span>·</span>
         <Link
           href={`/apps/${app.id}/releases`}
-          className="inline-flex items-center gap-1 hover:text-[var(--theme-text-muted)] transition-colors"
+          className="inline-flex items-center gap-1 hover:text-[var(--color-text-muted)] transition-colors"
         >
           <Tag className="h-3 w-3" /> All releases
         </Link>

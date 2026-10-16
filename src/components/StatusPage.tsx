@@ -28,16 +28,16 @@ export function StatusPage({ code, title, description, note, actions = [], child
             <div className="flex items-center gap-3 sm:gap-4">
               <img src="/assets/Logo.png" alt="LePatch" className="h-10 w-10 rounded-xl shadow-lg shadow-cyan-500/10 sm:h-12 sm:w-12" />
               <div className="min-w-0">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-cyan-300 sm:text-xs sm:tracking-[0.35em]">{code}</div>
-                <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-white sm:text-3xl">{title}</h1>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-accent sm:text-xs sm:tracking-[0.35em]">{code}</div>
+                <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-text sm:text-3xl">{title}</h1>
               </div>
             </div>
           </div>
 
           <div className="space-y-4 px-5 py-5 sm:space-y-5 sm:px-8 sm:py-7">
-            <p className="text-sm leading-6 text-slate-300">{description}</p>
+            <p className="text-sm leading-6 text-text">{description}</p>
             {note ? (
-              <div className="break-all rounded-xl border border-line/60 bg-surface-elevated/70 px-3 py-2.5 text-xs leading-5 text-slate-400 sm:break-normal sm:px-4 sm:py-3 sm:text-sm">
+              <div className="break-all rounded-xl border border-line/60 bg-surface-elevated/70 px-3 py-2.5 text-xs leading-5 text-text-muted sm:break-normal sm:px-4 sm:py-3 sm:text-sm">
                 {note}
               </div>
             ) : null}
@@ -52,8 +52,8 @@ export function StatusPage({ code, title, description, note, actions = [], child
                     href={action.href}
                     className={
                       action.variant === "secondary"
-                        ? "focus-ring inline-flex items-center justify-center rounded-lg border border-line/60 bg-surface px-4 py-2.5 text-sm font-medium text-slate-200 transition-all hover:border-cyan-500/30 hover:text-white"
-                        : "focus-ring inline-flex items-center justify-center rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-medium text-slate-950 shadow-lg shadow-cyan-500/20 transition-all hover:bg-cyan-400"
+                        ? "focus-ring inline-flex items-center justify-center rounded-lg border border-line/60 bg-surface px-4 py-2.5 text-sm font-medium text-text transition-all hover:border-accent/40 hover:text-text"
+                        : "focus-ring inline-flex items-center justify-center rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground shadow-lg shadow-cyan-500/20 transition-all hover:bg-accent"
                     }
                   >
                     {action.label}

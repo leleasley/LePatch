@@ -70,10 +70,10 @@ function formatRemaining(ms: number): string {
 
 function StatusBadge({ status }: { status: Backup["status"] }) {
   const styles: Record<string, string> = {
-    pending: "bg-slate-500/10 text-slate-400 border-slate-500/30",
-    running: "bg-cyan-500/10 text-cyan-300 border-cyan-500/30",
-    completed: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
-    failed: "bg-red-500/10 text-red-300 border-red-500/30",
+    pending: "bg-slate-500/10 text-text-muted border-slate-500/30",
+    running: "bg-accent/10 text-accent border-accent/40",
+    completed: "bg-status-success/10 text-status-success border-emerald-500/30",
+    failed: "bg-status-danger/10 text-status-danger border-red-500/30",
   };
   const icons: Record<string, React.ReactNode> = {
     pending: <Clock className="h-3 w-3" />,
@@ -92,11 +92,11 @@ function StatusBadge({ status }: { status: Backup["status"] }) {
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
   return (
     <div className="rounded-xl border border-line/50 bg-panel/80 px-4 py-3 backdrop-blur-sm">
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-slate-500">
+      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-text-muted">
         {icon}
         {label}
       </div>
-      <div className="mt-1.5 truncate text-sm font-semibold text-white">{value}</div>
+      <div className="mt-1.5 truncate text-sm font-semibold text-text">{value}</div>
     </div>
   );
 }
@@ -189,18 +189,18 @@ export function BackupsClient() {
       <div className="mb-8 overflow-hidden rounded-xl border border-line/50 bg-gradient-to-br from-surface via-panel to-surface p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="rounded-xl bg-cyan-500/10 p-3">
-              <Database className="h-6 w-6 text-cyan-400" />
+            <div className="rounded-xl bg-accent/10 p-3">
+              <Database className="h-6 w-6 text-accent" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-white">Backups</h1>
-              <p className="mt-1 text-sm text-slate-400">Database backups — max 5 kept, oldest auto-removed.</p>
+              <h1 className="text-3xl font-bold tracking-tight text-text">Backups</h1>
+              <p className="mt-1 text-sm text-text-muted">Database backups — max 5 kept, oldest auto-removed.</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowEditSchedule(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-line/50 bg-panel/80 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/[0.04] hover:text-white"
+              className="inline-flex items-center gap-2 rounded-lg border border-line/50 bg-panel/80 px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-white/[0.04] hover:text-text"
             >
               <Edit3 className="h-4 w-4" />
               Edit schedule
@@ -208,7 +208,7 @@ export function BackupsClient() {
             <button
               onClick={createBackup}
               disabled={creating}
-              className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950 transition-colors hover:bg-cyan-400 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent disabled:opacity-50"
             >
               {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
               {creating ? "Creating..." : "Create Backup"}
@@ -218,7 +218,7 @@ export function BackupsClient() {
       </div>
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-500/40 bg-status-danger/10 px-4 py-3 text-sm text-red-200">
           <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
@@ -226,11 +226,11 @@ export function BackupsClient() {
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
         <StatCard icon={<Database className="h-4 w-4" />} label="Total" value={stats?.total ?? "—"} />
-        <StatCard icon={<CheckCircle className="h-4 w-4 text-emerald-400" />} label="Completed" value={stats?.completed ?? "—"} />
-        <StatCard icon={<XCircle className="h-4 w-4 text-red-400" />} label="Failed" value={stats?.failed ?? "—"} />
+        <StatCard icon={<CheckCircle className="h-4 w-4 text-status-success" />} label="Completed" value={stats?.completed ?? "—"} />
+        <StatCard icon={<XCircle className="h-4 w-4 text-status-danger" />} label="Failed" value={stats?.failed ?? "—"} />
         <StatCard icon={<Clock className="h-4 w-4" />} label="Last Backup" value={stats?.lastBackupAt ? formatDate(stats.lastBackupAt) : "Never"} />
         <StatCard
-          icon={<Calendar className={`h-4 w-4 ${showNextBackup ? "text-cyan-400" : "text-slate-500"}`} />}
+          icon={<Calendar className={`h-4 w-4 ${showNextBackup ? "text-accent" : "text-text-muted"}`} />}
           label="Next Backup"
           value={showNextBackup ? formatRemaining(msUntilNext) : schedule?.enabled ? "Calculating..." : "Disabled"}
         />
@@ -238,15 +238,15 @@ export function BackupsClient() {
 
       <div className="mb-6 rounded-xl border border-line/50 bg-panel/80 px-5 py-3 backdrop-blur-sm">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Backup Slots</span>
-          <span className="text-xs text-slate-500">{stats?.completed ?? 0} / 5 used</span>
+          <span className="text-xs font-medium uppercase tracking-wider text-text-muted">Backup Slots</span>
+          <span className="text-xs text-text-muted">{stats?.completed ?? 0} / 5 used</span>
         </div>
         <div className="mt-2 flex items-center gap-1.5">
           {Array.from({ length: 5 }, (_, i) => (
             i < (stats?.completed ?? 0) ? (
-              <CircleDot key={i} className="h-4 w-4 text-emerald-400" />
+              <CircleDot key={i} className="h-4 w-4 text-status-success" />
             ) : (
-              <Circle key={i} className="h-4 w-4 text-slate-600" />
+              <Circle key={i} className="h-4 w-4 text-text-faint" />
             )
           ))}
         </div>
@@ -255,10 +255,10 @@ export function BackupsClient() {
       <div className="rounded-xl border border-line/50 bg-panel/60">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
+            <Loader2 className="h-6 w-6 animate-spin text-accent" />
           </div>
         ) : backups.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+          <div className="flex flex-col items-center justify-center py-12 text-text-muted">
             <HardDrive className="mb-2 h-8 w-8" />
             <p className="text-sm">No backups yet</p>
             <p className="mt-1 text-xs">Click &quot;Create Backup&quot; to get started</p>
@@ -269,10 +269,10 @@ export function BackupsClient() {
               <div key={backup.id} className="flex items-center justify-between px-4 py-3 sm:px-6">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium text-white">{backup.filename}</span>
+                    <span className="truncate text-sm font-medium text-text">{backup.filename}</span>
                     <StatusBadge status={backup.status} />
                   </div>
-                  <div className="mt-0.5 flex items-center gap-3 text-xs text-slate-500">
+                  <div className="mt-0.5 flex items-center gap-3 text-xs text-text-muted">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
                       {formatDate(backup.createdAt)}
@@ -284,7 +284,7 @@ export function BackupsClient() {
                     <span>{backup.type}</span>
                   </div>
                   {backup.error && (
-                    <p className="mt-1 text-xs text-red-400">{backup.error}</p>
+                    <p className="mt-1 text-xs text-status-danger">{backup.error}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0 ml-3">
@@ -292,7 +292,7 @@ export function BackupsClient() {
                     <a
                       href={`/api/admin/backups/${backup.id}`}
                       download
-                      className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/[0.04] hover:text-white"
+                      className="rounded-lg p-2 text-text-muted transition-colors hover:bg-white/[0.04] hover:text-text"
                       title="Download"
                     >
                       <Download className="h-4 w-4" />
@@ -300,7 +300,7 @@ export function BackupsClient() {
                   )}
                   <button
                     onClick={() => setDeleteTarget({ id: backup.id, filename: backup.filename })}
-                    className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                    className="rounded-lg p-2 text-text-muted transition-colors hover:bg-status-danger/10 hover:text-status-danger"
                     title="Delete"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -316,28 +316,28 @@ export function BackupsClient() {
         <div className="p-6 w-full max-w-md">
           <div className="flex items-center gap-3 mb-4">
             <div className="rounded-full bg-red-500/20 p-2">
-              <Trash2 className="h-5 w-5 text-red-400" />
+              <Trash2 className="h-5 w-5 text-status-danger" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">Delete Backup</h3>
-              <p className="text-sm text-slate-400 mt-0.5">This action cannot be undone.</p>
+              <h3 className="text-lg font-semibold text-text">Delete Backup</h3>
+              <p className="text-sm text-text-muted mt-0.5">This action cannot be undone.</p>
             </div>
           </div>
-          <p className="text-sm text-slate-300 mb-6">
-            Are you sure you want to delete <span className="font-medium text-white">{deleteTarget?.filename}</span>?
+          <p className="text-sm text-text mb-6">
+            Are you sure you want to delete <span className="font-medium text-text">{deleteTarget?.filename}</span>?
           </p>
           <div className="flex items-center justify-end gap-3">
             <button
               onClick={() => setDeleteTarget(null)}
               disabled={deleting}
-              className="rounded-lg border border-line/50 bg-panel/80 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/[0.04] hover:text-white disabled:opacity-50"
+              className="rounded-lg border border-line/50 bg-panel/80 px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-white/[0.04] hover:text-text disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={confirmDelete}
               disabled={deleting}
-              className="inline-flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-400 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-red-400 disabled:opacity-50"
             >
               {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               {deleting ? "Deleting..." : "Delete"}
@@ -348,7 +348,7 @@ export function BackupsClient() {
 
       <ModalShell open={showEditSchedule} onClose={() => setShowEditSchedule(false)}>
         <div className="p-6 w-full max-w-lg">
-          <h2 className="mb-4 text-lg font-medium text-white">Edit Backup Schedule</h2>
+          <h2 className="mb-4 text-lg font-medium text-text">Edit Backup Schedule</h2>
           {schedule && (
             <BackupScheduleForm
               schedule={{

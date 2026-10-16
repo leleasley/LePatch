@@ -35,7 +35,7 @@ type CreateIssueModalProps = {
 };
 
 function MarkdownToolbar({ fieldId, onInsert }: { fieldId: string; onInsert: (fieldId: string, before: string, after?: string) => void }) {
-  const btnClass = "rounded p-1 text-slate-400 hover:bg-surface hover:text-white";
+  const btnClass = "rounded p-1 text-text-muted hover:bg-surface hover:text-text";
   const iconClass = "h-3.5 w-3.5";
   return (
     <div className="flex items-center gap-0.5 border-b border-line px-2 py-1 flex-wrap">
@@ -55,7 +55,7 @@ function MarkdownToolbar({ fieldId, onInsert }: { fieldId: string; onInsert: (fi
       <button type="button" onClick={() => onInsert(fieldId, "\n> ")} className={btnClass} title="Quote"><Quote className={iconClass} /></button>
       <button type="button" onClick={() => onInsert(fieldId, "\n| Col 1 | Col 2 |\n|------|------|\n| Cell | Cell |\n")} className={btnClass} title="Table"><Table className={iconClass} /></button>
       <button type="button" onClick={() => onInsert(fieldId, "@")} className={btnClass} title="Mention"><AtSign className={iconClass} /></button>
-      <div className="ml-auto text-[10px] text-slate-600">Markdown</div>
+      <div className="ml-auto text-[10px] text-text-faint">Markdown</div>
     </div>
   );
 }
@@ -223,12 +223,12 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
       panelClassName="flex w-auto max-w-lg flex-col overflow-hidden"
     >
         <div className="flex items-center justify-between border-b border-line px-5 py-4 shrink-0">
-          <h2 className="text-lg font-semibold text-white">
+          <h2 className="text-lg font-semibold text-text">
             {step === "choose" ? "New Issue" : selectedTemplate?.name || "New Issue"}
           </h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-white/5 hover:text-white"
+            className="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-white/5 hover:text-text"
           >
             <X className="h-4 w-4" />
           </button>
@@ -237,14 +237,14 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
         <div className="overflow-auto flex-1 p-5">
           {step === "choose" && (
             <div className="space-y-3">
-              <p className="text-sm text-slate-400 mb-4">
-                Creating issue on <span className="font-mono text-slate-300">{owner}/{repo}</span>
+              <p className="text-sm text-text-muted mb-4">
+                Creating issue on <span className="font-mono text-text">{owner}/{repo}</span>
               </p>
 
               {loadingTemplates ? (
                 <div className="flex items-center justify-center gap-2 py-8">
-                  <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
-                  <span className="text-sm text-slate-400">Loading templates...</span>
+                  <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                  <span className="text-sm text-text-muted">Loading templates...</span>
                 </div>
               ) : (
                 <>
@@ -256,20 +256,20 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
                           onClick={() => selectTemplate(template)}
                           className="group flex w-full items-center gap-3 rounded-lg border border-line/50 bg-surface p-3 text-left transition-colors hover:border-line hover:bg-panel"
                         >
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-cyan-500/10">
-                            <FileText className="h-4 w-4 text-cyan-400" />
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent/10">
+                            <FileText className="h-4 w-4 text-accent" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium text-white group-hover:text-cyan-300 transition-colors">
+                            <div className="text-sm font-medium text-text group-hover:text-accent transition-colors">
                               {template.name}
                             </div>
                             {template.description && (
-                              <div className="mt-0.5 text-xs text-slate-500 line-clamp-1">
+                              <div className="mt-0.5 text-xs text-text-muted line-clamp-1">
                                 {template.description}
                               </div>
                             )}
                           </div>
-                          <ChevronRight className="h-4 w-4 shrink-0 text-slate-600 group-hover:text-slate-400 transition-colors" />
+                          <ChevronRight className="h-4 w-4 shrink-0 text-text-faint group-hover:text-text-muted transition-colors" />
                         </button>
                       ))}
                     </div>
@@ -278,7 +278,7 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
                   {blankEnabled && hasTemplates && (
                     <div className="flex items-center gap-3 my-3">
                       <div className="h-px flex-1 bg-line/50" />
-                      <span className="text-xs uppercase tracking-wider text-slate-600">or</span>
+                      <span className="text-xs uppercase tracking-wider text-text-faint">or</span>
                       <div className="h-px flex-1 bg-line/50" />
                     </div>
                   )}
@@ -289,13 +289,13 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
                       className="group flex w-full items-center gap-3 rounded-lg border border-dashed border-line/50 bg-transparent p-3 text-left transition-colors hover:border-line hover:bg-surface"
                     >
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/5">
-                        <Send className="h-4 w-4 text-slate-500" />
+                        <Send className="h-4 w-4 text-text-muted" />
                       </div>
                       <div>
-                        <div className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">
+                        <div className="text-sm font-medium text-text group-hover:text-text transition-colors">
                           Blank issue
                         </div>
-                        <div className="mt-0.5 text-xs text-slate-600">
+                        <div className="mt-0.5 text-xs text-text-faint">
                           Open a blank issue without a template
                         </div>
                       </div>
@@ -303,7 +303,7 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
                   )}
 
                   {!loadingTemplates && !hasTemplates && !blankEnabled && (
-                    <p className="text-sm text-slate-500 text-center py-6">
+                    <p className="text-sm text-text-muted text-center py-6">
                       No issue templates available for this repository.
                     </p>
                   )}
@@ -315,7 +315,7 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
           {step === "form" && (
             <form onSubmit={submit} className="space-y-4">
               <label className="block text-sm">
-                <span className="text-slate-300 font-medium">Title *</span>
+                <span className="text-text font-medium">Title *</span>
                 <input
                   type="text"
                   value={title}
@@ -323,7 +323,7 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
                   placeholder={selectedTemplate?.title || "Issue title"}
                   required
                   maxLength={256}
-                  className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white placeholder:text-slate-600"
+                  className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text placeholder:text-text-faint"
                   autoFocus
                 />
               </label>
@@ -332,7 +332,7 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
                 const fieldKey = field.id || `field-${index}`;
                 if (field.type === "markdown") {
                   return (
-                    <div key={fieldKey} className="rounded-md border border-line bg-surface p-3 text-xs text-slate-400 whitespace-pre-wrap leading-relaxed">
+                    <div key={fieldKey} className="rounded-md border border-line bg-surface p-3 text-xs text-text-muted whitespace-pre-wrap leading-relaxed">
                       {field.attributes.value}
                     </div>
                   );
@@ -341,12 +341,12 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
                 if (field.type === "textarea") {
                   return (
                     <div key={fieldKey} className="block text-sm">
-                      <span className="text-slate-300 font-medium">
+                      <span className="text-text font-medium">
                         {field.attributes.label || field.id}
                         {field.validations?.required && " *"}
                       </span>
                       {field.attributes.description && (
-                        <span className="block mt-0.5 text-xs text-slate-500 font-normal">
+                        <span className="block mt-0.5 text-xs text-text-muted font-normal">
                           {field.attributes.description.split("\n").map((line, i) => <span key={i}>{line}<br /></span>)}
                         </span>
                       )}
@@ -359,11 +359,11 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
                           placeholder={field.attributes.placeholder}
                           rows={4}
                           required={field.validations?.required}
-                          className="w-full border-0 bg-surface px-3 py-2 text-sm text-white placeholder:text-slate-600 resize-y focus:outline-none"
+                          className="w-full border-0 bg-surface px-3 py-2 text-sm text-text placeholder:text-text-faint resize-y focus:outline-none"
                         />
-                        <div className="border-t border-line px-3 py-1.5 text-xs text-slate-500 flex items-center gap-1.5">
+                        <div className="border-t border-line px-3 py-1.5 text-xs text-text-muted flex items-center gap-1.5">
                           <Paperclip className="h-3 w-3 shrink-0" />
-                          <span>Attach files by dragging &amp; dropping, <button type="button" className="text-cyan-400 hover:underline" onClick={() => document.getElementById(`file-${fieldKey}`)?.click()}>selecting</button> or pasting them.</span>
+                          <span>Attach files by dragging &amp; dropping, <button type="button" className="text-accent hover:underline" onClick={() => document.getElementById(`file-${fieldKey}`)?.click()}>selecting</button> or pasting them.</span>
                           <input id={`file-${fieldKey}`} type="file" multiple className="hidden" onChange={(e) => {
                             if (e.target.files?.length) {
                               const names = Array.from(e.target.files).map(f => f.name).join(", ");
@@ -380,12 +380,12 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
                 if (field.type === "input") {
                   return (
                     <div key={fieldKey} className="block text-sm">
-                      <span className="text-slate-300 font-medium">
+                      <span className="text-text font-medium">
                         {field.attributes.label || field.id}
                         {field.validations?.required && " *"}
                       </span>
                       {field.attributes.description && (
-                        <span className="block mt-0.5 text-xs text-slate-500 font-normal">{field.attributes.description}</span>
+                        <span className="block mt-0.5 text-xs text-text-muted font-normal">{field.attributes.description}</span>
                       )}
                       <input
                         type="text"
@@ -393,7 +393,7 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
                         onChange={(e) => setFieldValues((prev) => ({ ...prev, [fieldKey]: e.target.value }))}
                         placeholder={field.attributes.placeholder}
                         required={field.validations?.required}
-                        className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white placeholder:text-slate-600"
+                        className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text placeholder:text-text-faint"
                       />
                     </div>
                   );
@@ -402,18 +402,18 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
                 if (field.type === "dropdown") {
                   return (
                     <div key={fieldKey} className="block text-sm">
-                      <span className="text-slate-300 font-medium">
+                      <span className="text-text font-medium">
                         {field.attributes.label || field.id}
                         {field.validations?.required && " *"}
                       </span>
                       {field.attributes.description && (
-                        <span className="block mt-0.5 text-xs text-slate-500 font-normal">{field.attributes.description}</span>
+                        <span className="block mt-0.5 text-xs text-text-muted font-normal">{field.attributes.description}</span>
                       )}
                       <select
                         value={fieldValues[fieldKey] || ""}
                         onChange={(e) => setFieldValues((prev) => ({ ...prev, [fieldKey]: e.target.value }))}
                         required={field.validations?.required}
-                        className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+                        className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
                       >
                         <option value="">Select...</option>
                         {(field.attributes.options || []).map((opt) => (
@@ -429,7 +429,7 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
 
               {!selectedTemplate && (
                 <div className="block text-sm">
-                  <span className="text-slate-300 font-medium">Description</span>
+                  <span className="text-text font-medium">Description</span>
                   <div className="mt-1 rounded-md border border-line overflow-hidden">
                     <MarkdownToolbar fieldId="blank-body" onInsert={(_, before, after) => {
                       const textarea = document.getElementById("ta-blank-body") as HTMLTextAreaElement;
@@ -447,11 +447,11 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
                       onChange={(e) => setBody(e.target.value)}
                       placeholder="Describe the issue (markdown supported)"
                       rows={6}
-                      className="w-full border-0 bg-surface px-3 py-2 text-sm text-white placeholder:text-slate-600 resize-y focus:outline-none"
+                      className="w-full border-0 bg-surface px-3 py-2 text-sm text-text placeholder:text-text-faint resize-y focus:outline-none"
                     />
-                    <div className="border-t border-line px-3 py-1.5 text-xs text-slate-500 flex items-center gap-1.5">
+                    <div className="border-t border-line px-3 py-1.5 text-xs text-text-muted flex items-center gap-1.5">
                       <Paperclip className="h-3 w-3 shrink-0" />
-                      <span>Attach files by dragging &amp; dropping, <button type="button" className="text-cyan-400 hover:underline" onClick={() => document.getElementById("file-blank-body")?.click()}>selecting</button> or pasting them.</span>
+                      <span>Attach files by dragging &amp; dropping, <button type="button" className="text-accent hover:underline" onClick={() => document.getElementById("file-blank-body")?.click()}>selecting</button> or pasting them.</span>
                       <input id="file-blank-body" type="file" multiple className="hidden" onChange={(e) => {
                         if (e.target.files?.length) {
                           const names = Array.from(e.target.files).map(f => f.name).join(", ");
@@ -466,43 +466,43 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
 
               {selectedTemplate ? (
                 <div className="text-sm">
-                  <span className="text-slate-300 font-medium">Labels</span>
+                  <span className="text-text font-medium">Labels</span>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {selectedTemplate.labels.map((label) => (
                       <span
                         key={label}
-                        className="inline-flex items-center rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-0.5 text-xs font-medium text-cyan-300"
+                        className="inline-flex items-center rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent"
                       >
                         {label}
                       </span>
                     ))}
                     {selectedTemplate.labels.length === 0 && (
-                      <span className="text-xs text-slate-500">No labels</span>
+                      <span className="text-xs text-text-muted">No labels</span>
                     )}
                   </div>
                 </div>
               ) : (
                 <label className="block text-sm">
-                  <span className="text-slate-300 font-medium">Labels</span>
+                  <span className="text-text font-medium">Labels</span>
                   <input
                     type="text"
                     value={labels}
                     onChange={(e) => setLabels(e.target.value)}
                     placeholder="bug, enhancement (comma-separated)"
-                    className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white placeholder:text-slate-600"
+                    className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text placeholder:text-text-faint"
                   />
                 </label>
               )}
 
               {error && (
-                <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>
+                <p className="rounded-md border border-red-500/40 bg-status-danger/10 px-3 py-2 text-sm text-red-200">{error}</p>
               )}
 
               <div className="flex justify-between gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setStep("choose")}
-                  className="rounded-md border border-line px-4 py-2 text-sm text-slate-300 hover:bg-white/5 transition-colors"
+                  className="rounded-md border border-line px-4 py-2 text-sm text-text hover:bg-white/5 transition-colors"
                 >
                   Back
                 </button>
@@ -510,14 +510,14 @@ export function CreateIssueModal({ open, onClose, onCreated, owner, repo }: Crea
                   <button
                     type="button"
                     onClick={onClose}
-                    className="rounded-md border border-line px-4 py-2 text-sm text-slate-300 hover:bg-white/5 transition-colors"
+                    className="rounded-md border border-line px-4 py-2 text-sm text-text hover:bg-white/5 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={loading || !title.trim()}
-                    className="focus-ring inline-flex items-center gap-2 rounded-md bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-cyan-400 transition-colors disabled:opacity-50"
+                    className="focus-ring inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent transition-colors disabled:opacity-50"
                   >
                     {loading ? (
                       <><Loader2 className="h-4 w-4 animate-spin" /> Creating...</>

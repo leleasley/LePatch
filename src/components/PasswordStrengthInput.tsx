@@ -54,7 +54,7 @@ export function StrengthMeter({ password }: { password: string }) {
           />
         ))}
       </div>
-      <p className={`mt-1 text-xs ${score <= 2 ? "text-red-400" : score <= 4 ? "text-amber-400" : "text-emerald-400"}`}>
+      <p className={`mt-1 text-xs ${score <= 2 ? "text-status-danger" : score <= 4 ? "text-status-warning" : "text-status-success"}`}>
         {label}
       </p>
     </div>
@@ -89,20 +89,20 @@ export function PasswordInput({
 
   return (
     <div>
-      {label && <label className="block text-sm text-slate-300 font-medium mb-1.5">{label}</label>}
+      {label && <label className="block text-sm text-text font-medium mb-1.5">{label}</label>}
       <div className="relative">
         <input
           type={show ? "text" : "password"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 pr-20 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
+          className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 pr-20 text-sm text-text placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
         />
         <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
           <button
             type="button"
             onClick={() => setShow(!show)}
-            className="rounded-md p-1.5 text-slate-500 hover:text-white hover:bg-white/5 transition-colors"
+            className="rounded-md p-1.5 text-text-muted hover:text-text hover:bg-white/5 transition-colors"
             aria-label={show ? "Hide password" : "Show password"}
           >
             {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -111,10 +111,10 @@ export function PasswordInput({
             <button
               type="button"
               onClick={handleCopy}
-              className="rounded-md p-1.5 text-slate-500 hover:text-white hover:bg-white/5 transition-colors"
+              className="rounded-md p-1.5 text-text-muted hover:text-text hover:bg-white/5 transition-colors"
               aria-label="Copy password"
             >
-              {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? <Check className="h-3.5 w-3.5 text-status-success" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
           )}
         </div>
@@ -124,7 +124,7 @@ export function PasswordInput({
           <button
             type="button"
             onClick={handleGenerate}
-            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-cyan-400 bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/20 transition-colors"
+            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-accent bg-cyan-500/5 hover:bg-accent/10 border border-accent/40 transition-colors"
           >
             <KeyRound className="h-3 w-3" />
             Generate

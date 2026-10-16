@@ -52,7 +52,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ id: s
         kicker={
           <Link
             href={`/apps/${app.id}`}
-            className="inline-flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-faint)] hover:text-[var(--theme-text-muted)] transition-colors"
+            className="inline-flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-faint)] hover:text-[var(--color-text-muted)] transition-colors"
           >
             ← {app.name}
           </Link>

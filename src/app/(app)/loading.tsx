@@ -39,7 +39,7 @@ export default function LoadingPage() {
     <div className="flex min-h-[70vh] items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <Spinner size="lg" />
-        <p className="text-sm text-slate-400 animate-pulse">Loading {name}...</p>
+        <p className="text-sm text-text-muted animate-pulse">Loading {name}...</p>
       </div>
     </div>
   );

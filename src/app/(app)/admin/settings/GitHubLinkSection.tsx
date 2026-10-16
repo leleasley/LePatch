@@ -69,7 +69,7 @@ export function GitHubLinkSection() {
           <button
             onClick={connect}
             disabled={working || !enabled}
-            className="focus-ring inline-flex items-center gap-2 rounded-md bg-cyan-500 px-3 py-1.5 text-sm font-medium text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
+            className="focus-ring inline-flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground hover:bg-accent disabled:opacity-50"
           >
             <Link2 className="h-4 w-4" />
             Connect GitHub
@@ -78,26 +78,26 @@ export function GitHubLinkSection() {
       </div>
 
       {!enabled ? (
-        <p className="text-sm text-slate-400">An administrator must configure GitHub OAuth first.</p>
+        <p className="text-sm text-text-muted">An administrator must configure GitHub OAuth first.</p>
       ) : (
         <div className="space-y-4 text-sm">
-          <p className="text-slate-400">
+          <p className="text-text-muted">
             Connect your GitHub account to sign in with GitHub and create issues directly from LePatch.
           </p>
 
           <div className="rounded-md border border-line bg-surface p-3">
-            <div className="text-slate-300">Current connection</div>
+            <div className="text-text">Current connection</div>
             {link.linked ? (
-              <div className="mt-2 space-y-1 text-slate-400">
+              <div className="mt-2 space-y-1 text-text-muted">
                 <div className="flex items-center gap-2">
                   <img src="/assets/github.svg" alt="" className="h-4 w-4" />
-                  <span className="font-medium text-white">{link.githubUsername}</span>
+                  <span className="font-medium text-text">{link.githubUsername}</span>
                 </div>
                 <div>Connected: {formatDate(link.linkedAt)}</div>
                 <div>Last used: {formatDate(link.lastUsedAt)}</div>
               </div>
             ) : (
-              <p className="mt-2 text-slate-500">No GitHub account connected yet.</p>
+              <p className="mt-2 text-text-muted">No GitHub account connected yet.</p>
             )}
           </div>
 
@@ -105,7 +105,7 @@ export function GitHubLinkSection() {
             <button
               onClick={unlink}
               disabled={working}
-              className="focus-ring inline-flex items-center gap-2 rounded-md border border-red-500/40 px-3 py-1.5 text-sm text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-md border border-red-500/40 px-3 py-1.5 text-sm text-status-danger hover:bg-status-danger/10 disabled:opacity-50"
             >
               <Trash2 className="h-4 w-4" />
               Disconnect GitHub
@@ -117,8 +117,8 @@ export function GitHubLinkSection() {
       {message && (
         <p className={`mt-4 rounded-md border p-3 text-sm ${
           message.includes("Failed") || message.includes("failed")
-            ? "border-red-500/40 bg-red-500/10 text-red-200"
-            : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+            ? "border-red-500/40 bg-status-danger/10 text-red-200"
+            : "border-emerald-500/40 bg-status-success/10 text-emerald-200"
         }`}>
           {message}
         </p>

@@ -19,10 +19,10 @@ export default async function MfaPage(props: {
       <div className="relative mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl items-center justify-center">
         <div className="hidden max-w-sm pr-12 lg:block">
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-cyan-300/80">LePatch Access</p>
-          <h2 className="mt-4 text-5xl font-semibold leading-tight text-white">
+          <h2 className="mt-4 text-5xl font-semibold leading-tight text-text">
             Secure sign-in without the clutter.
           </h2>
-          <p className="mt-6 text-base leading-7 text-slate-400">
+          <p className="mt-6 text-base leading-7 text-text-muted">
             Dedicated verification flow, cleaner routing, and an OTP input that supports direct paste.
           </p>
         </div>

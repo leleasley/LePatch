@@ -44,14 +44,14 @@ export function ActionsTab({ owner, repo }: { owner: string; repo: string }) {
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="animate-pulse rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_20%,transparent)] p-4">
-              <div className="mb-2 h-4 w-48 rounded bg-[color-mix(in_srgb,var(--theme-text)_5%,transparent)]" />
-              <div className="h-3 w-32 rounded bg-[color-mix(in_srgb,var(--theme-text)_3%,transparent)]" />
+            <div key={i} className="animate-pulse rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_20%,transparent)] p-4">
+              <div className="mb-2 h-4 w-48 rounded bg-[color-mix(in_srgb,var(--color-text)_5%,transparent)]" />
+              <div className="h-3 w-32 rounded bg-[color-mix(in_srgb,var(--color-text)_3%,transparent)]" />
             </div>
           ))}
         </div>
       ) : runs.length === 0 ? (
-        <p className="text-sm text-[var(--theme-text-muted)]">No workflow runs found.</p>
+        <p className="text-sm text-[var(--color-text-muted)]">No workflow runs found.</p>
       ) : (
         <div className="space-y-2">
           {runs.map((run) => (
@@ -60,19 +60,19 @@ export function ActionsTab({ owner, repo }: { owner: string; repo: string }) {
               href={run.html_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-start gap-3 rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_20%,transparent)] p-4 transition-colors hover:border-[var(--theme-accent-border)]"
+              className="flex items-start gap-3 rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_20%,transparent)] p-4 transition-colors hover:border-[var(--color-accent-border)]"
             >
               <StatusIcon status={run.status} conclusion={run.conclusion} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-[var(--theme-text)]">
+                  <span className="text-sm font-medium text-[var(--color-text)]">
                     {run.name}
                   </span>
-                  <span className="font-mono text-xs text-[var(--theme-text-muted)]">
+                  <span className="font-mono text-xs text-[var(--color-text-muted)]">
                     #{run.run_number}
                   </span>
                 </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-[var(--theme-text-muted)]">
+                <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-[var(--color-text-muted)]">
                   <span className="font-mono">{run.head_branch}</span>
                   <span className="font-mono">{run.head_sha.slice(0, 7)}</span>
                   {run.actor && <span>by {run.actor.login}</span>}
@@ -90,18 +90,18 @@ export function ActionsTab({ owner, repo }: { owner: string; repo: string }) {
 
 function StatusIcon({ status, conclusion }: { status: string; conclusion: string | null }) {
   if (status === "in_progress" || status === "queued") {
-    return <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-cyan-400" />;
+    return <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-accent" />;
   }
   if (conclusion === "success") {
-    return <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />;
+    return <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-status-success" />;
   }
   if (conclusion === "failure" || conclusion === "timed_out" || conclusion === "action_required") {
-    return <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />;
+    return <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-status-danger" />;
   }
   if (conclusion === "cancelled") {
-    return <RotateCw className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />;
+    return <RotateCw className="mt-0.5 h-4 w-4 shrink-0 text-text-muted" />;
   }
-  return <Clock className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />;
+  return <Clock className="mt-0.5 h-4 w-4 shrink-0 text-text-muted" />;
 }
 
 function formatDate(dateStr: string): string {

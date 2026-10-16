@@ -37,10 +37,10 @@ type User = {
 const PER_PAGE = 20;
 
 const ROLE_STYLES: Record<string, string> = {
-  administrator: "text-red-300 bg-red-500/10 border-red-500/20",
-  moderator: "text-amber-300 bg-amber-500/10 border-amber-500/20",
-  user: "text-cyan-300 bg-cyan-500/10 border-cyan-500/20",
-  restricted: "text-slate-400 bg-slate-500/10 border-slate-500/20",
+  administrator: "text-status-danger bg-status-danger/10 border-status-danger/30",
+  moderator: "text-status-warning bg-status-warning/10 border-status-warning/30",
+  user: "text-accent bg-accent/10 border-accent/40",
+  restricted: "text-text-muted bg-slate-500/10 border-slate-500/20",
 };
 
 function roleIcon(role: string) {
@@ -73,7 +73,7 @@ function PasswordBadge({ enabled }: { enabled: boolean }) {
       Password
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
+    <span className="inline-flex items-center gap-1 text-[11px] text-text-muted">
       <Key className="h-3 w-3 opacity-50" />
       No password
     </span>
@@ -98,8 +98,8 @@ function Modal({
         <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/[0.03] to-transparent pointer-events-none rounded-t-2xl sm:rounded-xl" />
         <div className="relative">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-semibold text-white">{title}</h2>
-            <button onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:text-white hover:bg-white/5 transition-colors">
+            <h2 className="text-lg font-semibold text-text">{title}</h2>
+            <button onClick={onClose} className="rounded-lg p-1.5 text-text-muted hover:text-text hover:bg-white/5 transition-colors">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -148,29 +148,29 @@ function AddUserModal({
     <Modal open={open} onClose={onClose} title="Add User">
       <div className="space-y-4">
         <div>
-          <label className="block text-sm text-slate-300 font-medium mb-1.5">Name</label>
+          <label className="block text-sm text-text font-medium mb-1.5">Name</label>
           <input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="Jane Doe"
-            className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
+            className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-text placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
           />
         </div>
         <div>
-          <label className="block text-sm text-slate-300 font-medium mb-1.5">Email</label>
+          <label className="block text-sm text-text font-medium mb-1.5">Email</label>
           <input
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             placeholder="jane@example.com"
-            className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
+            className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-text placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
           />
         </div>
         <div>
-          <label className="block text-sm text-slate-300 font-medium mb-1.5">Role</label>
+          <label className="block text-sm text-text font-medium mb-1.5">Role</label>
           <select
             value={form.role}
             onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })}
-            className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-500/50 transition-colors"
+            className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-cyan-500/50 transition-colors"
           >
             {Object.entries(roleLabels).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
@@ -186,14 +186,14 @@ function AddUserModal({
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">
           <button
             onClick={onClose}
-            className="w-full sm:w-auto rounded-lg border border-line/50 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/[0.06] transition-all"
+            className="w-full sm:w-auto rounded-lg border border-line/50 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-text hover:bg-white/[0.06] transition-all"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={submitting || !form.name || !form.email || form.password.length < 10}
-            className="w-full sm:w-auto rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-medium text-slate-950 hover:bg-cyan-400 disabled:opacity-50 transition-all"
+            className="w-full sm:w-auto rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent disabled:opacity-50 transition-all"
           >
             {submitting ? "Creating..." : "Create User"}
           </button>
@@ -252,14 +252,14 @@ function EditUserModal({
         <div className="space-y-5">
           {/* User context header */}
           <div className="flex items-center gap-4 rounded-xl border border-line/50 bg-white/[0.02] p-4">
-            <div className="h-12 w-12 shrink-0 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center border border-cyan-500/20">
-              <span className="text-base font-semibold text-cyan-300">
+            <div className="h-12 w-12 shrink-0 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center border border-accent/40">
+              <span className="text-base font-semibold text-accent">
                 {(user.name || user.email)[0]?.toUpperCase() || "?"}
               </span>
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold text-white truncate">{user.name || "Unnamed"}</div>
-              <div className="text-xs text-slate-400 truncate">{user.email}</div>
+              <div className="text-sm font-semibold text-text truncate">{user.name || "Unnamed"}</div>
+              <div className="text-xs text-text-muted truncate">{user.email}</div>
               <div className="mt-1 flex items-center gap-3">
                 <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${ROLE_STYLES[user.role] || ROLE_STYLES.user}`}>
                   {createElement(roleIcon(user.role), { className: "h-2.5 w-2.5" })}
@@ -270,7 +270,7 @@ function EditUserModal({
             </div>
             <button
               onClick={() => { onClose(); onResetPassword(user); }}
-              className="shrink-0 rounded-lg border border-line/50 bg-white/[0.03] px-3 py-2 text-xs font-medium text-slate-300 hover:bg-white/[0.06] hover:text-white transition-all flex items-center gap-1.5"
+              className="shrink-0 rounded-lg border border-line/50 bg-white/[0.03] px-3 py-2 text-xs font-medium text-text hover:bg-white/[0.06] hover:text-text transition-all flex items-center gap-1.5"
             >
               <KeyRound className="h-3.5 w-3.5" />
               Reset Password
@@ -280,27 +280,27 @@ function EditUserModal({
           {/* Edit fields */}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-slate-300 font-medium mb-1.5">Name</label>
+              <label className="block text-sm text-text font-medium mb-1.5">Name</label>
               <input
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-500/50 transition-colors"
+                className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-cyan-500/50 transition-colors"
               />
             </div>
             <div>
-              <label className="block text-sm text-slate-300 font-medium mb-1.5">Email</label>
+              <label className="block text-sm text-text font-medium mb-1.5">Email</label>
               <input
                 value={draft.email}
                 onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-                className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-500/50 transition-colors"
+                className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-cyan-500/50 transition-colors"
               />
             </div>
             <div>
-              <label className="block text-sm text-slate-300 font-medium mb-1.5">Role</label>
+              <label className="block text-sm text-text font-medium mb-1.5">Role</label>
               <select
                 value={draft.role}
                 onChange={(e) => setDraft({ ...draft, role: e.target.value as UserRole })}
-                className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-500/50 transition-colors"
+                className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-cyan-500/50 transition-colors"
               >
                 {Object.entries(roleLabels).map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
@@ -312,14 +312,14 @@ function EditUserModal({
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-1">
             <button
               onClick={onClose}
-              className="w-full sm:w-auto rounded-lg border border-line/50 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/[0.06] transition-all"
+              className="w-full sm:w-auto rounded-lg border border-line/50 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-text hover:bg-white/[0.06] transition-all"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={submitting || !draft.name || !draft.email}
-              className="w-full sm:w-auto rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-medium text-slate-950 hover:bg-cyan-400 disabled:opacity-50 transition-all"
+              className="w-full sm:w-auto rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent disabled:opacity-50 transition-all"
             >
               {submitting ? "Saving..." : "Save Changes"}
             </button>
@@ -372,31 +372,31 @@ function ResetPasswordModal({
         {/* User context */}
         {user && (
           <div className="flex items-center gap-3 rounded-xl border border-line/50 bg-white/[0.02] p-3">
-            <div className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center border border-cyan-500/20">
-              <span className="text-sm font-semibold text-cyan-300">
+            <div className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center border border-accent/40">
+              <span className="text-sm font-semibold text-accent">
                 {(user.name || user.email)[0]?.toUpperCase() || "?"}
               </span>
             </div>
             <div className="min-w-0">
-              <div className="text-sm font-medium text-white truncate">{user.name || "Unnamed"}</div>
-              <div className="text-xs text-slate-400 truncate">{user.email}</div>
+              <div className="text-sm font-medium text-text truncate">{user.name || "Unnamed"}</div>
+              <div className="text-xs text-text-muted truncate">{user.email}</div>
             </div>
           </div>
         )}
 
-        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+        <div className="rounded-lg border border-status-warning/30 bg-amber-500/5 p-3">
           <p className="text-xs text-amber-300/80">
             You must confirm your own password to reset another user&apos;s password.
           </p>
         </div>
         <div>
-          <label className="block text-sm text-slate-300 font-medium mb-1.5">Your Current Password</label>
+          <label className="block text-sm text-text font-medium mb-1.5">Your Current Password</label>
           <input
             type="password"
             value={adminPassword}
             onChange={(e) => setAdminPassword(e.target.value)}
             placeholder="Enter your password"
-            className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
+            className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-text placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
           />
         </div>
         <PasswordInput
@@ -408,14 +408,14 @@ function ResetPasswordModal({
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">
           <button
             onClick={onClose}
-            className="w-full sm:w-auto rounded-lg border border-line/50 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/[0.06] transition-all"
+            className="w-full sm:w-auto rounded-lg border border-line/50 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-text hover:bg-white/[0.06] transition-all"
           >
             Cancel
           </button>
           <button
             onClick={handleReset}
             disabled={submitting || !adminPassword || newPassword.length < 10}
-            className="w-full sm:w-auto rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-medium text-slate-950 hover:bg-cyan-400 disabled:opacity-50 transition-all"
+            className="w-full sm:w-auto rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent disabled:opacity-50 transition-all"
           >
             {submitting ? "Resetting..." : "Reset Password"}
           </button>
@@ -440,17 +440,17 @@ function UserCard({
     <div className="rounded-xl border border-line/50 bg-panel/80 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center border border-cyan-500/20">
-            <span className="text-sm font-semibold text-cyan-300">
+          <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center border border-accent/40">
+            <span className="text-sm font-semibold text-accent">
               {(user.name || user.email)[0]?.toUpperCase() || "?"}
             </span>
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-white truncate">{user.name || "Unnamed"}</span>
-              {isCurrent && <span className="text-[10px] text-slate-500 shrink-0">(you)</span>}
+              <span className="text-sm font-semibold text-text truncate">{user.name || "Unnamed"}</span>
+              {isCurrent && <span className="text-[10px] text-text-muted shrink-0">(you)</span>}
             </div>
-            <p className="text-xs text-slate-400 truncate">{user.email}</p>
+            <p className="text-xs text-text-muted truncate">{user.email}</p>
           </div>
         </div>
       </div>
@@ -462,12 +462,12 @@ function UserCard({
           </span>
           <PasswordBadge enabled={user.passwordEnabled} />
         </div>
-        <span className="text-xs text-slate-500">{timeAgo(user.createdAt)}</span>
+        <span className="text-xs text-text-muted">{timeAgo(user.createdAt)}</span>
       </div>
       <div className="mt-3 flex items-center gap-2 border-t border-line/30 pt-3">
         <button
           onClick={onEdit}
-          className="flex items-center gap-1.5 rounded-lg border border-line/50 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-white/[0.06] hover:text-white transition-all"
+          className="flex items-center gap-1.5 rounded-lg border border-line/50 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-text hover:bg-white/[0.06] hover:text-text transition-all"
         >
           <Pencil className="h-3.5 w-3.5" />
           Edit
@@ -475,7 +475,7 @@ function UserCard({
         <button
           onClick={onDelete}
           disabled={isCurrent}
-          className="flex items-center gap-1.5 rounded-lg border border-line/50 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-red-300/80 hover:bg-red-500/5 hover:text-red-300 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 rounded-lg border border-line/50 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-red-300/80 hover:bg-red-500/5 hover:text-status-danger transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Trash2 className="h-3.5 w-3.5" />
           Delete
@@ -500,20 +500,20 @@ function UserTableRow({
     <tr className="border-b border-line/30 hover:bg-white/[0.02] transition-colors">
       <td className="px-4 py-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center border border-cyan-500/20">
-            <span className="text-sm font-semibold text-cyan-300">
+          <div className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center border border-accent/40">
+            <span className="text-sm font-semibold text-accent">
               {(user.name || user.email)[0]?.toUpperCase() || "?"}
             </span>
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-white truncate">{user.name || "Unnamed"}</span>
-              {isCurrent && <span className="text-[10px] text-slate-500 shrink-0">(you)</span>}
+              <span className="text-sm font-medium text-text truncate">{user.name || "Unnamed"}</span>
+              {isCurrent && <span className="text-[10px] text-text-muted shrink-0">(you)</span>}
             </div>
           </div>
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-slate-400 truncate max-w-[240px]">{user.email}</td>
+      <td className="px-4 py-3 text-sm text-text-muted truncate max-w-[240px]">{user.email}</td>
       <td className="px-4 py-3">
         <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${ROLE_STYLES[user.role] || ROLE_STYLES.user}`}>
           {createElement(roleIcon(user.role), { className: "h-3 w-3" })}
@@ -523,13 +523,13 @@ function UserTableRow({
       <td className="px-4 py-3">
         <PasswordBadge enabled={user.passwordEnabled} />
       </td>
-      <td className="px-4 py-3 text-sm text-slate-500 whitespace-nowrap">{timeAgo(user.createdAt)}</td>
+      <td className="px-4 py-3 text-sm text-text-muted whitespace-nowrap">{timeAgo(user.createdAt)}</td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-end gap-1">
           <button
             onClick={onEdit}
             title="Edit user"
-            className="rounded-lg p-1.5 text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+            className="rounded-lg p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
           >
             <Pencil className="h-4 w-4" />
           </button>
@@ -537,7 +537,7 @@ function UserTableRow({
             onClick={onDelete}
             disabled={isCurrent}
             title={isCurrent ? "Can't delete yourself" : "Delete user"}
-            className="rounded-lg p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg p-1.5 text-text-muted hover:text-status-danger hover:bg-status-danger/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -618,17 +618,17 @@ export function UsersClient({ users: initialUsers, currentUserId }: { users: Use
       <div className="mb-4 sm:mb-6 overflow-hidden rounded-xl border border-line/50 bg-gradient-to-br from-surface via-panel to-surface p-4 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="rounded-xl bg-cyan-500/10 p-2.5 sm:p-3 shrink-0">
-              <Users className="h-5 w-5 sm:h-6 sm:w-6 text-cyan-400" />
+            <div className="rounded-xl bg-accent/10 p-2.5 sm:p-3 shrink-0">
+              <Users className="h-5 w-5 sm:h-6 sm:w-6 text-accent" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-white">User Management</h1>
-              <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-slate-400 hidden sm:block">Manage local accounts, roles, and access control.</p>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-text">User Management</h1>
+              <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-text-muted hidden sm:block">Manage local accounts, roles, and access control.</p>
             </div>
           </div>
           <button
             onClick={() => setAddOpen(true)}
-            className="flex items-center gap-2 rounded-lg bg-cyan-500 px-3 sm:px-4 py-2 sm:py-2.5 text-sm font-medium text-slate-950 hover:bg-cyan-400 transition-all shrink-0"
+            className="flex items-center gap-2 rounded-lg bg-accent px-3 sm:px-4 py-2 sm:py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent transition-all shrink-0"
           >
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">Add User</span>
@@ -636,7 +636,7 @@ export function UsersClient({ users: initialUsers, currentUserId }: { users: Use
         </div>
 
         <div className="mt-3 sm:mt-4 flex flex-wrap gap-1.5 sm:gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-line/50 bg-white/[0.03] px-2.5 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium text-slate-300">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-line/50 bg-white/[0.03] px-2.5 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium text-text">
             {users.length} total
           </span>
           {Object.entries(stats).map(([role, count]) => (
@@ -650,21 +650,21 @@ export function UsersClient({ users: initialUsers, currentUserId }: { users: Use
       {/* Search + count */}
       <div className="mb-3 sm:mb-4 flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
           <input
             type="text"
             placeholder="Search users..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-            className="w-full rounded-lg border border-line/50 bg-panel/80 py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
+            className="w-full rounded-lg border border-line/50 bg-panel/80 py-2.5 pl-10 pr-4 text-sm text-text placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
           />
           {search && (
-            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white">
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text">
               <X className="h-4 w-4" />
             </button>
           )}
         </div>
-        <span className="text-xs sm:text-sm text-slate-500 whitespace-nowrap">
+        <span className="text-xs sm:text-sm text-text-muted whitespace-nowrap">
           {filtered.length === users.length ? `${users.length} users` : `${filtered.length}/${users.length}`}
         </span>
       </div>
@@ -674,22 +674,22 @@ export function UsersClient({ users: initialUsers, currentUserId }: { users: Use
         <table className="w-full">
           <thead>
             <tr className="border-b border-line/50">
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider w-[220px]">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider w-[260px]">Email</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider w-[140px]">Role</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider w-[110px]">Auth</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider w-[90px]">Created</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider w-[80px]"></th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider w-[220px]">Name</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider w-[260px]">Email</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider w-[140px]">Role</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider w-[110px]">Auth</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider w-[90px]">Created</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-text-muted uppercase tracking-wider w-[80px]"></th>
             </tr>
           </thead>
           <tbody>
             {paginated.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-16 text-center">
-                  <Users className="mx-auto mb-3 h-10 w-10 text-slate-600" />
-                  <p className="text-sm font-medium text-slate-400">{search ? "No users match your search" : "No users yet"}</p>
+                  <Users className="mx-auto mb-3 h-10 w-10 text-text-faint" />
+                  <p className="text-sm font-medium text-text-muted">{search ? "No users match your search" : "No users yet"}</p>
                   {!search && (
-                    <button onClick={() => setAddOpen(true)} className="mt-2 text-sm text-cyan-400 hover:text-cyan-300 transition-colors">
+                    <button onClick={() => setAddOpen(true)} className="mt-2 text-sm text-accent hover:text-accent transition-colors">
                       Create your first user
                     </button>
                   )}
@@ -714,10 +714,10 @@ export function UsersClient({ users: initialUsers, currentUserId }: { users: Use
       <div className="sm:hidden space-y-3">
         {paginated.length === 0 ? (
           <div className="rounded-xl border border-line/50 bg-panel/80 p-8 text-center">
-            <Users className="mx-auto mb-3 h-10 w-10 text-slate-600" />
-            <p className="text-sm font-medium text-slate-400">{search ? "No users match your search" : "No users yet"}</p>
+            <Users className="mx-auto mb-3 h-10 w-10 text-text-faint" />
+            <p className="text-sm font-medium text-text-muted">{search ? "No users match your search" : "No users yet"}</p>
             {!search && (
-              <button onClick={() => setAddOpen(true)} className="mt-2 text-sm text-cyan-400 hover:text-cyan-300 transition-colors">
+              <button onClick={() => setAddOpen(true)} className="mt-2 text-sm text-accent hover:text-accent transition-colors">
                 Create your first user
               </button>
             )}
@@ -738,21 +738,21 @@ export function UsersClient({ users: initialUsers, currentUserId }: { users: Use
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
-          <p className="text-xs sm:text-sm text-slate-500">
+          <p className="text-xs sm:text-sm text-text-muted">
             Page {safePage + 1} of {totalPages}
           </p>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage(Math.max(0, safePage - 1))}
               disabled={safePage === 0}
-              className="rounded-lg border border-line/50 bg-panel/80 px-3 py-2 text-sm text-slate-300 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="rounded-lg border border-line/50 bg-panel/80 px-3 py-2 text-sm text-text hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               onClick={() => setPage(Math.min(totalPages - 1, safePage + 1))}
               disabled={safePage >= totalPages - 1}
-              className="rounded-lg border border-line/50 bg-panel/80 px-3 py-2 text-sm text-slate-300 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="rounded-lg border border-line/50 bg-panel/80 px-3 py-2 text-sm text-text hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight className="h-4 w-4" />
             </button>

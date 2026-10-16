@@ -44,41 +44,41 @@ export function LatestReleaseHero({
       <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-[var(--theme-divider)] flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">
+            <span className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
               Latest Release
             </span>
             {updateAvailable && (
-              <span className="status-pill status-pill--pending" style={{ background: "var(--theme-status-pending-bg)", color: "var(--theme-status-pending)" }}>
+              <span className="status-pill status-pill--pending" style={{ background: "var(--theme-status-pending-bg)", color: "var(--color-status-warning)" }}>
                 <span className="pulse-dot" />
                 Update available
               </span>
             )}
             {latestRelease.prerelease && (
-              <span className="status-pill status-pill--pending" style={{ background: "var(--theme-status-pending-bg)", color: "var(--theme-status-pending)" }}>
+              <span className="status-pill status-pill--pending" style={{ background: "var(--theme-status-pending-bg)", color: "var(--color-status-warning)" }}>
                 Pre-release
               </span>
             )}
           </div>
           <div className="mt-2 flex items-baseline gap-3 flex-wrap">
-            <h2 className="text-[clamp(1.5rem,4vw,2.1rem)] font-bold tracking-tight text-[var(--theme-text)] app-mono">
+            <h2 className="text-[clamp(1.5rem,4vw,2.1rem)] font-bold tracking-tight text-[var(--color-text)] app-mono">
               {latestRelease.tagName}
             </h2>
             {latestRelease.name && latestRelease.name !== latestRelease.tagName && (
-              <span className="text-sm text-[var(--theme-text-muted)]">{latestRelease.name}</span>
+              <span className="text-sm text-[var(--color-text-muted)]">{latestRelease.name}</span>
             )}
           </div>
           {previousTag && (
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[0.82rem] text-[var(--theme-text-muted)]">
-              <span className="text-[var(--theme-text-faint)]">Previous:</span>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[0.82rem] text-[var(--color-text-muted)]">
+              <span className="text-[var(--color-text-faint)]">Previous:</span>
               <span className="app-mono text-[0.78rem]">{previousTag}</span>
-              <ArrowUpRight className="h-3.5 w-3.5 text-[var(--theme-status-success)]" />
-              <span className="app-mono text-[0.78rem] text-[var(--theme-status-success)]">{latestRelease.tagName}</span>
+              <ArrowUpRight className="h-3.5 w-3.5 text-[var(--color-status-success)]" />
+              <span className="app-mono text-[0.78rem] text-[var(--color-status-success)]">{latestRelease.tagName}</span>
             </div>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {latestRelease.publishedAt && (
-            <span className="inline-flex items-center gap-1.5 text-[0.78rem] text-[var(--theme-text-muted)]">
+            <span className="inline-flex items-center gap-1.5 text-[0.78rem] text-[var(--color-text-muted)]">
               <Clock className="h-3.5 w-3.5" />
               {latestRelease.publishedAt.toLocaleDateString()}
             </span>
@@ -100,10 +100,10 @@ export function LatestReleaseHero({
           <button
             type="button"
             onClick={() => setNotesExpanded(!notesExpanded)}
-            className="flex w-full items-center justify-between gap-2 border-b border-[var(--theme-divider)] px-5 py-2.5 text-left text-[0.78rem] font-semibold text-[var(--theme-text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--theme-text)_3%,transparent)]"
+            className="flex w-full items-center justify-between gap-2 border-b border-[var(--theme-divider)] px-5 py-2.5 text-left text-[0.78rem] font-semibold text-[var(--color-text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-text)_3%,transparent)]"
           >
             <span className="inline-flex items-center gap-2">
-              <Sparkles className="h-3.5 w-3.5 text-[var(--theme-accent)]" />
+              <Sparkles className="h-3.5 w-3.5 text-[var(--color-accent)]" />
               Release Notes
             </span>
             {notesExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -115,7 +115,7 @@ export function LatestReleaseHero({
           )}
         </>
       ) : (
-        <div className="px-5 py-6 text-center text-sm text-[var(--theme-text-faint)]">
+        <div className="px-5 py-6 text-center text-sm text-[var(--color-text-faint)]">
           No release notes for this version.
         </div>
       )}

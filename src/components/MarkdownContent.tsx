@@ -58,7 +58,7 @@ export function MarkdownContent({
   imageBaseUrl?: string;
 }) {
   if (!body || !body.trim()) {
-    return <div className={cn("text-sm text-slate-500 italic", className)}>{emptyMessage}</div>;
+    return <div className={cn("text-sm text-text-muted italic", className)}>{emptyMessage}</div>;
   }
 
   return (
@@ -81,13 +81,13 @@ export function MarkdownContent({
             return <source {...props} srcSet={resolvedSrcSet} />;
           },
           h1: ({ className, ...props }) => (
-            <h1 className={cn("mb-3 mt-0 text-lg font-bold text-white sm:text-xl", className)} {...props} />
+            <h1 className={cn("mb-3 mt-0 text-lg font-bold text-text sm:text-xl", className)} {...props} />
           ),
           h2: ({ className, ...props }) => (
-            <h2 className={cn("mb-2 mt-4 text-base font-semibold text-white first:mt-0 sm:text-lg", className)} {...props} />
+            <h2 className={cn("mb-2 mt-4 text-base font-semibold text-text first:mt-0 sm:text-lg", className)} {...props} />
           ),
           h3: ({ className, ...props }) => (
-            <h3 className={cn("mb-2 mt-3 text-base font-semibold text-slate-200", className)} {...props} />
+            <h3 className={cn("mb-2 mt-3 text-base font-semibold text-text", className)} {...props} />
           ),
           p: (props) => {
             const paragraphProps = props as typeof props & { align?: string };
@@ -98,7 +98,7 @@ export function MarkdownContent({
             return (
               <p
                 className={cn(
-                  "mb-2 break-words text-sm leading-relaxed text-slate-300",
+                  "mb-2 break-words text-sm leading-relaxed text-text",
                   align === "center" && "text-center",
                   align === "right" && "text-right",
                   hasOnlyImage && "flex justify-center my-6",
@@ -109,15 +109,15 @@ export function MarkdownContent({
             );
           },
           ul: ({ className, ...props }) => (
-            <ul className={cn("mb-2 ml-4 list-disc space-y-0.5 text-sm text-slate-300", className)} {...props} />
+            <ul className={cn("mb-2 ml-4 list-disc space-y-0.5 text-sm text-text", className)} {...props} />
           ),
           ol: ({ className, ...props }) => (
-            <ol className={cn("mb-2 ml-4 list-decimal space-y-0.5 text-sm text-slate-300", className)} {...props} />
+            <ol className={cn("mb-2 ml-4 list-decimal space-y-0.5 text-sm text-text", className)} {...props} />
           ),
           li: ({ className, ...props }) => <li className={cn("leading-relaxed", className)} {...props} />,
           a: ({ className, href, ...props }) => (
             <a
-              className={cn("underline underline-offset-2 hover:text-cyan-200 text-cyan-300 break-all", className)}
+              className={cn("underline underline-offset-2 hover:text-accent text-accent break-all", className)}
               href={resolveUrl(href, linkBaseUrl)}
               target="_blank"
               rel="noopener noreferrer"
@@ -138,20 +138,20 @@ export function MarkdownContent({
             return isBlock ? (
               <code
                 className={cn(
-                  "block overflow-x-auto rounded-lg border border-line/50 bg-black/40 p-3 font-mono text-xs text-slate-300",
+                  "block overflow-x-auto rounded-lg border border-line/50 bg-black/40 p-3 font-mono text-xs text-text",
                   className
                 )}
                 {...props}
               />
             ) : (
-              <code className={cn("rounded bg-white/10 px-1.5 py-0.5 font-mono text-xs text-cyan-300", className)} {...props} />
+              <code className={cn("rounded bg-white/10 px-1.5 py-0.5 font-mono text-xs text-accent", className)} {...props} />
             );
           },
           pre: ({ className, ...props }) => (
             <pre className={cn("mb-3 overflow-hidden rounded-lg border border-line/50 bg-black/40 p-0", className)} {...props} />
           ),
           blockquote: ({ className, ...props }) => (
-            <blockquote className={cn("my-2 border-l-2 border-cyan-500/50 pl-3 text-sm italic text-slate-400", className)} {...props} />
+            <blockquote className={cn("my-2 border-l-2 border-cyan-500/50 pl-3 text-sm italic text-text-muted", className)} {...props} />
           ),
           table: ({ className, ...props }) => (
             <div className="mb-3 overflow-x-auto rounded-lg border border-line/50 -mx-2 sm:mx-0">
@@ -159,26 +159,26 @@ export function MarkdownContent({
             </div>
           ),
           details: ({ className, ...props }) => (
-            <details className={cn("mb-3 rounded-lg border border-line/50 bg-white/[0.03] p-3 text-sm text-slate-300", className)} {...props} />
+            <details className={cn("mb-3 rounded-lg border border-line/50 bg-white/[0.03] p-3 text-sm text-text", className)} {...props} />
           ),
           summary: ({ className, ...props }) => (
-            <summary className={cn("cursor-pointer font-medium text-white", className)} {...props} />
+            <summary className={cn("cursor-pointer font-medium text-text", className)} {...props} />
           ),
           kbd: ({ className, ...props }) => (
-            <kbd className={cn("rounded border border-line/50 bg-black/30 px-1.5 py-0.5 font-mono text-xs text-slate-200", className)} {...props} />
+            <kbd className={cn("rounded border border-line/50 bg-black/30 px-1.5 py-0.5 font-mono text-xs text-text", className)} {...props} />
           ),
           thead: ({ className, ...props }) => (
-            <thead className={cn("bg-white/5 text-left text-slate-400", className)} {...props} />
+            <thead className={cn("bg-white/5 text-left text-text-muted", className)} {...props} />
           ),
           tbody: ({ className, ...props }) => (
             <tbody className={cn("divide-y divide-line/30", className)} {...props} />
           ),
           tr: ({ className, ...props }) => <tr className={cn("hover:bg-white/[0.02]", className)} {...props} />,
           th: ({ className, ...props }) => <th className={cn("px-3 py-2 font-medium", className)} {...props} />,
-          td: ({ className, ...props }) => <td className={cn("px-3 py-2 text-slate-300", className)} {...props} />,
+          td: ({ className, ...props }) => <td className={cn("px-3 py-2 text-text", className)} {...props} />,
           hr: ({ className, ...props }) => <hr className={cn("my-3 border-line/30", className)} {...props} />,
-          strong: ({ className, ...props }) => <strong className={cn("font-semibold text-white", className)} {...props} />,
-          em: ({ className, ...props }) => <em className={cn("text-slate-300", className)} {...props} />,
+          strong: ({ className, ...props }) => <strong className={cn("font-semibold text-text", className)} {...props} />,
+          em: ({ className, ...props }) => <em className={cn("text-text", className)} {...props} />,
         }}
       >
         {body}

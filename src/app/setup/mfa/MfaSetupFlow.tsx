@@ -101,14 +101,14 @@ export function MfaSetupFlow({ setupToken }: { email: string; setupToken: string
       {/* Logo */}
       <div className="mb-8 text-center">
         <img src="/assets/Logo.png" alt="LePatch" className="mx-auto h-14 w-14 rounded-2xl" />
-        <h1 className="mt-4 text-2xl font-bold tracking-tight text-white">Set Up Two-Factor Authentication</h1>
-        <p className="mt-2 text-sm text-slate-400">
+        <h1 className="mt-4 text-2xl font-bold tracking-tight text-text">Set Up Two-Factor Authentication</h1>
+        <p className="mt-2 text-sm text-text-muted">
           MFA is required for all accounts. This adds an extra layer of security to your account.
         </p>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 rounded-lg border border-status-danger/30 bg-status-danger/10 px-4 py-3 text-sm text-status-danger">
           {error}
         </div>
       )}
@@ -117,22 +117,22 @@ export function MfaSetupFlow({ setupToken }: { email: string; setupToken: string
       {step === "intro" && (
         <div className="rounded-2xl border border-line/50 bg-panel/80 backdrop-blur-sm p-6 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-cyan-500/10 p-3">
-              <Shield className="h-6 w-6 text-cyan-400" />
+            <div className="rounded-xl bg-accent/10 p-3">
+              <Shield className="h-6 w-6 text-accent" />
             </div>
             <div>
-              <h2 className="font-semibold text-white">Authenticator App Required</h2>
-              <p className="text-xs text-slate-400">Google Authenticator, Authy, 1Password, etc.</p>
+              <h2 className="font-semibold text-text">Authenticator App Required</h2>
+              <p className="text-xs text-text-muted">Google Authenticator, Authy, 1Password, etc.</p>
             </div>
           </div>
-          <p className="text-sm text-slate-300 leading-relaxed">
+          <p className="text-sm text-text leading-relaxed">
             You&apos;ll need an authenticator app on your phone to complete setup. Once configured,
             you&apos;ll enter a 6-digit code from the app each time you sign in.
           </p>
           <button
             onClick={startSetup}
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 font-medium text-slate-950 shadow-lg shadow-cyan-500/20 transition-all hover:bg-cyan-400 disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 font-medium text-accent-foreground shadow-lg shadow-cyan-500/20 transition-all hover:bg-accent disabled:opacity-60"
           >
             {loading ? <><Spinner size="sm" /> Setting up</> : "Get Started"}
           </button>
@@ -143,10 +143,10 @@ export function MfaSetupFlow({ setupToken }: { email: string; setupToken: string
       {step === "scan" && (
         <div className="rounded-2xl border border-line/50 bg-panel/80 backdrop-blur-sm p-6 space-y-5">
           <div>
-            <h2 className="font-semibold text-white mb-1">Step 1: Add to Authenticator</h2>
-            <p className="text-sm text-slate-400">
+            <h2 className="font-semibold text-text mb-1">Step 1: Add to Authenticator</h2>
+            <p className="text-sm text-text-muted">
               Scan the QR code below with your authenticator app.
-              The app will show this as <strong className="text-white">{issuer}</strong>.
+              The app will show this as <strong className="text-text">{issuer}</strong>.
             </p>
           </div>
 
@@ -157,33 +157,33 @@ export function MfaSetupFlow({ setupToken }: { email: string; setupToken: string
 
           {/* Manual Secret */}
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500 mb-2">
+            <p className="text-xs font-medium uppercase tracking-wider text-text-muted mb-2">
               Can&apos;t scan? Enter this secret key manually:
             </p>
             <div className="flex items-center gap-2 rounded-xl bg-black/40 border border-line/50 px-4 py-3">
-              <code className={`flex-1 text-sm font-mono text-cyan-300 break-all ${showSecret ? "" : "blur-sm select-none"}`}>
+              <code className={`flex-1 text-sm font-mono text-accent break-all ${showSecret ? "" : "blur-sm select-none"}`}>
                 {secret}
               </code>
               <button
                 onClick={() => setShowSecret(!showSecret)}
-                className="shrink-0 rounded-lg p-1.5 text-slate-500 hover:text-white transition-colors"
+                className="shrink-0 rounded-lg p-1.5 text-text-muted hover:text-text transition-colors"
                 title={showSecret ? "Hide secret" : "Show secret"}
               >
                 {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
               <button
                 onClick={copySecretKey}
-                className="shrink-0 rounded-lg p-1.5 text-slate-500 hover:text-white transition-colors"
+                className="shrink-0 rounded-lg p-1.5 text-text-muted hover:text-text transition-colors"
                 title="Copy secret key"
               >
-                {copiedSecret ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                {copiedSecret ? <Check className="h-4 w-4 text-status-success" /> : <Copy className="h-4 w-4" />}
               </button>
             </div>
           </div>
 
           <button
             onClick={() => setStep("verify")}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 font-medium text-slate-950 shadow-lg shadow-cyan-500/20 transition-all hover:bg-cyan-400"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 font-medium text-accent-foreground shadow-lg shadow-cyan-500/20 transition-all hover:bg-accent"
           >
             I&apos;ve added it — Continue
           </button>
@@ -194,8 +194,8 @@ export function MfaSetupFlow({ setupToken }: { email: string; setupToken: string
       {step === "verify" && (
         <div className="rounded-2xl border border-line/50 bg-panel/80 backdrop-blur-sm p-6 space-y-5">
           <div>
-            <h2 className="font-semibold text-white mb-1">Step 2: Verify Setup</h2>
-            <p className="text-sm text-slate-400">
+            <h2 className="font-semibold text-text mb-1">Step 2: Verify Setup</h2>
+            <p className="text-sm text-text-muted">
               Enter the 6-digit code currently shown in your authenticator app to confirm it&apos;s working.
             </p>
           </div>
@@ -206,18 +206,18 @@ export function MfaSetupFlow({ setupToken }: { email: string; setupToken: string
             label="Authenticator code"
           />
           {error && (
-            <p className="text-sm text-red-300">{error}</p>
+            <p className="text-sm text-status-danger">{error}</p>
           )}
           <button
             onClick={verifyAndEnable}
             disabled={verifyCode.length !== 6 || loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 font-medium text-slate-950 shadow-lg shadow-cyan-500/20 transition-all hover:bg-cyan-400 disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 font-medium text-accent-foreground shadow-lg shadow-cyan-500/20 transition-all hover:bg-accent disabled:opacity-60"
           >
             {loading ? <><Spinner size="sm" /> Verifying</> : "Verify & Enable"}
           </button>
           <button
             onClick={() => setStep("scan")}
-            className="w-full text-center text-sm text-slate-500 hover:text-slate-300 transition-colors"
+            className="w-full text-center text-sm text-text-muted hover:text-text transition-colors"
           >
             Back to QR code
           </button>
@@ -228,41 +228,41 @@ export function MfaSetupFlow({ setupToken }: { email: string; setupToken: string
       {step === "backup" && (
         <div className="rounded-2xl border border-line/50 bg-panel/80 backdrop-blur-sm p-6 space-y-5">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-emerald-500/10 p-3">
-              <ShieldCheck className="h-6 w-6 text-emerald-400" />
+            <div className="rounded-xl bg-status-success/10 p-3">
+              <ShieldCheck className="h-6 w-6 text-status-success" />
             </div>
             <div>
-              <h2 className="font-semibold text-white">MFA Enabled!</h2>
-              <p className="text-xs text-slate-400">Save your backup codes somewhere safe</p>
+              <h2 className="font-semibold text-text">MFA Enabled!</h2>
+              <p className="text-xs text-text-muted">Save your backup codes somewhere safe</p>
             </div>
           </div>
 
-          <div className="rounded-xl bg-black/40 border border-amber-500/20 p-4">
+          <div className="rounded-xl bg-black/40 border border-status-warning/30 p-4">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium uppercase tracking-wider text-amber-400">Backup Codes</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-status-warning">Backup Codes</p>
               <div className="flex gap-1.5">
                 <button
                   onClick={copyAllCodes}
-                  className="inline-flex items-center gap-1 rounded-lg border border-line/50 px-2 py-1 text-xs text-slate-400 hover:text-white transition-colors"
+                  className="inline-flex items-center gap-1 rounded-lg border border-line/50 px-2 py-1 text-xs text-text-muted hover:text-text transition-colors"
                 >
-                  {copiedCodes ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                  {copiedCodes ? <Check className="h-3 w-3 text-status-success" /> : <Copy className="h-3 w-3" />}
                   {copiedCodes ? "Copied" : "Copy"}
                 </button>
                 <button
                   onClick={downloadCodes}
-                  className="inline-flex items-center gap-1 rounded-lg border border-line/50 px-2 py-1 text-xs text-slate-400 hover:text-white transition-colors"
+                  className="inline-flex items-center gap-1 rounded-lg border border-line/50 px-2 py-1 text-xs text-text-muted hover:text-text transition-colors"
                 >
                   <Download className="h-3 w-3" />
                   Download
                 </button>
               </div>
             </div>
-            <p className="mb-3 text-sm text-slate-400">
+            <p className="mb-3 text-sm text-text-muted">
               Each code can only be used once. If you lose your authenticator, these codes are your only way back in.
             </p>
             <div className="grid grid-cols-2 gap-2">
               {backupCodes.map((code, i) => (
-                <div key={i} className="rounded-lg bg-white/5 border border-line/30 px-3 py-2 text-center font-mono text-sm text-cyan-300">
+                <div key={i} className="rounded-lg bg-white/5 border border-line/30 px-3 py-2 text-center font-mono text-sm text-accent">
                   {code}
                 </div>
               ))}
@@ -271,7 +271,7 @@ export function MfaSetupFlow({ setupToken }: { email: string; setupToken: string
 
           <button
             onClick={() => setStep("done")}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 font-medium text-slate-950 shadow-lg shadow-cyan-500/20 transition-all hover:bg-cyan-400"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 font-medium text-accent-foreground shadow-lg shadow-cyan-500/20 transition-all hover:bg-accent"
           >
             I&apos;ve saved my backup codes
           </button>
@@ -281,17 +281,17 @@ export function MfaSetupFlow({ setupToken }: { email: string; setupToken: string
       {/* Step: Done */}
       {step === "done" && (
         <div className="rounded-2xl border border-line/50 bg-panel/80 backdrop-blur-sm p-6 space-y-4 text-center">
-          <div className="mx-auto rounded-2xl bg-emerald-500/10 p-4 w-fit">
-            <ShieldCheck className="h-10 w-10 text-emerald-400" />
+          <div className="mx-auto rounded-2xl bg-status-success/10 p-4 w-fit">
+            <ShieldCheck className="h-10 w-10 text-status-success" />
           </div>
-          <h2 className="text-xl font-bold text-white">You&apos;re All Set!</h2>
-          <p className="text-sm text-slate-400">
+          <h2 className="text-xl font-bold text-text">You&apos;re All Set!</h2>
+          <p className="text-sm text-text-muted">
             Two-factor authentication is now enabled on your account.
             You&apos;ll need your authenticator app each time you sign in.
           </p>
           <button
             onClick={() => router.push("/dashboard")}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 font-medium text-slate-950 shadow-lg shadow-cyan-500/20 transition-all hover:bg-cyan-400"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 font-medium text-accent-foreground shadow-lg shadow-cyan-500/20 transition-all hover:bg-accent"
           >
             Continue to Dashboard
           </button>

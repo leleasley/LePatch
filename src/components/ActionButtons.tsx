@@ -34,7 +34,7 @@ export function AppActions({ appId, size = "sm" }: { appId: string; size?: "sm" 
         <button
           title="Check for new release"
           aria-label="Check for new release"
-          className="focus-ring inline-flex items-center justify-center rounded-md border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] p-1.5 text-[var(--theme-text-muted)] hover:text-[var(--theme-accent)] hover:border-[var(--theme-accent-border)] transition-all active:scale-95"
+          className="focus-ring inline-flex items-center justify-center rounded-md border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent-border)] transition-all active:scale-95"
           onClick={async () => {
             await post(`/api/apps/${appId}/check`);
             router.refresh();
@@ -45,7 +45,7 @@ export function AppActions({ appId, size = "sm" }: { appId: string; size?: "sm" 
         <button
           title="Mark current release as seen"
           aria-label="Mark current release as seen"
-          className="focus-ring inline-flex items-center justify-center rounded-md border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] p-1.5 text-[var(--theme-text-muted)] hover:text-[var(--theme-text)] hover:border-[color-mix(in_srgb,var(--theme-line)_140%,transparent)] transition-all active:scale-95"
+          className="focus-ring inline-flex items-center justify-center rounded-md border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:border-[color-mix(in_srgb,var(--color-border)_140%,transparent)] transition-all active:scale-95"
           onClick={async () => {
             await post("/api/releases/seen", { watchedAppId: appId });
             router.refresh();
@@ -60,7 +60,7 @@ export function AppActions({ appId, size = "sm" }: { appId: string; size?: "sm" 
   return (
     <div className="flex items-center gap-1">
       <button
-        className={`focus-ring inline-flex items-center font-medium bg-[var(--theme-accent-bg)] text-[var(--theme-accent)] border border-[var(--theme-accent-border)] hover:bg-[color-mix(in_srgb,var(--theme-accent)_18%,transparent)] transition-all duration-200 active:scale-95 ${buttonSizeClasses(size)}`}
+        className={`focus-ring inline-flex items-center font-medium bg-[var(--color-accent-muted)] text-[var(--color-accent)] border border-[var(--color-accent-border)] hover:bg-[color-mix(in_srgb,var(--color-accent)_18%,transparent)] transition-all duration-200 active:scale-95 ${buttonSizeClasses(size)}`}
         onClick={async () => {
           await post(`/api/apps/${appId}/check`);
           router.refresh();
@@ -70,7 +70,7 @@ export function AppActions({ appId, size = "sm" }: { appId: string; size?: "sm" 
         Check
       </button>
       <button
-        className={`focus-ring inline-flex items-center font-medium bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] text-[var(--theme-text-muted)] border border-[var(--theme-line)] hover:text-[var(--theme-text)] hover:border-[color-mix(in_srgb,var(--theme-line)_140%,transparent)] transition-all duration-200 active:scale-95 ${buttonSizeClasses(size)}`}
+        className={`focus-ring inline-flex items-center font-medium bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] text-[var(--color-text-muted)] border border-[var(--color-border)] hover:text-[var(--color-text)] hover:border-[color-mix(in_srgb,var(--color-border)_140%,transparent)] transition-all duration-200 active:scale-95 ${buttonSizeClasses(size)}`}
         onClick={async () => {
           await post("/api/releases/seen", { watchedAppId: appId });
           router.refresh();
@@ -90,7 +90,7 @@ export function RemoveAppButton({ appId, size = "sm" }: { appId: string; size?: 
   return (
     <>
       <button
-        className={`focus-ring inline-flex items-center font-medium bg-[var(--theme-status-failure-bg)] text-[var(--theme-status-failure)] border border-[var(--theme-status-failure-border)] hover:bg-[color-mix(in_srgb,var(--theme-status-failure)_22%,transparent)] transition-all duration-200 active:scale-95 ${buttonSizeClasses(size)}`}
+        className={`focus-ring inline-flex items-center font-medium bg-[var(--theme-status-failure-bg)] text-[var(--color-status-danger)] border border-[var(--theme-status-failure-border)] hover:bg-[color-mix(in_srgb,var(--color-status-danger)_22%,transparent)] transition-all duration-200 active:scale-95 ${buttonSizeClasses(size)}`}
         onClick={() => setConfirmOpen(true)}
       >
         <Trash2 className={iconSizeClasses(size)} />
@@ -122,7 +122,7 @@ export function DisableNotificationsButton({ appId, size = "sm" }: { appId: stri
   return (
     <>
       <button
-        className={`focus-ring inline-flex items-center font-medium bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] text-[var(--theme-text-muted)] border border-[var(--theme-line)] hover:text-[var(--theme-text)] hover:border-[color-mix(in_srgb,var(--theme-line)_140%,transparent)] transition-all duration-200 active:scale-95 ${buttonSizeClasses(size)}`}
+        className={`focus-ring inline-flex items-center font-medium bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] text-[var(--color-text-muted)] border border-[var(--color-border)] hover:text-[var(--color-text)] hover:border-[color-mix(in_srgb,var(--color-border)_140%,transparent)] transition-all duration-200 active:scale-95 ${buttonSizeClasses(size)}`}
         onClick={() => setConfirmOpen(true)}
       >
         <BellOff className={iconSizeClasses(size)} />

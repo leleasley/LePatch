@@ -81,7 +81,7 @@ export function EditAppModal({
       <>
         <button
           onClick={() => setOpen(true)}
-          className="focus-ring inline-flex items-center gap-2 rounded-md border border-line/50 px-3 py-2 text-sm text-slate-400 transition-all hover:border-cyan-500/30 hover:text-cyan-300"
+          className="focus-ring inline-flex items-center gap-2 rounded-md border border-line/50 px-3 py-2 text-sm text-text-muted transition-all hover:border-accent/40 hover:text-accent"
         >
           <Settings className="h-4 w-4" />
           Edit
@@ -94,16 +94,16 @@ export function EditAppModal({
     <>
       <ModalShell open={open} onClose={() => setOpen(false)} panelClassName="w-auto max-w-md overflow-hidden p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-white">Edit App Settings</h2>
-            <button onClick={() => setOpen(false)} className="rounded-lg p-1.5 text-slate-500 hover:text-white hover:bg-white/5 transition-colors">
+            <h2 className="text-lg font-semibold text-text">Edit App Settings</h2>
+            <button onClick={() => setOpen(false)} className="rounded-lg p-1.5 text-text-muted hover:text-text hover:bg-white/5 transition-colors">
               <X className="h-4 w-4" />
             </button>
           </div>
 
           <div className="space-y-5">
             <label className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-slate-300 font-medium">
-                {notificationsEnabled ? <Bell className="h-4 w-4 text-emerald-400" /> : <BellOff className="h-4 w-4 text-slate-500" />}
+              <span className="flex items-center gap-2 text-text font-medium">
+                {notificationsEnabled ? <Bell className="h-4 w-4 text-status-success" /> : <BellOff className="h-4 w-4 text-text-muted" />}
                 Notifications
               </span>
               <button
@@ -123,13 +123,13 @@ export function EditAppModal({
             </label>
 
             <label className="flex items-center justify-between text-sm">
-              <span className="text-slate-300 font-medium">Include pre-releases</span>
+              <span className="text-text font-medium">Include pre-releases</span>
               <button
                 role="switch"
                 aria-checked={includePrereleases}
                 onClick={() => setIncludePrereleases(!includePrereleases)}
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
-                  includePrereleases ? "bg-cyan-500" : "bg-slate-600"
+                  includePrereleases ? "bg-accent" : "bg-slate-600"
                 }`}
               >
                 <span
@@ -142,11 +142,11 @@ export function EditAppModal({
 
             <div className="border-t border-line/50 pt-4">
               <label className="block text-sm">
-                <span className="text-slate-300 font-medium">Check interval</span>
+                <span className="text-text font-medium">Check interval</span>
                 <select
                   value={checkInterval}
                   onChange={(e) => setCheckInterval(Number(e.target.value))}
-                  className="focus-ring mt-1.5 w-full rounded-lg border border-line/50 bg-surface px-4 py-2.5 text-white transition-all focus:border-cyan-500/50"
+                  className="focus-ring mt-1.5 w-full rounded-lg border border-line/50 bg-surface px-4 py-2.5 text-text transition-all focus:border-cyan-500/50"
                 >
                   {PRESETS.map((p) => (
                     <option key={p.value} value={p.value}>
@@ -155,18 +155,18 @@ export function EditAppModal({
                   ))}
                 </select>
               </label>
-              <p className="mt-1 text-xs text-slate-500">{formatInterval(checkInterval)}</p>
+              <p className="mt-1 text-xs text-text-muted">{formatInterval(checkInterval)}</p>
             </div>
 
             <div className="border-t border-line/50 pt-4">
               <button
                 onClick={() => setDeleteConfirmOpen(true)}
-                className="focus-ring inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/40 px-4 py-2.5 text-sm font-medium text-red-200 transition-all hover:bg-red-500/10"
+                className="focus-ring inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/40 px-4 py-2.5 text-sm font-medium text-red-200 transition-all hover:bg-status-danger/10"
               >
                 <Trash2 className="h-4 w-4" />
                 Remove app
               </button>
-              <p className="mt-1 text-xs text-slate-500">Permanently delete this app and all its releases</p>
+              <p className="mt-1 text-xs text-text-muted">Permanently delete this app and all its releases</p>
             </div>
           </div>
 
@@ -178,14 +178,14 @@ export function EditAppModal({
                 setNotificationsEnabled(initialNotificationsEnabled);
                 setCheckInterval(initialCheckInterval);
               }}
-              className="rounded-lg border border-line/50 px-4 py-2.5 text-sm font-medium text-slate-300 transition-all hover:bg-white/[0.06]"
+              className="rounded-lg border border-line/50 px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-white/[0.06]"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={saving || !dirty}
-              className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-medium text-slate-950 transition-all hover:bg-cyan-400 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground transition-all hover:bg-accent disabled:opacity-50"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {saving ? "Saving..." : "Save"}

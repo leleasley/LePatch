@@ -1,9 +1,9 @@
 const variantStyles: Record<string, string> = {
-  success: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20 shadow-[inset_0_1px_0_rgba(52,211,153,0.1)]",
-  warning: "bg-amber-500/10 text-amber-300 border-amber-500/20 shadow-[inset_0_1px_0_rgba(251,191,36,0.1)]",
-  error: "bg-red-500/10 text-red-300 border-red-500/20 shadow-[inset_0_1px_0_rgba(248,113,113,0.1)]",
-  info: "bg-cyan-500/10 text-cyan-300 border-cyan-500/20 shadow-[inset_0_1px_0_rgba(34,211,238,0.1)]",
-  neutral: "bg-slate-500/10 text-slate-300 border-slate-500/20 shadow-[inset_0_1px_0_rgba(148,163,184,0.05)]",
+  success: "bg-status-success/10 text-status-success border-status-success/30 shadow-[inset_0_1px_0_rgba(52,211,153,0.1)]",
+  warning: "bg-status-warning/10 text-status-warning border-status-warning/30 shadow-[inset_0_1px_0_rgba(251,191,36,0.1)]",
+  error: "bg-status-danger/10 text-status-danger border-status-danger/30 shadow-[inset_0_1px_0_rgba(248,113,113,0.1)]",
+  info: "bg-accent/10 text-accent border-accent/40 shadow-[inset_0_1px_0_rgba(34,211,238,0.1)]",
+  neutral: "bg-slate-500/10 text-text border-slate-500/20 shadow-[inset_0_1px_0_rgba(148,163,184,0.05)]",
 };
 
 export function Badge({
@@ -32,7 +32,7 @@ export function Badge({
                 : variant === "error"
                   ? "bg-red-400"
                   : variant === "info"
-                    ? "bg-cyan-400"
+                    ? "bg-accent"
                     : "bg-slate-400"
           }`}
         />

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, startTransition } from "react";
 import type { ThemeId } from "@/lib/theme";
+import { resolveTheme, themeColor } from "@/lib/theme";
 
 type ThemeContextValue = {
   theme: ThemeId;
@@ -9,7 +10,7 @@ type ThemeContextValue = {
 };
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: "dark",
+  theme: "system",
   setTheme: () => {},
 });
 
@@ -27,23 +28,11 @@ export function ThemeProvider({
   const [theme, setThemeState] = useState<ThemeId>(initialTheme);
 
   const applyTheme = useCallback((id: ThemeId) => {
-    document.documentElement.setAttribute("data-theme", id);
+    const resolved = resolveTheme(id);
+    document.documentElement.setAttribute("data-theme", resolved);
+    document.documentElement.style.colorScheme = resolved;
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) {
-      const colors: Record<ThemeId, string> = {
-        dark: "#050b14",
-        light: "#f1f5f9",
-        ocean: "#0a1628",
-        forest: "#0a1a0f",
-        sunset: "#1a0f0a",
-        nord: "#2e3440",
-        graphite: "#111315",
-        rose: "#160d14",
-        matcha: "#12170f",
-        midnight: "#070713",
-      };
-      meta.setAttribute("content", colors[id] || colors.dark);
-    }
+    if (meta) meta.setAttribute("content", themeColor[resolved]);
   }, []);
 
   const setTheme = useCallback(
@@ -52,7 +41,9 @@ export function ThemeProvider({
       applyTheme(id);
       try {
         localStorage.setItem("lepatch-theme", id);
-      } catch {}
+      } catch {
+        // Private mode: the choice simply does not persist.
+      }
     },
     [applyTheme]
   );
@@ -61,16 +52,26 @@ export function ThemeProvider({
     applyTheme(theme);
   }, [theme, applyTheme]);
 
+  // Follow the OS while "system" is selected.
   useEffect(() => {
-    const stored = localStorage.getItem("lepatch-theme") as ThemeId | null;
-    if (stored && stored !== theme) {
-      startTransition(() => setTheme(stored));
-    }
-  }, [setTheme, theme]);
+    if (theme !== "system") return;
+    const query = window.matchMedia("(prefers-color-scheme: light)");
+    const onChange = () => applyTheme("system");
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, [theme, applyTheme]);
 
-  return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  useEffect(() => {
+    let stored: ThemeId | null = null;
+    try {
+      stored = localStorage.getItem("lepatch-theme") as ThemeId | null;
+    } catch {
+      stored = null;
+    }
+    if (stored && stored !== theme) {
+      startTransition(() => setThemeState(stored));
+    }
+  }, [theme]);
+
+  return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>;
 }

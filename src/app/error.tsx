@@ -18,7 +18,7 @@ export default function ErrorPage({ error, reset }: { error: Error; reset: () =>
       <div className="pt-2">
         <button
           onClick={reset}
-          className="focus-ring rounded-lg bg-cyan-500 px-5 py-2.5 text-sm font-medium text-slate-950 shadow-lg shadow-cyan-500/20 transition-all hover:bg-cyan-400"
+          className="focus-ring rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground shadow-lg shadow-cyan-500/20 transition-all hover:bg-accent"
         >
           Try again
         </button>

@@ -166,35 +166,35 @@ function GitHubSection() {
   return (
     <div className="rounded-xl border border-line/50 bg-panel/80 backdrop-blur-sm p-5">
       <div className="flex items-center gap-3 mb-4">
-        <div className="rounded-lg bg-cyan-500/10 p-2">
+        <div className="rounded-lg bg-accent/10 p-2">
           <img src="/assets/github.svg" alt="" className="h-4 w-4" />
         </div>
         <div className="flex flex-1 items-center gap-3">
           <div>
-            <h3 className="font-semibold text-white">GitHub</h3>
-            <p className="text-xs text-slate-400">Personal access tokens and OAuth sign-in</p>
+            <h3 className="font-semibold text-text">GitHub</h3>
+            <p className="text-xs text-text-muted">Personal access tokens and OAuth sign-in</p>
           </div>
-          <span className={`ml-auto rounded-full px-2.5 py-0.5 text-xs font-medium ${configured ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-500/10 text-slate-500"}`}>
+          <span className={`ml-auto rounded-full px-2.5 py-0.5 text-xs font-medium ${configured ? "bg-status-success/10 text-status-success" : "bg-slate-500/10 text-text-muted"}`}>
             {configured ? "Configured" : "Not configured"}
           </span>
         </div>
       </div>
       {loading ? (
-        <p className="text-sm text-slate-400">Loading...</p>
+        <p className="text-sm text-text-muted">Loading...</p>
       ) : (
         <div className="space-y-4">
           {rateLimit && !rateLimit.error && (
             <div className="rounded-md border border-line bg-surface p-3 text-sm">
-              <p className="text-slate-300">
+              <p className="text-text">
                 API Rate Limit: {rateLimit.used}/{rateLimit.limit} used
               </p>
               {rateLimit.reset && (
-                <p className="text-slate-400">
+                <p className="text-text-muted">
                   Resets at: {new Date(rateLimit.reset * 1000).toLocaleString()}
                 </p>
               )}
               {rateLimit.remaining !== undefined && (
-                <p className={rateLimit.remaining < 100 ? "text-amber-300" : "text-slate-300"}>
+                <p className={rateLimit.remaining < 100 ? "text-status-warning" : "text-text"}>
                   Remaining: {rateLimit.remaining}
                 </p>
               )}
@@ -202,26 +202,26 @@ function GitHubSection() {
           )}
 
           {rateLimit?.error && (
-            <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
+            <div className="rounded-md border border-red-500/40 bg-status-danger/10 p-3 text-sm text-red-200">
               Rate limit check failed: {rateLimit.error} (status {rateLimit.status})
             </div>
           )}
 
           <label className="block text-sm">
-            <span className="text-slate-300">GitHub Personal Access Token</span>
+            <span className="text-text">GitHub Personal Access Token</span>
             <input
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
               placeholder={configured ? "Enter new token to replace existing" : "ghp_..."}
-              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
             />
           </label>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={saveToken}
               disabled={saving || !token}
-              className="focus-ring inline-flex items-center gap-2 rounded-md bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-cyan-400 transition-colors disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent transition-colors disabled:opacity-50"
             >
               <Key className="h-4 w-4" />
               {saving ? "Saving..." : "Save token"}
@@ -229,7 +229,7 @@ function GitHubSection() {
             {configured && (
               <button
                 onClick={removeToken}
-                className="focus-ring inline-flex items-center gap-2 rounded-md border border-red-500/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10 transition-colors"
+                className="focus-ring inline-flex items-center gap-2 rounded-md border border-red-500/40 px-4 py-2 text-sm text-status-danger hover:bg-status-danger/10 transition-colors"
               >
                 <Trash2 className="h-4 w-4" />
                 Remove token
@@ -237,8 +237,8 @@ function GitHubSection() {
             )}
           </div>
 
-          <details className="text-sm text-slate-400">
-            <summary className="cursor-pointer hover:text-slate-200">How to get a GitHub token?</summary>
+          <details className="text-sm text-text-muted">
+            <summary className="cursor-pointer hover:text-text">How to get a GitHub token?</summary>
             <div className="mt-2 rounded-md border border-line bg-surface p-3 space-y-1">
               <p>1. Go to GitHub Settings &gt; Developer settings &gt; Personal access tokens &gt; Tokens (classic)</p>
               <p>2. Click &quot;Generate new token (classic)&quot;</p>
@@ -251,17 +251,17 @@ function GitHubSection() {
             <div className="mb-4 flex items-center gap-3">
               <img src="/assets/github.svg" alt="" className="h-7 w-7" />
               <div>
-                <h4 className="font-semibold text-white">GitHub OAuth</h4>
-                <p className="text-xs text-slate-400">Sign-In &amp; Issue Creation</p>
+                <h4 className="font-semibold text-text">GitHub OAuth</h4>
+                <p className="text-xs text-text-muted">Sign-In &amp; Issue Creation</p>
               </div>
             </div>
 
             <div className="flex items-center gap-2 text-sm mb-4">
-              <span className="text-slate-300">Status:</span>
+              <span className="text-text">Status:</span>
               {oauthConfigured ? (
-                <span className="text-emerald-300">OAuth configured</span>
+                <span className="text-status-success">OAuth configured</span>
               ) : (
-                <span className="text-slate-500">Not configured</span>
+                <span className="text-text-muted">Not configured</span>
               )}
             </div>
 
@@ -272,35 +272,35 @@ function GitHubSection() {
                 onChange={(e) => setOauthEnabled(e.target.checked)}
                 className="rounded border-line"
               />
-              <span className="text-slate-300">Enabled</span>
+              <span className="text-text">Enabled</span>
             </label>
 
             <div className="rounded-md border border-line bg-surface p-3 space-y-2 mb-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Required for GitHub OAuth App setup</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-text-muted">Required for GitHub OAuth App setup</p>
               <div className="space-y-2">
                 <div>
-                  <span className="text-xs text-slate-400">Homepage URL</span>
-                  <div className="mt-1 flex items-center gap-2 rounded border border-line/50 bg-black/20 px-3 py-2 font-mono text-xs text-slate-300">
+                  <span className="text-xs text-text-muted">Homepage URL</span>
+                  <div className="mt-1 flex items-center gap-2 rounded border border-line/50 bg-black/20 px-3 py-2 font-mono text-xs text-text">
                     <span className="min-w-0 flex-1 truncate">{appUrl}</span>
                     <button
                       type="button"
                       onClick={() => copyToClipboard(appUrl, "appUrl")}
-                      className="shrink-0 rounded p-1 text-slate-500 transition-colors hover:bg-white/5 hover:text-white"
+                      className="shrink-0 rounded p-1 text-text-muted transition-colors hover:bg-white/5 hover:text-text"
                     >
-                      {copiedField === "appUrl" ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedField === "appUrl" ? <Check className="h-3.5 w-3.5 text-status-success" /> : <Copy className="h-3.5 w-3.5" />}
                     </button>
                   </div>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400">Authorization callback URL</span>
-                  <div className="mt-1 flex items-center gap-2 rounded border border-line/50 bg-black/20 px-3 py-2 font-mono text-xs text-slate-300">
+                  <span className="text-xs text-text-muted">Authorization callback URL</span>
+                  <div className="mt-1 flex items-center gap-2 rounded border border-line/50 bg-black/20 px-3 py-2 font-mono text-xs text-text">
                     <span className="min-w-0 flex-1 truncate">{callbackUrl}</span>
                     <button
                       type="button"
                       onClick={() => copyToClipboard(callbackUrl, "callbackUrl")}
-                      className="shrink-0 rounded p-1 text-slate-500 transition-colors hover:bg-white/5 hover:text-white"
+                      className="shrink-0 rounded p-1 text-text-muted transition-colors hover:bg-white/5 hover:text-text"
                     >
-                      {copiedField === "callbackUrl" ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedField === "callbackUrl" ? <Check className="h-3.5 w-3.5 text-status-success" /> : <Copy className="h-3.5 w-3.5" />}
                     </button>
                   </div>
                 </div>
@@ -308,18 +308,18 @@ function GitHubSection() {
             </div>
 
             <label className="block text-sm mb-4">
-              <span className="text-slate-300">Client ID</span>
+              <span className="text-text">Client ID</span>
               {oauthConfigured && showClientId ? (
                 <div className="mt-1 rounded-md border border-line/70 bg-surface/80 px-3 py-2">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-xs uppercase tracking-wide text-slate-500">Stored Client ID</div>
-                      <div className="mt-1 truncate font-mono text-sm text-slate-200">{oauthClientId}</div>
+                      <div className="text-xs uppercase tracking-wide text-text-muted">Stored Client ID</div>
+                      <div className="mt-1 truncate font-mono text-sm text-text">{oauthClientId}</div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setShowClientId((v) => !v)}
-                      className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+                      className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-white/5 hover:text-text"
                     >
                       <EyeOff className="h-4 w-4" />
                     </button>
@@ -334,26 +334,26 @@ function GitHubSection() {
                   validateClientId(e.target.value);
                 }}
                 placeholder={oauthConfigured && !showClientId ? "Enter new Client ID to replace" : "Ov23ct... or Iv1.abc..."}
-                className={`focus-ring mt-1 w-full rounded-md border bg-surface px-3 py-2 text-white ${
+                className={`focus-ring mt-1 w-full rounded-md border bg-surface px-3 py-2 text-text ${
                   clientIdError ? "border-red-500/60" : "border-line"
                 }`}
               />
-              {clientIdError && <p className="mt-1 text-xs text-red-400">{clientIdError}</p>}
+              {clientIdError && <p className="mt-1 text-xs text-status-danger">{clientIdError}</p>}
             </label>
 
             <label className="block text-sm mb-4">
-              <span className="text-slate-300">Client Secret</span>
+              <span className="text-text">Client Secret</span>
               {oauthConfigured && showClientSecret ? (
                 <div className="mt-1 rounded-md border border-line/70 bg-surface/80 px-3 py-2">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-xs uppercase tracking-wide text-slate-500">Stored Client Secret</div>
-                      <div className="mt-1 truncate font-mono text-sm text-slate-200">ghs_****</div>
+                      <div className="text-xs uppercase tracking-wide text-text-muted">Stored Client Secret</div>
+                      <div className="mt-1 truncate font-mono text-sm text-text">ghs_****</div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setShowClientSecret((v) => !v)}
-                      className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+                      className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-white/5 hover:text-text"
                     >
                       <EyeOff className="h-4 w-4" />
                     </button>
@@ -368,18 +368,18 @@ function GitHubSection() {
                   validateClientSecret(e.target.value);
                 }}
                 placeholder={oauthConfigured && !showClientSecret ? "Enter new secret to replace" : "Your client secret..."}
-                className={`focus-ring mt-1 w-full rounded-md border bg-surface px-3 py-2 text-white ${
+                className={`focus-ring mt-1 w-full rounded-md border bg-surface px-3 py-2 text-text ${
                   clientSecretError ? "border-red-500/60" : "border-line"
                 }`}
               />
-              {clientSecretError && <p className="mt-1 text-xs text-red-400">{clientSecretError}</p>}
+              {clientSecretError && <p className="mt-1 text-xs text-status-danger">{clientSecretError}</p>}
             </label>
 
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={saveOauth}
                 disabled={oauthSaving || !oauthClientId || !oauthClientSecret}
-                className="focus-ring inline-flex items-center gap-2 rounded-md bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-cyan-400 transition-colors disabled:opacity-50"
+                className="focus-ring inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent transition-colors disabled:opacity-50"
               >
                 <img src="/assets/github.svg" alt="" className="h-4 w-4" />
                 {oauthSaving ? "Saving..." : "Save OAuth config"}
@@ -387,7 +387,7 @@ function GitHubSection() {
               {oauthConfigured && (
                 <button
                   onClick={removeOauth}
-                  className="focus-ring inline-flex items-center gap-2 rounded-md border border-red-500/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10 transition-colors"
+                  className="focus-ring inline-flex items-center gap-2 rounded-md border border-red-500/40 px-4 py-2 text-sm text-status-danger hover:bg-status-danger/10 transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />
                   Remove OAuth config
@@ -395,8 +395,8 @@ function GitHubSection() {
               )}
             </div>
 
-            <details className="mt-4 text-sm text-slate-400">
-              <summary className="cursor-pointer hover:text-slate-200">How to set up GitHub OAuth?</summary>
+            <details className="mt-4 text-sm text-text-muted">
+              <summary className="cursor-pointer hover:text-text">How to set up GitHub OAuth?</summary>
               <div className="mt-2 rounded-md border border-line bg-surface p-3 space-y-1">
                 <p>1. Go to GitHub Settings &gt; Developer settings &gt; OAuth Apps &gt; New OAuth App</p>
                 <p>2. Fill in the application name (e.g. &quot;LePatch&quot;)</p>
@@ -512,21 +512,21 @@ function TelegramSection() {
   return (
     <div className="rounded-xl border border-line/50 bg-panel/80 backdrop-blur-sm p-5">
       <div className="flex items-center gap-3 mb-4">
-        <div className="rounded-lg bg-cyan-500/10 p-2">
-          <Send className="h-4 w-4 text-cyan-400" />
+        <div className="rounded-lg bg-accent/10 p-2">
+          <Send className="h-4 w-4 text-accent" />
         </div>
         <div className="flex flex-1 items-center gap-3">
           <div>
-            <h3 className="font-semibold text-white">Telegram Bot</h3>
-            <p className="text-xs text-slate-400">Notifications and alerts via Telegram</p>
+            <h3 className="font-semibold text-text">Telegram Bot</h3>
+            <p className="text-xs text-text-muted">Notifications and alerts via Telegram</p>
           </div>
-          <span className={`ml-auto rounded-full px-2.5 py-0.5 text-xs font-medium ${hasToken ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-500/10 text-slate-500"}`}>
+          <span className={`ml-auto rounded-full px-2.5 py-0.5 text-xs font-medium ${hasToken ? "bg-status-success/10 text-status-success" : "bg-slate-500/10 text-text-muted"}`}>
             {hasToken ? "Configured" : "Not configured"}
           </span>
         </div>
       </div>
       {loading ? (
-        <p className="text-sm text-slate-400">Loading...</p>
+        <p className="text-sm text-text-muted">Loading...</p>
       ) : (
         <div className="space-y-4">
           <label className="flex items-center gap-2 text-sm">
@@ -536,35 +536,35 @@ function TelegramSection() {
               onChange={(e) => setEnabled(e.target.checked)}
               className="rounded border-line"
             />
-            <span className="text-slate-300">Enabled</span>
+            <span className="text-text">Enabled</span>
           </label>
 
           <label className="block text-sm">
-            <span className="text-slate-300">Bot token</span>
+            <span className="text-text">Bot token</span>
             <input
               type="password"
               value={botToken}
               onChange={(e) => setBotToken(e.target.value)}
               placeholder={hasToken ? "Leave empty to keep existing" : "123456:ABC-DEF1234..."}
-              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
             />
           </label>
 
           <label className="block text-sm">
-            <span className="text-slate-300">Chat ID</span>
+            <span className="text-text">Chat ID</span>
             {hasChatId ? (
               <div className="mt-1 rounded-md border border-line/70 bg-surface/80 px-3 py-2">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-xs uppercase tracking-wide text-slate-500">Stored fallback Chat ID</div>
-                    <div className="mt-1 truncate font-mono text-sm text-slate-200">
+                    <div className="text-xs uppercase tracking-wide text-text-muted">Stored fallback Chat ID</div>
+                    <div className="mt-1 truncate font-mono text-sm text-text">
                       {showStoredChatId ? storedChatId : "*".repeat(Math.max(8, storedChatId.length || 8))}
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowStoredChatId((value) => !value)}
-                    className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+                    className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-white/5 hover:text-text"
                     aria-label={showStoredChatId ? "Hide Chat ID" : "Show Chat ID"}
                   >
                     {showStoredChatId ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -577,21 +577,21 @@ function TelegramSection() {
               value={chatId}
               onChange={(e) => setChatId(e.target.value)}
               placeholder={hasChatId ? "Enter a new Chat ID to replace the stored one" : "Optional fallback chat"}
-              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
             />
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-text-muted">
               Optional fallback destination. Linked Telegram Bot users receive alerts directly without this.
             </p>
           </label>
 
           <label className="block text-sm">
-            <span className="text-slate-300">Webhook secret</span>
+            <span className="text-text">Webhook secret</span>
             <input
               type="password"
               value={webhookSecret}
               onChange={(e) => setWebhookSecret(e.target.value)}
               placeholder="Auto-generated if empty"
-              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
             />
           </label>
 
@@ -599,7 +599,7 @@ function TelegramSection() {
             <button
               onClick={save}
               disabled={saving}
-              className="focus-ring inline-flex items-center gap-2 rounded-md bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-cyan-400 transition-colors disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent transition-colors disabled:opacity-50"
             >
               <Send className="h-4 w-4" />
               {saving ? "Saving..." : "Save"}
@@ -615,7 +615,7 @@ function TelegramSection() {
             <button
               onClick={clearWebhook}
               disabled={!hasToken}
-              className="focus-ring inline-flex items-center gap-2 rounded-md border border-red-500/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-md border border-red-500/40 px-4 py-2 text-sm text-status-danger hover:bg-status-danger/10 transition-colors disabled:opacity-50"
             >
               <Trash2 className="h-4 w-4" />
               Clear webhook
@@ -706,21 +706,21 @@ function DiscordSection() {
   return (
     <div className="rounded-xl border border-line/50 bg-panel/80 backdrop-blur-sm p-5">
       <div className="flex items-center gap-3 mb-4">
-        <div className="rounded-lg bg-cyan-500/10 p-2">
+        <div className="rounded-lg bg-accent/10 p-2">
           <img src="/assets/discord.svg" alt="" className="h-4 w-4" />
         </div>
         <div className="flex flex-1 items-center gap-3">
           <div>
-            <h3 className="font-semibold text-white">Discord</h3>
-            <p className="text-xs text-slate-400">Webhook notifications for your Discord server</p>
+            <h3 className="font-semibold text-text">Discord</h3>
+            <p className="text-xs text-text-muted">Webhook notifications for your Discord server</p>
           </div>
-          <span className={`ml-auto rounded-full px-2.5 py-0.5 text-xs font-medium ${configured ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-500/10 text-slate-500"}`}>
+          <span className={`ml-auto rounded-full px-2.5 py-0.5 text-xs font-medium ${configured ? "bg-status-success/10 text-status-success" : "bg-slate-500/10 text-text-muted"}`}>
             {configured ? "Configured" : "Not configured"}
           </span>
         </div>
       </div>
       {loading ? (
-        <p className="text-sm text-slate-400">Loading...</p>
+        <p className="text-sm text-text-muted">Loading...</p>
       ) : (
         <div className="space-y-4">
           <label className="flex items-center gap-2 text-sm">
@@ -730,17 +730,17 @@ function DiscordSection() {
               onChange={(e) => setEnabled(e.target.checked)}
               className="rounded border-line"
             />
-            <span className="text-slate-300">Enabled</span>
+            <span className="text-text">Enabled</span>
           </label>
 
           <label className="block text-sm">
-            <span className="text-slate-300">Webhook URL</span>
+            <span className="text-text">Webhook URL</span>
             <input
               type="url"
               value={webhookUrl}
               onChange={(e) => setWebhookUrl(e.target.value)}
               placeholder={configured ? "Leave empty to keep existing" : "https://discord.com/api/webhooks/..."}
-              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
             />
           </label>
 
@@ -748,7 +748,7 @@ function DiscordSection() {
             <button
               onClick={save}
               disabled={saving}
-              className="focus-ring inline-flex items-center gap-2 rounded-md bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-cyan-400 transition-colors disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent transition-colors disabled:opacity-50"
             >
               <Send className="h-4 w-4" />
               {saving ? "Saving..." : "Save"}
@@ -756,7 +756,7 @@ function DiscordSection() {
             {configured && (
               <button
                 onClick={removeWebhook}
-                className="focus-ring inline-flex items-center gap-2 rounded-md border border-red-500/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10 transition-colors"
+                className="focus-ring inline-flex items-center gap-2 rounded-md border border-red-500/40 px-4 py-2 text-sm text-status-danger hover:bg-status-danger/10 transition-colors"
               >
                 <Trash2 className="h-4 w-4" />
                 Remove webhook

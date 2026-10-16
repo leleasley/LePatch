@@ -49,13 +49,13 @@ export function ProfileTabs({ isAdmin, githubLinked }: ProfileTabsProps) {
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="flex w-full items-center justify-between gap-3 rounded-2xl border border-line/50 bg-panel/80 px-4 py-3.5 text-sm font-medium text-white shadow-lg shadow-black/10"
+          className="flex w-full items-center justify-between gap-3 rounded-2xl border border-line/50 bg-panel/80 px-4 py-3.5 text-sm font-medium text-text shadow-lg shadow-black/10"
         >
           <span className="flex items-center gap-2">
-            <active.icon className="h-4 w-4 text-cyan-400" />
+            <active.icon className="h-4 w-4 text-accent" />
             {active.label}
           </span>
-          <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+          <ChevronDown className={`h-4 w-4 text-text-muted transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
 
         {open ? (
@@ -70,11 +70,11 @@ export function ProfileTabs({ isAdmin, githubLinked }: ProfileTabsProps) {
                     onClick={() => setOpen(false)}
                     className={`flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
                       isActive
-                        ? "bg-cyan-500/10 text-cyan-300"
-                        : "text-slate-300 hover:bg-white/[0.04] hover:text-white"
+                        ? "bg-accent/10 text-accent"
+                        : "text-text hover:bg-white/[0.04] hover:text-text"
                     }`}
                   >
-                    <Icon className={`h-4 w-4 ${isActive ? "text-cyan-400" : "text-slate-500"}`} />
+                    <Icon className={`h-4 w-4 ${isActive ? "text-accent" : "text-text-muted"}`} />
                     {tab.label}
                   </Link>
                 );
@@ -93,11 +93,11 @@ export function ProfileTabs({ isAdmin, githubLinked }: ProfileTabsProps) {
               href={tab.href}
               className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                 isActive
-                  ? "bg-cyan-500/10 text-cyan-300 shadow-sm"
-                  : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
+                  ? "bg-accent/10 text-accent shadow-sm"
+                  : "text-text-muted hover:bg-white/[0.04] hover:text-text"
               }`}
             >
-              <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-cyan-400" : "text-slate-500"}`} />
+              <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-accent" : "text-text-muted"}`} />
               {tab.label}
             </Link>
           );

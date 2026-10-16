@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 
 const TONES = {
-  default: "var(--theme-text)",
-  success: "var(--theme-status-success)",
-  failure: "var(--theme-status-failure)",
-  pending: "var(--theme-status-pending)",
-  stale: "var(--theme-status-pending)",
-  muted: "var(--theme-text-faint)",
-  accent: "var(--theme-accent)",
+  default: "var(--color-text)",
+  success: "var(--color-status-success)",
+  failure: "var(--color-status-danger)",
+  pending: "var(--color-status-warning)",
+  stale: "var(--color-status-warning)",
+  muted: "var(--color-text-faint)",
+  accent: "var(--color-accent)",
 } as const;
 
 export function StatPill({

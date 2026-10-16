@@ -22,27 +22,27 @@ export default async function LoginPage() {
         <div className="grid w-full gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
           <section className="hidden max-w-2xl lg:block">
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-cyan-300/80">LePatch Control</p>
-            <h1 className="mt-5 text-5xl font-semibold leading-[1.02] text-white sm:text-6xl">
+            <h1 className="mt-5 text-5xl font-semibold leading-[1.02] text-text sm:text-6xl">
               Patch management that feels deliberate, not duct-taped.
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-7 text-slate-400 sm:text-lg">
+            <p className="mt-6 max-w-xl text-base leading-7 text-text-muted sm:text-lg">
               Cleaner auth flow, dedicated MFA verification, and a login screen that looks like it belongs in the app.
             </p>
             <div className="mt-8 grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Live</p>
-                <p className="mt-3 text-lg font-semibold text-white">Fleet visibility</p>
-                <p className="mt-2 text-sm text-slate-400">See package drift, alerts, scans, and rollout state in one place.</p>
+                <p className="text-xs uppercase tracking-[0.24em] text-text-muted">Live</p>
+                <p className="mt-3 text-lg font-semibold text-text">Fleet visibility</p>
+                <p className="mt-2 text-sm text-text-muted">See package drift, alerts, scans, and rollout state in one place.</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Safe</p>
-                <p className="mt-3 text-lg font-semibold text-white">Protected access</p>
-                <p className="mt-2 text-sm text-slate-400">Session resets stay local to the correct host instead of falling back to localhost.</p>
+                <p className="text-xs uppercase tracking-[0.24em] text-text-muted">Safe</p>
+                <p className="mt-3 text-lg font-semibold text-text">Protected access</p>
+                <p className="mt-2 text-sm text-text-muted">Session resets stay local to the correct host instead of falling back to localhost.</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Fast</p>
-                <p className="mt-3 text-lg font-semibold text-white">Passkeys + MFA</p>
-                <p className="mt-2 text-sm text-slate-400">Use a passkey or password, then land on a dedicated verification screen.</p>
+                <p className="text-xs uppercase tracking-[0.24em] text-text-muted">Fast</p>
+                <p className="mt-3 text-lg font-semibold text-text">Passkeys + MFA</p>
+                <p className="mt-2 text-sm text-text-muted">Use a passkey or password, then land on a dedicated verification screen.</p>
               </div>
             </div>
           </section>
@@ -53,8 +53,8 @@ export default async function LoginPage() {
               <div className="relative">
                 <div className="mb-6 sm:mb-8">
                   <img src="/assets/Logo.png" alt="LePatch" className="h-14 w-14 rounded-2xl sm:h-16 sm:w-16" />
-                  <h2 className="mt-4 text-2xl font-semibold text-white sm:mt-5 sm:text-3xl">Sign in</h2>
-                  <p className="mt-2 hidden text-sm leading-6 text-slate-400 sm:block">
+                  <h2 className="mt-4 text-2xl font-semibold text-text sm:mt-5 sm:text-3xl">Sign in</h2>
+                  <p className="mt-2 hidden text-sm leading-6 text-text-muted sm:block">
                     Access your dashboard, review your fleet, and keep releases moving.
                   </p>
                 </div>

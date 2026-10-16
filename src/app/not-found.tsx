@@ -13,7 +13,7 @@ export default function NotFoundPage() {
         { href: "/login", label: "Go to Login", variant: "secondary" },
       ]}
     >
-      <Link href="/apps" className="text-sm text-cyan-300 transition-colors hover:text-cyan-200">
+      <Link href="/apps" className="text-sm text-accent transition-colors hover:text-accent">
         Open Apps instead
       </Link>
     </StatusPage>

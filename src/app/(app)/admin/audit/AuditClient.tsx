@@ -33,11 +33,11 @@ function actionIcon(action: string) {
 }
 
 function actionColor(action: string): string {
-  if (action.includes("login") || action.includes("logout")) return "text-emerald-400 bg-emerald-500/10";
-  if (action.includes("deleted") || action.includes("stop")) return "text-red-400 bg-red-500/10";
-  if (action.includes("created") || action.includes("setup")) return "text-cyan-400 bg-cyan-500/10";
+  if (action.includes("login") || action.includes("logout")) return "text-status-success bg-status-success/10";
+  if (action.includes("deleted") || action.includes("stop")) return "text-status-danger bg-status-danger/10";
+  if (action.includes("created") || action.includes("setup")) return "text-accent bg-accent/10";
   if (action.startsWith("server.")) return "text-violet-400 bg-violet-500/10";
-  return "text-slate-400 bg-slate-500/10";
+  return "text-text-muted bg-slate-500/10";
 }
 
 function formatTime(dateStr: string): string {
@@ -106,12 +106,12 @@ export function AuditClient() {
     <div>
       <div className="mb-8">
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-amber-500/10 p-3">
-            <Shield className="h-6 w-6 text-amber-400" />
+          <div className="rounded-xl bg-status-warning/10 p-3">
+            <Shield className="h-6 w-6 text-status-warning" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">Audit Log</h1>
-            <p className="mt-1 text-sm text-slate-400">
+            <h1 className="text-3xl font-bold tracking-tight text-text">Audit Log</h1>
+            <p className="mt-1 text-sm text-text-muted">
               Track administrative actions across the system
             </p>
           </div>
@@ -120,18 +120,18 @@ export function AuditClient() {
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 max-w-xs">
-          <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
           <input
             type="text"
             placeholder="Filter by action..."
             value={filterAction}
             onChange={(e) => { setFilterAction(e.target.value); setPage(0); }}
-            className="w-full rounded-lg border border-line/50 bg-panel/80 py-2 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500/50"
+            className="w-full rounded-lg border border-line/50 bg-panel/80 py-2 pl-10 pr-4 text-sm text-text placeholder-slate-500 outline-none focus:border-cyan-500/50"
           />
         </div>
         <button
           onClick={fetchLogs}
-          className="flex items-center gap-2 rounded-lg border border-line/50 bg-panel/80 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+          className="flex items-center gap-2 rounded-lg border border-line/50 bg-panel/80 px-4 py-2 text-sm text-text transition-colors hover:bg-white/5 hover:text-text"
         >
           <RefreshCw className="h-4 w-4" />
           Refresh
@@ -139,26 +139,26 @@ export function AuditClient() {
         <button
           onClick={() => setShowClearConfirm(true)}
           disabled={clearing || total === 0}
-          className="flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 rounded-lg border border-red-500/40 bg-status-danger/10 px-4 py-2 text-sm text-status-danger transition-colors hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Trash2 className="h-4 w-4" />
           {clearing ? "Clearing..." : "Clear logs"}
         </button>
-        <div className="text-sm text-slate-500">
+        <div className="text-sm text-text-muted">
           {total} event{total !== 1 ? "s" : ""}
         </div>
       </div>
 
       <div className="space-y-2">
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-slate-500">
+          <div className="flex items-center justify-center py-16 text-text-muted">
             <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
             Loading...
           </div>
         ) : entries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-500">
-            <Shield className="mb-3 h-12 w-12 text-slate-600" />
-            <p className="text-lg font-medium text-slate-400">No audit events yet</p>
+          <div className="flex flex-col items-center justify-center py-16 text-text-muted">
+            <Shield className="mb-3 h-12 w-12 text-text-faint" />
+            <p className="text-lg font-medium text-text-muted">No audit events yet</p>
             <p className="mt-1 text-sm">Administrative actions will appear here</p>
           </div>
         ) : (
@@ -174,16 +174,16 @@ export function AuditClient() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className="text-sm font-medium text-white">
+                    <span className="text-sm font-medium text-text">
                       {describeAction(entry.action)}
                     </span>
                     {entry.target && (
-                      <span className="truncate text-sm text-slate-400">
+                      <span className="truncate text-sm text-text-muted">
                         {entry.target}{entry.targetId ? ` #${entry.targetId.slice(0, 8)}` : ""}
                       </span>
                     )}
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-muted">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       {formatTime(entry.createdAt)}
@@ -194,7 +194,7 @@ export function AuditClient() {
                         {entry.user.name || entry.user.email}
                       </span>
                     ) : entry.userId ? (
-                      <span className="flex items-center gap-1 text-slate-600">
+                      <span className="flex items-center gap-1 text-text-faint">
                         <User className="h-3 w-3" />
                         deleted user
                       </span>
@@ -205,10 +205,10 @@ export function AuditClient() {
                   </div>
                   {entry.metadata && Object.keys(entry.metadata as Record<string, unknown>).length > 0 && (
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-400">
+                      <summary className="cursor-pointer text-xs text-text-muted hover:text-text-muted">
                         Details
                       </summary>
-                      <pre className="mt-1 rounded-lg bg-black/30 p-2 text-xs text-slate-400 overflow-x-auto">
+                      <pre className="mt-1 rounded-lg bg-black/30 p-2 text-xs text-text-muted overflow-x-auto">
                         {JSON.stringify(entry.metadata, null, 2)}
                       </pre>
                     </details>
@@ -225,17 +225,17 @@ export function AuditClient() {
           <button
             onClick={() => setPage(Math.max(0, page - 1))}
             disabled={page === 0}
-            className="rounded-lg border border-line/50 bg-panel/80 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg border border-line/50 bg-panel/80 px-4 py-2 text-sm text-text transition-colors hover:bg-white/5 hover:text-text disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Previous
           </button>
-          <span className="px-4 text-sm text-slate-500">
+          <span className="px-4 text-sm text-text-muted">
             Page {page + 1} of {totalPages}
           </span>
           <button
             onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
             disabled={page >= totalPages - 1}
-            className="rounded-lg border border-line/50 bg-panel/80 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg border border-line/50 bg-panel/80 px-4 py-2 text-sm text-text transition-colors hover:bg-white/5 hover:text-text disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Next
           </button>

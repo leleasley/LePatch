@@ -32,7 +32,7 @@ export function ReposClient() {
       <div className="space-y-3">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="animate-pulse rounded-xl border border-line/50 bg-panel/60 p-5">
-            <div className="mb-2 h-5 w-56 rounded bg-slate-700/40" />
+            <div className="mb-2 h-5 w-56 rounded bg-surface-elevated" />
             <div className="mb-3 h-3 w-3/4 rounded bg-slate-700/30" />
             <div className="flex gap-4">
               <div className="h-3 w-16 rounded bg-slate-700/30" />
@@ -47,8 +47,8 @@ export function ReposClient() {
 
   if (state.status === "error") {
     return (
-      <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-6 text-center">
-        <p className="text-sm text-red-400">{state.message}</p>
+      <div className="rounded-xl border border-status-danger/30 bg-red-500/5 p-6 text-center">
+        <p className="text-sm text-status-danger">{state.message}</p>
       </div>
     );
   }
@@ -56,8 +56,8 @@ export function ReposClient() {
   if (state.repos.length === 0) {
     return (
       <div className="rounded-xl border border-line/50 bg-panel/60 p-12 text-center">
-        <GitBranch className="mx-auto mb-3 h-8 w-8 text-slate-500" />
-        <p className="text-sm text-slate-400">No repositories found on your GitHub account.</p>
+        <GitBranch className="mx-auto mb-3 h-8 w-8 text-text-muted" />
+        <p className="text-sm text-text-muted">No repositories found on your GitHub account.</p>
       </div>
     );
   }
@@ -68,24 +68,24 @@ export function ReposClient() {
         <a
           key={repo.id}
           href={`/repos/${repo.owner.login}/${repo.name}`}
-          className="group block rounded-xl border border-line/50 bg-panel/60 p-5 transition-colors hover:border-cyan-500/30 hover:bg-cyan-500/[0.02]"
+          className="group block rounded-xl border border-line/50 bg-panel/60 p-5 transition-colors hover:border-accent/40 hover:bg-accent/5"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <h3 className="truncate text-sm font-semibold text-white group-hover:text-cyan-300">
+                <h3 className="truncate text-sm font-semibold text-text group-hover:text-accent">
                   {repo.full_name}
                 </h3>
                 {repo.fork && (
-                  <span className="shrink-0 rounded-full border border-slate-600/50 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+                  <span className="shrink-0 rounded-full border border-slate-600/50 px-2 py-0.5 text-[10px] font-medium text-text-muted">
                     fork
                   </span>
                 )}
               </div>
               {repo.description && (
-                <p className="mt-1.5 line-clamp-2 text-xs text-slate-400">{repo.description}</p>
+                <p className="mt-1.5 line-clamp-2 text-xs text-text-muted">{repo.description}</p>
               )}
-              <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-500">
+              <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-text-muted">
                 {repo.language && (
                   <span className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-cyan-400/60" />
@@ -107,7 +107,7 @@ export function ReposClient() {
                 <span>Updated {formatDate(repo.updated_at)}</span>
               </div>
             </div>
-            <ExternalLink className="mt-1 h-4 w-4 shrink-0 text-slate-600 transition-colors group-hover:text-cyan-400" />
+            <ExternalLink className="mt-1 h-4 w-4 shrink-0 text-text-faint transition-colors group-hover:text-accent" />
           </div>
         </a>
       ))}

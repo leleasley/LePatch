@@ -36,12 +36,12 @@ export default async function SessionResetPage(props: {
         <div className="relative rounded-xl border border-line bg-panel/90 p-8 shadow-[0_0_30px_rgba(34,211,238,0.05)] backdrop-blur">
           <div className="mb-6 text-center">
             <img src="/assets/Logo.png" alt="LePatch" className="mx-auto h-14 w-14" />
-            <h1 className="mt-4 text-2xl font-semibold text-white">{reason.title}</h1>
-            <p className="mt-2 text-sm text-slate-400">{reason.message}</p>
+            <h1 className="mt-4 text-2xl font-semibold text-text">{reason.title}</h1>
+            <p className="mt-2 text-sm text-text-muted">{reason.message}</p>
           </div>
           <Link
             href={loginHref}
-            className="focus-ring flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-500 px-4 py-3 font-medium text-slate-950 shadow-lg shadow-cyan-500/20 transition-all hover:bg-cyan-400"
+            className="focus-ring flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 font-medium text-accent-foreground shadow-lg shadow-cyan-500/20 transition-all hover:bg-accent"
           >
             Sign in again
           </Link>

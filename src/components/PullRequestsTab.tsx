@@ -51,8 +51,8 @@ export function PullRequestsTab({ owner, repo }: { owner: string; repo: string }
             onClick={() => setState(s)}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
               state === s
-                ? "bg-cyan-500/10 text-cyan-300"
-                : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
+                ? "bg-accent/10 text-accent"
+                : "text-text-muted hover:bg-white/[0.04] hover:text-text"
             }`}
           >
             {s.charAt(0).toUpperCase() + s.slice(1)}
@@ -63,14 +63,14 @@ export function PullRequestsTab({ owner, repo }: { owner: string; repo: string }
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="animate-pulse rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_30%,transparent)] p-4">
-              <div className="mb-2 h-4 w-64 rounded bg-[color-mix(in_srgb,var(--theme-text)_5%,transparent)]" />
-              <div className="h-3 w-32 rounded bg-[color-mix(in_srgb,var(--theme-text)_3%,transparent)]" />
+            <div key={i} className="animate-pulse rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_30%,transparent)] p-4">
+              <div className="mb-2 h-4 w-64 rounded bg-[color-mix(in_srgb,var(--color-text)_5%,transparent)]" />
+              <div className="h-3 w-32 rounded bg-[color-mix(in_srgb,var(--color-text)_3%,transparent)]" />
             </div>
           ))}
         </div>
       ) : pulls.length === 0 ? (
-        <p className="text-sm text-[var(--theme-text-muted)]">No {state} pull requests found.</p>
+        <p className="text-sm text-[var(--color-text-muted)]">No {state} pull requests found.</p>
       ) : (
         <div className="space-y-2">
           {pulls.map((pr) => (
@@ -79,25 +79,25 @@ export function PullRequestsTab({ owner, repo }: { owner: string; repo: string }
               href={pr.html_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-start gap-3 rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_20%,transparent)] p-4 transition-colors hover:border-[var(--theme-accent-border)]"
+              className="flex items-start gap-3 rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_20%,transparent)] p-4 transition-colors hover:border-[var(--color-accent-border)]"
             >
               {pr.merged ? (
                 <GitMerge className="mt-0.5 h-4 w-4 shrink-0 text-purple-400" />
               ) : pr.state === "open" ? (
-                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
+                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-status-success" />
               ) : (
-                <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+                <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-text-muted" />
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-[var(--theme-text)]">
+                  <span className="text-sm font-medium text-[var(--color-text)]">
                     #{pr.number}
                   </span>
-                  <span className="truncate text-sm text-[var(--theme-text)]">
+                  <span className="truncate text-sm text-[var(--color-text)]">
                     {pr.title}
                   </span>
                 </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-[var(--theme-text-muted)]">
+                <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-[var(--color-text-muted)]">
                   {pr.user && <span>by {pr.user.login}</span>}
                   <span>{formatDate(pr.created_at)}</span>
                   {pr.comments > 0 && (
@@ -107,10 +107,10 @@ export function PullRequestsTab({ owner, repo }: { owner: string; repo: string }
                     </span>
                   )}
                   {pr.additions !== undefined && (
-                    <span className="text-green-400">+{pr.additions}</span>
+                    <span className="text-status-success">+{pr.additions}</span>
                   )}
                   {pr.deletions !== undefined && (
-                    <span className="text-red-400">-{pr.deletions}</span>
+                    <span className="text-status-danger">-{pr.deletions}</span>
                   )}
                   {pr.labels.map((label) => (
                     <span

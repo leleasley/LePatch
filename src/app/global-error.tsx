@@ -21,13 +21,13 @@ export default function GlobalError({
           <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:flex-wrap sm:gap-3">
             <button
               onClick={reset}
-              className="focus-ring inline-flex items-center justify-center rounded-lg bg-cyan-500 px-5 py-2.5 text-sm font-medium text-slate-950 shadow-lg shadow-cyan-500/20 transition-all hover:bg-cyan-400"
+              className="focus-ring inline-flex items-center justify-center rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground shadow-lg shadow-cyan-500/20 transition-all hover:bg-accent"
             >
               Try Again
             </button>
             <a
               href="/"
-              className="focus-ring inline-flex items-center justify-center rounded-lg border border-line/60 bg-surface px-5 py-2.5 text-sm font-medium text-slate-200 transition-all hover:border-cyan-500/30 hover:text-white"
+              className="focus-ring inline-flex items-center justify-center rounded-lg border border-line/60 bg-surface px-5 py-2.5 text-sm font-medium text-text transition-all hover:border-accent/40 hover:text-text"
             >
               Go Home
             </a>

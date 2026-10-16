@@ -94,13 +94,13 @@ export function TelegramLinkSection() {
     <section className="rounded-lg border border-line bg-panel p-4">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Send className="h-5 w-5 text-cyan-300" />
+          <Send className="h-5 w-5 text-accent" />
           <h2 className="text-lg font-medium">Telegram Bot Access</h2>
         </div>
         <button
           onClick={generateCode}
           disabled={working || !enabled}
-          className="focus-ring inline-flex items-center gap-2 rounded-md bg-cyan-500 px-3 py-1.5 text-sm font-medium text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
+          className="focus-ring inline-flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground hover:bg-accent disabled:opacity-50"
         >
           <Link2 className="h-4 w-4" />
           Generate link code
@@ -108,17 +108,17 @@ export function TelegramLinkSection() {
       </div>
 
       {!enabled ? (
-        <p className="text-sm text-slate-400">An administrator must configure and enable Telegram Bot first.</p>
+        <p className="text-sm text-text-muted">An administrator must configure and enable Telegram Bot first.</p>
       ) : (
         <div className="space-y-4 text-sm">
-          <p className="text-slate-400">
+          <p className="text-text-muted">
             Link your Telegram account to {botName || "the Telegram Bot"} so only signed-in LePatch users can use bot commands and receive direct release alerts.
           </p>
 
           <div className="rounded-md border border-line bg-surface p-3">
-            <div className="text-slate-300">Current link</div>
+            <div className="text-text">Current link</div>
             {link.linked ? (
-              <div className="mt-2 space-y-1 text-slate-400">
+              <div className="mt-2 space-y-1 text-text-muted">
                 <div>Bot account: {link.username ? `@${link.username}` : "Unnamed Telegram account"}</div>
                 <div className="flex items-center gap-2">
                   <span>
@@ -127,7 +127,7 @@ export function TelegramLinkSection() {
                   <button
                     type="button"
                     onClick={() => setShowChatId((value) => !value)}
-                    className="rounded-md p-1 text-slate-500 transition-colors hover:bg-white/5 hover:text-white"
+                    className="rounded-md p-1 text-text-muted transition-colors hover:bg-white/5 hover:text-text"
                     aria-label={showChatId ? "Hide Chat ID" : "Show Chat ID"}
                   >
                     {showChatId ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -137,39 +137,39 @@ export function TelegramLinkSection() {
                 <div>Last seen: {formatDate(link.lastSeenAt)}</div>
               </div>
             ) : (
-              <p className="mt-2 text-slate-500">No Telegram account linked yet.</p>
+              <p className="mt-2 text-text-muted">No Telegram account linked yet.</p>
             )}
           </div>
 
           {linkCode && (
-            <div className="rounded-md border border-cyan-500/30 bg-cyan-500/10 p-3">
+            <div className="rounded-md border border-accent/40 bg-accent/10 p-3">
               <div className="flex items-center justify-between gap-3">
-                <div className="font-medium text-cyan-200">Link code</div>
+                <div className="font-medium text-accent">Link code</div>
                 <button
                   type="button"
                   onClick={copyLinkCommand}
-                  className="inline-flex items-center gap-1 rounded-md border border-cyan-500/30 px-2 py-1 text-xs text-cyan-100 transition-colors hover:bg-cyan-500/10"
+                  className="inline-flex items-center gap-1 rounded-md border border-accent/40 px-2 py-1 text-xs text-cyan-100 transition-colors hover:bg-accent/10"
                 >
                   <Copy className="h-3 w-3" />
                   Copy command
                 </button>
               </div>
-              <div className="mt-2 font-mono text-base text-white">{linkCode}</div>
-              <div className="mt-2 text-slate-300">
+              <div className="mt-2 font-mono text-base text-text">{linkCode}</div>
+              <div className="mt-2 text-text">
                 Open {botHandle} in Telegram and send:
               </div>
-              <div className="mt-1 rounded bg-slate-950/60 px-3 py-2 font-mono text-cyan-200">/link {linkCode}</div>
-              <div className="mt-2 text-xs text-slate-400">Expires: {formatDate(expiresAt)}</div>
+              <div className="mt-1 rounded bg-slate-950/60 px-3 py-2 font-mono text-accent">/link {linkCode}</div>
+              <div className="mt-2 text-xs text-text-muted">Expires: {formatDate(expiresAt)}</div>
             </div>
           )}
 
-          <div className="rounded-md border border-line bg-surface p-3 text-slate-400">
+          <div className="rounded-md border border-line bg-surface p-3 text-text-muted">
             <div>Available bot commands after linking:</div>
             <div className="mt-2 space-y-1">
               {visibleCommands.map((command) => (
                 <div key={command.command} className="flex items-center justify-between gap-3 rounded-md border border-line/40 bg-black/10 px-3 py-2">
-                  <div className="font-mono text-xs text-cyan-200">/{command.command}</div>
-                  <div className="text-right text-xs text-slate-500">{command.description}</div>
+                  <div className="font-mono text-xs text-accent">/{command.command}</div>
+                  <div className="text-right text-xs text-text-muted">{command.description}</div>
                 </div>
               ))}
             </div>
@@ -179,7 +179,7 @@ export function TelegramLinkSection() {
             <button
               onClick={unlink}
               disabled={working}
-              className="focus-ring inline-flex items-center gap-2 rounded-md border border-red-500/40 px-3 py-1.5 text-sm text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-md border border-red-500/40 px-3 py-1.5 text-sm text-status-danger hover:bg-status-danger/10 disabled:opacity-50"
             >
               <Trash2 className="h-4 w-4" />
               Unlink Telegram Bot
@@ -191,8 +191,8 @@ export function TelegramLinkSection() {
       {message && (
         <p className={`mt-4 rounded-md border p-3 text-sm ${
           message.includes("Failed") || message.includes("failed")
-            ? "border-red-500/40 bg-red-500/10 text-red-200"
-            : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+            ? "border-red-500/40 bg-status-danger/10 text-red-200"
+            : "border-emerald-500/40 bg-status-success/10 text-emerald-200"
         }`}>
           {message}
         </p>

@@ -135,13 +135,13 @@ export function PasskeysSection({ passwordEnabled }: { passwordEnabled: boolean;
 
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Key className="h-5 w-5 text-cyan-300" />
+          <Key className="h-5 w-5 text-accent" />
           <h2 className="text-lg font-medium">Passkeys</h2>
         </div>
         <button
           onClick={registerPasskey}
           disabled={registering}
-          className="focus-ring inline-flex items-center gap-2 rounded-md bg-cyan-500 px-3 py-1.5 text-sm font-medium text-slate-950 hover:bg-cyan-400 disabled:opacity-60 transition-colors"
+          className="focus-ring inline-flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground hover:bg-accent disabled:opacity-60 transition-colors"
         >
           {registering ? (
             <>
@@ -157,21 +157,21 @@ export function PasskeysSection({ passwordEnabled }: { passwordEnabled: boolean;
         </button>
       </div>
 
-      <p className="mb-4 text-sm text-slate-400">
+      <p className="mb-4 text-sm text-text-muted">
         Passkeys let you sign in using your device biometrics or PIN instead of a password. They are more secure and resistant to phishing.
       </p>
 
       {loading ? (
-        <p className="text-sm text-slate-400">Loading passkeys...</p>
+        <p className="text-sm text-text-muted">Loading passkeys...</p>
       ) : passkeys.length === 0 ? (
-        <p className="text-sm text-slate-500">No passkeys registered</p>
+        <p className="text-sm text-text-muted">No passkeys registered</p>
       ) : (
         <div className="space-y-2">
           {passkeys.map((passkey) => (
             <div key={passkey.id} className="flex items-center justify-between rounded-md border border-line bg-surface p-3 text-sm">
               <div>
-                <span className="text-slate-300">{passkey.deviceName || "Unnamed passkey"}</span>
-                <div className="mt-0.5 text-xs text-slate-500">
+                <span className="text-text">{passkey.deviceName || "Unnamed passkey"}</span>
+                <div className="mt-0.5 text-xs text-text-muted">
                   Created {formatDate(passkey.createdAt)}
                   {passkey.lastUsedAt && <> &middot; Last used {formatDate(passkey.lastUsedAt)}</>}
                 </div>
@@ -179,7 +179,7 @@ export function PasskeysSection({ passwordEnabled }: { passwordEnabled: boolean;
               <button
                 onClick={() => setDeletingId(passkey.id)}
                 disabled={deleting}
-                className="focus-ring rounded p-1 text-slate-500 hover:text-red-400 transition-colors disabled:opacity-50"
+                className="focus-ring rounded p-1 text-text-muted hover:text-status-danger transition-colors disabled:opacity-50"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -190,14 +190,14 @@ export function PasskeysSection({ passwordEnabled }: { passwordEnabled: boolean;
 
       <div className="mt-4 flex items-center justify-between border-t border-line pt-4">
         <div>
-          <span className="text-sm text-slate-300">Disable password login</span>
-          <p className="text-xs text-slate-500">Only allow sign-in via passkeys</p>
+          <span className="text-sm text-text">Disable password login</span>
+          <p className="text-xs text-text-muted">Only allow sign-in via passkeys</p>
         </div>
         <button
           onClick={togglePassword}
           disabled={toggling || passkeys.length === 0}
           className={`focus-ring relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed ${
-            passwordLoginEnabled ? "bg-slate-600" : "bg-cyan-500"
+            passwordLoginEnabled ? "bg-slate-600" : "bg-accent"
           }`}
         >
           <span
@@ -209,10 +209,10 @@ export function PasskeysSection({ passwordEnabled }: { passwordEnabled: boolean;
       </div>
 
       {error && (
-        <p className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>
+        <p className="mt-3 rounded-md border border-red-500/40 bg-status-danger/10 px-3 py-2 text-sm text-red-200">{error}</p>
       )}
       {message && (
-        <p className="mt-3 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">{message}</p>
+        <p className="mt-3 rounded-md border border-emerald-500/40 bg-status-success/10 px-3 py-2 text-sm text-emerald-200">{message}</p>
       )}
     </section>
   );

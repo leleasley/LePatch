@@ -5,9 +5,12 @@
   "start_url": "/dashboard",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#050b14",
-  "theme_color": "#050b14",
-  "categories": ["utilities", "developer tools"],
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "categories": [
+    "utilities",
+    "developer tools"
+  ],
   "screenshots": [
     {
       "src": "/assets/splash-dark.svg",

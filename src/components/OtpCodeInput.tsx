@@ -33,7 +33,7 @@ export function OtpCodeInput({
 
   return (
     <div className="space-y-3">
-      <label htmlFor={id} className="block text-sm font-medium text-slate-200">
+      <label htmlFor={id} className="block text-sm font-medium text-text">
         {label}
       </label>
       <div
@@ -67,8 +67,8 @@ export function OtpCodeInput({
                 className={[
                   "flex h-14 items-center justify-center rounded-2xl border text-xl font-semibold transition-all sm:h-16 sm:text-2xl",
                   hasDigit
-                    ? "border-cyan-400/60 bg-cyan-400/10 text-white shadow-[0_0_24px_rgba(34,211,238,0.12)]"
-                    : "border-white/10 bg-white/[0.03] text-slate-500",
+                    ? "border-cyan-400/60 bg-cyan-400/10 text-text shadow-[0_0_24px_rgba(34,211,238,0.12)]"
+                    : "border-white/10 bg-white/[0.03] text-text-muted",
                   isActive ? "ring-2 ring-cyan-400/40" : "",
                   disabled ? "opacity-60" : "",
                 ].join(" ")}
@@ -79,7 +79,7 @@ export function OtpCodeInput({
           })}
         </div>
       </div>
-      <p className="text-xs text-slate-500">You can type or paste the full code.</p>
+      <p className="text-xs text-text-muted">You can type or paste the full code.</p>
     </div>
   );
 }

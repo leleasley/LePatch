@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { LogoutButton } from "@/components/LogoutButton";
 import { ModalShell } from "@/components/ModalShell";
+import { CommandPalette, useCommandPaletteKey, type Command } from "@/components/ui/Tabs";
 import { isAdministrator, isModerator, roleLabels } from "@/lib/rbac";
 import { cn } from "@/lib/cn";
 import type { UserRole } from "@prisma/client";
@@ -241,6 +242,8 @@ function MobileDrawer({
 export function AppShell({ children, userRole = null, userName = null }: { children: ReactNode; userRole?: string | null; userName?: string | null }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useCommandPaletteKey(setPaletteOpen);
   const { mainNav, discoverNav, utilityNav, adminItems } = buildNav(userRole);
   const homeHref = userRole === "restricted" ? "/apps/search" : "/dashboard";
 
@@ -249,6 +252,20 @@ export function AppShell({ children, userRole = null, userName = null }: { child
     { title: "Discover", items: discoverNav },
     { title: "Account", items: utilityNav },
     ...(adminItems.length ? [{ title: "Admin", items: adminItems }] : []),
+  ];
+
+  const commands: Command[] = [
+    ...groups.flatMap((group) =>
+      group.items.map((item) => ({
+        id: item.href,
+        label: item.label,
+        group: group.title,
+        href: item.href,
+      }))
+    ),
+    { id: "search-repos", label: "Find a repository to watch", group: "Actions", href: "/apps/search" },
+    { id: "check-all", label: "Check watched repositories now", group: "Actions", run: () => window.dispatchEvent(new CustomEvent("lepatch:check-all")) },
+    { id: "copy-mcp", label: "Copy API base URL", group: "Actions", run: () => navigator.clipboard?.writeText(window.location.origin) },
   ];
 
   return (
@@ -268,6 +285,14 @@ export function AppShell({ children, userRole = null, userName = null }: { child
           ))}
         </div>
         <div className="shrink-0 border-t border-border p-3">
+          <button
+            onClick={() => setPaletteOpen(true)}
+            className="mb-2 flex w-full items-center gap-2 rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-text-muted transition-colors hover:border-accent/50 hover:text-text"
+          >
+            <Search className="h-3.5 w-3.5" />
+            <span className="flex-1 text-left">Command palette</span>
+            <kbd className="rounded border border-border px-1 text-2xs text-text-faint">⌘K</kbd>
+          </button>
           <LogoutButton />
         </div>
       </aside>
@@ -278,20 +303,34 @@ export function AppShell({ children, userRole = null, userName = null }: { child
           <img src="/assets/Logo.png" alt="LePatch" className="h-7 w-7 rounded-md" />
           <span className="text-base font-semibold tracking-tight text-text">LePatch</span>
         </Link>
-        <button
-          onClick={() => setMenuOpen(true)}
-          aria-label="Open menu"
-          aria-expanded={menuOpen}
-          className="-mr-1 rounded-lg p-2 text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setPaletteOpen(true)}
+            className="hidden h-8 items-center gap-2 rounded-md border border-border bg-surface-elevated px-2 text-xs text-text-muted transition-colors hover:border-accent/50 hover:text-text lg:flex"
+            aria-label="Open command palette"
+          >
+            <Search className="h-3.5 w-3.5" />
+            <span>Search</span>
+            <kbd className="rounded border border-border px-1 text-2xs text-text-faint">⌘K</kbd>
+          </button>
+          <button
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+            aria-expanded={menuOpen}
+            aria-haspopup="dialog"
+            className="icon-button lg:hidden"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
       </header>
 
       {/* Content */}
       <main className="mobile-content lg:pl-60">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
       </main>
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} />
 
       <MobileDrawer
         open={menuOpen}

@@ -132,8 +132,8 @@ export function AppDetailTabs({
           <div className="app-shell-card overflow-hidden min-w-0">
             <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-[var(--theme-divider)] flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-base font-semibold tracking-tight text-[var(--theme-text)]">README</h2>
-                <p className="text-[0.78rem] text-[var(--theme-text-muted)] mt-0.5">
+                <h2 className="text-base font-semibold tracking-tight text-[var(--color-text)]">README</h2>
+                <p className="text-[0.78rem] text-[var(--color-text-muted)] mt-0.5">
                   Cached from GitHub and refreshed on new release detection.
                 </p>
               </div>
@@ -149,7 +149,7 @@ export function AppDetailTabs({
           </div>
           <aside className="space-y-3">
             <div className="app-shell-card p-5">
-              <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">
+              <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
                 Project Links
               </h3>
               <div className="mt-3 space-y-3">
@@ -157,27 +157,27 @@ export function AppDetailTabs({
                   href={snapshot.repo.html_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between gap-2 rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] px-3 py-2.5 text-sm text-[var(--theme-text)] hover:border-[var(--theme-accent-border)] hover:text-[var(--theme-accent)] transition-colors"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] px-3 py-2.5 text-sm text-[var(--color-text)] hover:border-[var(--color-accent-border)] hover:text-[var(--color-accent)] transition-colors"
                 >
                   <span className="truncate app-mono text-[0.82rem]">{snapshot.repo.full_name}</span>
-                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[var(--theme-text-faint)]" />
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-faint)]" />
                 </a>
                 {snapshot.repo.homepage && (
                   <a
                     href={snapshot.repo.homepage}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-between gap-2 rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] px-3 py-2.5 text-sm text-[var(--theme-text)] hover:border-[var(--theme-accent-border)] hover:text-[var(--theme-accent)] transition-colors"
+                    className="flex items-center justify-between gap-2 rounded-lg border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] px-3 py-2.5 text-sm text-[var(--color-text)] hover:border-[var(--color-accent-border)] hover:text-[var(--color-accent)] transition-colors"
                   >
                     <span className="truncate">{snapshot.repo.homepage}</span>
-                    <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[var(--theme-text-faint)]" />
+                    <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-faint)]" />
                   </a>
                 )}
               </div>
             </div>
 
             <div className="app-shell-card p-5">
-              <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">
+              <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
                 Snapshot
               </h3>
               <div className="mt-3 space-y-2.5">
@@ -196,8 +196,8 @@ export function AppDetailTabs({
       {safeActive === "files" && (
         <section className="app-shell-card overflow-hidden mt-5">
           <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-[var(--theme-divider)]">
-            <h2 className="text-base font-semibold tracking-tight text-[var(--theme-text)]">Repository Files</h2>
-            <p className="text-[0.78rem] text-[var(--theme-text-muted)] mt-0.5">
+            <h2 className="text-base font-semibold tracking-tight text-[var(--color-text)]">Repository Files</h2>
+            <p className="text-[0.78rem] text-[var(--color-text-muted)] mt-0.5">
               Browse the repository on <span className="app-mono">{snapshot.repo.default_branch}</span>.
             </p>
           </div>
@@ -243,8 +243,8 @@ export function AppDetailTabs({
       {safeActive === "issues" && (
         <section className="app-shell-card p-4 sm:p-5 mt-5">
           <div className="mb-4">
-            <h2 className="text-base font-semibold tracking-tight text-[var(--theme-text)]">Issues</h2>
-            <p className="text-[0.78rem] text-[var(--theme-text-muted)] mt-0.5">Browse open and closed issues from GitHub.</p>
+            <h2 className="text-base font-semibold tracking-tight text-[var(--color-text)]">Issues</h2>
+            <p className="text-[0.78rem] text-[var(--color-text-muted)] mt-0.5">Browse open and closed issues from GitHub.</p>
           </div>
           <IssuesTab owner={owner} repo={repo} appId={appId} />
         </section>
@@ -265,8 +265,8 @@ export function AppDetailTabs({
       {safeActive === "pulls" && (
         <section className="app-shell-card p-4 sm:p-5 mt-5">
           <div className="mb-4">
-            <h2 className="text-base font-semibold tracking-tight text-[var(--theme-text)]">Pull Requests</h2>
-            <p className="text-[0.78rem] text-[var(--theme-text-muted)] mt-0.5">View and manage pull requests on GitHub.</p>
+            <h2 className="text-base font-semibold tracking-tight text-[var(--color-text)]">Pull Requests</h2>
+            <p className="text-[0.78rem] text-[var(--color-text-muted)] mt-0.5">View and manage pull requests on GitHub.</p>
           </div>
           <PullRequestsTab owner={owner} repo={repo} />
         </section>
@@ -275,8 +275,8 @@ export function AppDetailTabs({
       {safeActive === "branches" && (
         <section className="app-shell-card p-4 sm:p-5 mt-5">
           <div className="mb-4">
-            <h2 className="text-base font-semibold tracking-tight text-[var(--theme-text)]">Branches</h2>
-            <p className="text-[0.78rem] text-[var(--theme-text-muted)] mt-0.5">All branches in this repository.</p>
+            <h2 className="text-base font-semibold tracking-tight text-[var(--color-text)]">Branches</h2>
+            <p className="text-[0.78rem] text-[var(--color-text-muted)] mt-0.5">All branches in this repository.</p>
           </div>
           <BranchesTab owner={owner} repo={repo} defaultBranch={snapshot.repo.default_branch} />
         </section>
@@ -285,8 +285,8 @@ export function AppDetailTabs({
       {safeActive === "actions" && (
         <section className="app-shell-card p-4 sm:p-5 mt-5">
           <div className="mb-4">
-            <h2 className="text-base font-semibold tracking-tight text-[var(--theme-text)]">GitHub Actions</h2>
-            <p className="text-[0.78rem] text-[var(--theme-text-muted)] mt-0.5">Recent workflow runs and their status.</p>
+            <h2 className="text-base font-semibold tracking-tight text-[var(--color-text)]">GitHub Actions</h2>
+            <p className="text-[0.78rem] text-[var(--color-text-muted)] mt-0.5">Recent workflow runs and their status.</p>
           </div>
           <ActionsTab owner={owner} repo={repo} />
         </section>
@@ -298,8 +298,8 @@ export function AppDetailTabs({
 function SnapshotRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="text-[var(--theme-text-muted)]">{label}</span>
-      <span className="text-[var(--theme-text)] font-medium text-right truncate">{value}</span>
+      <span className="text-[var(--color-text-muted)]">{label}</span>
+      <span className="text-[var(--color-text)] font-medium text-right truncate">{value}</span>
     </div>
   );
 }

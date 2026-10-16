@@ -17,25 +17,25 @@ type Result = {
 const LANGUAGE_COLORS: Record<string, string> = {
   TypeScript: "from-blue-400/20 to-blue-500/10 text-blue-300",
   JavaScript: "from-yellow-400/20 to-yellow-500/10 text-yellow-300",
-  Python: "from-emerald-400/20 to-emerald-500/10 text-emerald-300",
-  Go: "from-cyan-400/20 to-cyan-500/10 text-cyan-300",
+  Python: "from-emerald-400/20 to-emerald-500/10 text-status-success",
+  Go: "from-cyan-400/20 to-cyan-500/10 text-accent",
   Rust: "from-orange-400/20 to-orange-500/10 text-orange-300",
-  Java: "from-red-400/20 to-red-500/10 text-red-300",
+  Java: "from-red-400/20 to-red-500/10 text-status-danger",
   "C++": "from-purple-400/20 to-purple-500/10 text-purple-300",
-  C: "from-slate-400/20 to-slate-500/10 text-slate-300",
+  C: "from-slate-400/20 to-slate-500/10 text-text",
   "C#": "from-violet-400/20 to-violet-500/10 text-violet-300",
   Ruby: "from-rose-400/20 to-rose-500/10 text-rose-300",
   PHP: "from-indigo-400/20 to-indigo-500/10 text-indigo-300",
   Swift: "from-orange-300/20 to-orange-400/10 text-orange-300",
   Kotlin: "from-purple-300/20 to-purple-400/10 text-purple-300",
   Dart: "from-sky-400/20 to-sky-500/10 text-sky-300",
-  Shell: "from-slate-300/20 to-slate-400/10 text-slate-300",
+  Shell: "from-slate-300/20 to-slate-400/10 text-text",
   Lua: "from-blue-300/20 to-blue-400/10 text-blue-300",
 };
 
 function languageAccent(lang: string | null): string {
-  if (!lang) return "from-slate-400/20 to-slate-500/10 text-slate-300";
-  return LANGUAGE_COLORS[lang] || "from-slate-400/20 to-slate-500/10 text-slate-300";
+  if (!lang) return "from-slate-400/20 to-slate-500/10 text-text";
+  return LANGUAGE_COLORS[lang] || "from-slate-400/20 to-slate-500/10 text-text";
 }
 
 function formatStars(count: number): string {
@@ -105,11 +105,11 @@ function SponsoredSection({
         className="flex w-full items-center gap-2 text-left"
       >
         <Heart className="h-4 w-4 text-pink-400" />
-        <span className="font-semibold text-[var(--theme-text)]">From maintainers you sponsor</span>
+        <span className="font-semibold text-[var(--color-text)]">From maintainers you sponsor</span>
         {repos !== null && (
-          <span className="text-xs text-[var(--theme-text-faint)]">{repos.length}</span>
+          <span className="text-xs text-[var(--color-text-faint)]">{repos.length}</span>
         )}
-        <span className="ml-auto text-xs text-[var(--theme-text-faint)]">{open ? "Hide" : "Show"}</span>
+        <span className="ml-auto text-xs text-[var(--color-text-faint)]">{open ? "Hide" : "Show"}</span>
       </button>
       {open && (
         <div className="mt-3">
@@ -119,12 +119,12 @@ function SponsoredSection({
             </div>
           )}
           {error && (
-            <p className="text-sm text-[var(--theme-text-muted)]">
+            <p className="text-sm text-[var(--color-text-muted)]">
               {error}
             </p>
           )}
           {repos !== null && repos.length === 0 && !error && (
-            <p className="text-sm text-[var(--theme-text-muted)]">
+            <p className="text-sm text-[var(--color-text-muted)]">
               No sponsorships found — when you sponsor developers on GitHub, their top repos will appear here.
             </p>
           )}
@@ -135,17 +135,17 @@ function SponsoredSection({
                 return (
                   <div
                     key={repo.full_name}
-                    className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_40%,transparent)] p-4"
+                    className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_40%,transparent)] p-4"
                   >
                     <div className="min-w-0 flex-1">
                       <Link
                         href={repoHref(repo.full_name)}
-                        className="group inline-flex items-center gap-2 font-semibold text-[var(--theme-text)] hover:text-[var(--theme-accent)] transition-colors"
+                        className="group inline-flex items-center gap-2 font-semibold text-[var(--color-text)] hover:text-[var(--color-accent)] transition-colors"
                       >
                         <span className="app-mono text-[0.9rem]">{repo.full_name}</span>
                         <ExternalLink className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </Link>
-                      <p className="mt-1 text-sm text-[var(--theme-text-muted)] line-clamp-2">
+                      <p className="mt-1 text-sm text-[var(--color-text-muted)] line-clamp-2">
                         {repo.description || "No description available."}
                       </p>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -156,7 +156,7 @@ function SponsoredSection({
                             {repo.language}
                           </span>
                         )}
-                        <span className="inline-flex items-center gap-1 rounded-full border border-[var(--theme-line)] px-2.5 py-0.5 text-[0.78rem] text-[var(--theme-text-muted)]">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] px-2.5 py-0.5 text-[0.78rem] text-[var(--color-text-muted)]">
                           <Star className="h-3 w-3" />
                           {formatStars(repo.stargazers_count)}
                         </span>
@@ -172,7 +172,7 @@ function SponsoredSection({
                           </span>
                         )}
                       </div>
-                      <p className="mt-2 text-xs text-[var(--theme-text-faint)]">
+                      <p className="mt-2 text-xs text-[var(--color-text-faint)]">
                         Tip: enable “Include prereleases” when watching to get Telegram alerts for pre-releases too.
                       </p>
                     </div>
@@ -298,13 +298,13 @@ export function SearchClient({ watchedApps, canAdd = true }: { watchedApps: { id
 
         <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--theme-text-faint)]" />
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-faint)]" />
             <input
               ref={inputRef}
               value={query}
               onChange={handleInputChange}
               placeholder="Try “immich”, “home assistant”, “nextcloud”…"
-              className="w-full rounded-xl border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_60%,transparent)] py-3 pl-11 pr-4 text-sm text-[var(--theme-text)] placeholder:text-[var(--theme-text-faint)] focus:border-[var(--theme-accent-border)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-focus-ring)] transition-all"
+              className="w-full rounded-xl border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_60%,transparent)] py-3 pl-11 pr-4 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] focus:border-[var(--color-accent-border)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-focus-ring)] transition-all"
               autoFocus
             />
           </div>
@@ -319,16 +319,16 @@ export function SearchClient({ watchedApps, canAdd = true }: { watchedApps: { id
         </form>
 
         {hasResults && (
-          <p className="mt-3 text-[0.78rem] text-[var(--theme-text-muted)]">
-            <span className="text-[var(--theme-text)] font-semibold">{totalCount.toLocaleString()}</span> result
+          <p className="mt-3 text-[0.78rem] text-[var(--color-text-muted)]">
+            <span className="text-[var(--color-text)] font-semibold">{totalCount.toLocaleString()}</span> result
             {totalCount !== 1 ? "s" : ""} for{" "}
-            <span className="app-mono text-[var(--theme-text)]">"{query.trim()}"</span>
+            <span className="app-mono text-[var(--color-text)]">"{query.trim()}"</span>
           </p>
         )}
       </section>
 
       {error && (
-        <div className="rounded-xl border border-[var(--theme-status-failure-border)] bg-[var(--theme-status-failure-bg)] p-4 text-sm text-[var(--theme-status-failure)]">
+        <div className="rounded-xl border border-[var(--theme-status-failure-border)] bg-[var(--theme-status-failure-bg)] p-4 text-sm text-[var(--color-status-danger)]">
           {error}
         </div>
       )}
@@ -361,18 +361,18 @@ export function SearchClient({ watchedApps, canAdd = true }: { watchedApps: { id
               return (
                 <div
                   key={repo.full_name}
-                  className="app-shell-card p-4 sm:p-5 transition-all hover:border-[color-mix(in_srgb,var(--theme-accent)_40%,transparent)]"
+                  className="app-shell-card p-4 sm:p-5 transition-all hover:border-[color-mix(in_srgb,var(--color-accent)_40%,transparent)]"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <Link
                         href={repoHref(repo.full_name)}
-                        className="group inline-flex items-center gap-2 font-semibold text-[var(--theme-text)] hover:text-[var(--theme-accent)] transition-colors"
+                        className="group inline-flex items-center gap-2 font-semibold text-[var(--color-text)] hover:text-[var(--color-accent)] transition-colors"
                       >
                         <span className="app-mono text-[0.95rem]">{repo.full_name}</span>
                         <ExternalLink className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </Link>
-                      <p className="mt-1.5 text-sm text-[var(--theme-text-muted)] line-clamp-2 leading-relaxed">
+                      <p className="mt-1.5 text-sm text-[var(--color-text-muted)] line-clamp-2 leading-relaxed">
                         {repo.description || "No description available."}
                       </p>
                       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -383,7 +383,7 @@ export function SearchClient({ watchedApps, canAdd = true }: { watchedApps: { id
                             {repo.language}
                           </span>
                         )}
-                        <span className="inline-flex items-center gap-1 rounded-full border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] px-2.5 py-0.5 text-[0.78rem] text-[var(--theme-text-muted)]">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] px-2.5 py-0.5 text-[0.78rem] text-[var(--color-text-muted)]">
                           <Star className="h-3 w-3" />
                           {formatStars(repo.stargazers_count)}
                         </span>

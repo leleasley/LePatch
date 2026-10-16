@@ -79,7 +79,7 @@ export default async function RepoDetailPage({
     <>
       <Link
         href="/profile/repos"
-        className="mb-5 inline-flex items-center gap-1.5 text-sm text-slate-400 transition-colors hover:text-cyan-300"
+        className="mb-5 inline-flex items-center gap-1.5 text-sm text-text-muted transition-colors hover:text-accent"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to my repositories
@@ -92,7 +92,7 @@ export default async function RepoDetailPage({
         subtitle={repoData.description || "No description available."}
         badges={
           <>
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] px-2.5 py-1 text-[0.78rem] text-[var(--theme-text-muted)]">
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] px-2.5 py-1 text-[0.78rem] text-[var(--color-text-muted)]">
               <GitFork className="h-3 w-3" />
               <span className="app-mono">{repoData.full_name}</span>
             </span>

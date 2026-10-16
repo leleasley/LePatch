@@ -19,7 +19,7 @@ export function LogoutButton({ compact = false }: { compact?: boolean }) {
     <button
       onClick={logout}
       disabled={loading}
-      className="focus-ring flex w-full items-center justify-center gap-2 rounded-md border border-line bg-white/5 px-3 py-2 text-sm text-slate-200 hover:bg-white/10 transition-colors disabled:opacity-50"
+      className="focus-ring flex w-full items-center justify-center gap-2 rounded-md border border-line bg-white/5 px-3 py-2 text-sm text-text hover:bg-white/10 transition-colors disabled:opacity-50"
       title="Log out"
     >
       <LogOut className="h-4 w-4" />

@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState } from "@/components/ui/Card";
 import { Badge } from "@/components/Badge";
 import { LiveTimestamp } from "@/components/LiveTimestamp";
 import { useDashboard } from "@/lib/use-swr";
@@ -131,7 +131,7 @@ function MetricCard({
   }[tone];
 
   return (
-    <Card padding="none" className="flex items-start gap-3 p-4">
+    <Card className="flex items-start gap-3 p-4">
       <div className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-surface ${toneClass}`}>
         {icon}
       </div>
@@ -217,7 +217,7 @@ export function DashboardClient({ initialData }: { initialData: DashboardData })
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[1.15fr_1fr]">
-        <Card padding="none" className="overflow-hidden">
+        <Card className="overflow-hidden">
           <CardHeader>
             <div>
               <div className="text-xs font-medium uppercase tracking-wide text-text-faint">Attention required</div>
@@ -277,7 +277,7 @@ export function DashboardClient({ initialData }: { initialData: DashboardData })
         </Card>
 
         <div className="flex flex-col gap-6">
-          <Card padding="none" className="overflow-hidden">
+          <Card className="overflow-hidden">
             <CardHeader>
               <div>
                 <div className="text-xs font-medium uppercase tracking-wide text-text-faint">Latest detections</div>
@@ -316,7 +316,7 @@ export function DashboardClient({ initialData }: { initialData: DashboardData })
             )}
           </Card>
 
-          <Card className="flex flex-col">
+          <Card>
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xs font-medium uppercase tracking-wide text-text-faint">Last 7 days</div>
@@ -333,7 +333,7 @@ export function DashboardClient({ initialData }: { initialData: DashboardData })
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">
-        <Card padding="none" className="overflow-hidden">
+        <Card className="overflow-hidden">
           <CardHeader>
             <div className="flex items-center gap-2">
               <FlaskConical className="h-4 w-4 text-status-pending" />
@@ -364,7 +364,7 @@ export function DashboardClient({ initialData }: { initialData: DashboardData })
           )}
         </Card>
 
-        <Card padding="none" className="overflow-hidden">
+        <Card className="overflow-hidden">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Flame className="h-4 w-4 text-status-pending" />

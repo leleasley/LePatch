@@ -87,12 +87,12 @@ export default async function RepoPreviewPage({
         subtitle={repoData.description || "No description available."}
         badges={
           <>
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] px-2.5 py-1 text-[0.78rem] text-[var(--theme-text-muted)]">
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-elevated)_50%,transparent)] px-2.5 py-1 text-[0.78rem] text-[var(--color-text-muted)]">
               <GitFork className="h-3 w-3" />
               <span className="app-mono">{repoData.full_name}</span>
             </span>
             {watchedApp ? (
-              <span className="status-pill status-pill--success" style={{ background: "var(--theme-status-success-bg)", color: "var(--theme-status-success)" }}>
+              <span className="status-pill status-pill--success" style={{ background: "var(--theme-status-success-bg)", color: "var(--color-status-success)" }}>
                 <Eye className="h-3 w-3" />
                 Watching · {watchedApp.name}
               </span>
@@ -154,18 +154,18 @@ export default async function RepoPreviewPage({
         <section className="mt-5 app-shell-card p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-[0.78rem] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">
+              <h2 className="text-[0.78rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
                 In your watchlist
               </h2>
-              <p className="mt-1.5 text-sm text-[var(--theme-text)]">
+              <p className="mt-1.5 text-sm text-[var(--color-text)]">
                 <span className="font-medium">{watchedApp.name}</span>
                 {watchedApp.latestSeenTag && (
                   <>
-                    {" "}· <span className="app-mono text-[var(--theme-text-muted)]">{watchedApp.latestSeenTag}</span>
+                    {" "}· <span className="app-mono text-[var(--color-text-muted)]">{watchedApp.latestSeenTag}</span>
                   </>
                 )}
                 {watchedApp.updateAvailable && (
-                  <span className="ml-1.5 text-[var(--theme-status-pending)]">· update available</span>
+                  <span className="ml-1.5 text-[var(--color-status-warning)]">· update available</span>
                 )}
               </p>
             </div>

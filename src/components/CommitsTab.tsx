@@ -153,7 +153,7 @@ export function CommitsTab({
                 <StatusBadge status="neutral" size="sm" label="No CI on these commits" />
               )}
               {defaultBranch && (
-                <span className="text-[0.72rem] text-[var(--theme-text-faint)] ml-1">
+                <span className="text-[0.72rem] text-[var(--color-text-faint)] ml-1">
                   on <span className="app-mono">{defaultBranch}</span>
                 </span>
               )}
@@ -163,7 +163,7 @@ export function CommitsTab({
         <div className="flex items-center gap-2">
           {lastRefreshed && (
             <span
-              className="hidden sm:inline-flex items-center gap-1 text-[0.7rem] text-[var(--theme-text-faint)]"
+              className="hidden sm:inline-flex items-center gap-1 text-[0.7rem] text-[var(--color-text-faint)]"
               title={lastRefreshed.toLocaleString()}
             >
               <Clock className="h-3 w-3" />
@@ -188,7 +188,7 @@ export function CommitsTab({
       </div>
 
       {error && !allCommits.length && (
-        <div className="flex items-start gap-2 rounded-lg border border-[var(--theme-status-failure-border)] bg-[var(--theme-status-failure-bg)] p-3 text-sm text-[var(--theme-status-failure)]">
+        <div className="flex items-start gap-2 rounded-lg border border-[var(--theme-status-failure-border)] bg-[var(--theme-status-failure-bg)] p-3 text-sm text-[var(--color-status-danger)]">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <div>
             <p className="font-medium">Couldn't load commits</p>
@@ -245,7 +245,7 @@ export function CommitsTab({
             </div>
           )}
 
-          <p className="text-center text-[0.7rem] text-[var(--theme-text-faint)] pt-1">
+          <p className="text-center text-[0.7rem] text-[var(--color-text-faint)] pt-1">
             {allCommits.length} commit{allCommits.length === 1 ? "" : "s"} · cached 10 min · auto-refresh when tab is open
           </p>
         </>
@@ -275,15 +275,15 @@ export function CommitsTab({
       )}
 
       {allCommits.length > 0 && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[0.7rem] text-[var(--theme-text-faint)]">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[0.7rem] text-[var(--color-text-faint)]">
           <span className="inline-flex items-center gap-1.5">
-            <CheckCircle2 className="h-3 w-3 text-[var(--theme-status-success)]" /> Passing
+            <CheckCircle2 className="h-3 w-3 text-[var(--color-status-success)]" /> Passing
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <XCircle className="h-3 w-3 text-[var(--theme-status-failure)]" /> Failing
+            <XCircle className="h-3 w-3 text-[var(--color-status-danger)]" /> Failing
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <Loader2 className="h-3 w-3 text-[var(--theme-status-pending)]" /> Running
+            <Loader2 className="h-3 w-3 text-[var(--color-status-warning)]" /> Running
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="status-pill status-pill--neutral" style={{ padding: "0.15rem 0.4rem", fontSize: "0.65rem" }}>

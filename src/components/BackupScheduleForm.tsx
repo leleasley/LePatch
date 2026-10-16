@@ -86,8 +86,8 @@ export function BackupScheduleForm({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-lg border border-line/50 bg-surface/50 p-3">
-        <Database className="h-5 w-5 text-cyan-400" />
-        <div className="text-xs text-slate-400">
+        <Database className="h-5 w-5 text-accent" />
+        <div className="text-xs text-text-muted">
           Automated PostgreSQL database backups. Stored as compressed SQL dumps. Max 5 kept — oldest removed automatically.
         </div>
       </div>
@@ -99,15 +99,15 @@ export function BackupScheduleForm({
           onChange={(e) => setEnabled(e.target.checked)}
           className="rounded border-line"
         />
-        <span className="text-slate-300">Enable automated backups</span>
+        <span className="text-text">Enable automated backups</span>
       </label>
 
       <label className="block text-sm">
-        <span className="text-slate-300">Frequency</span>
+        <span className="text-text">Frequency</span>
         <select
           value={frequency}
           onChange={(e) => setFrequency(e.target.value)}
-          className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+          className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
         >
           {frequencyOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -117,11 +117,11 @@ export function BackupScheduleForm({
 
       {frequency === "weekly" && (
         <label className="block text-sm">
-          <span className="text-slate-300">Day of week</span>
+          <span className="text-text">Day of week</span>
           <select
             value={dayOfWeek}
             onChange={(e) => setDayOfWeek(e.target.value)}
-            className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+            className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
           >
             {dayOfWeekOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -132,11 +132,11 @@ export function BackupScheduleForm({
 
       {frequency === "monthly" && (
         <label className="block text-sm">
-          <span className="text-slate-300">Day of month</span>
+          <span className="text-text">Day of month</span>
           <select
             value={dayOfMonth}
             onChange={(e) => setDayOfMonth(e.target.value)}
-            className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+            className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
           >
             {dayOfMonthOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -146,30 +146,30 @@ export function BackupScheduleForm({
       )}
 
       <label className="block text-sm">
-        <span className="text-slate-300">Time (BST/GMT)</span>
+        <span className="text-text">Time (BST/GMT)</span>
         <select
           value={scheduleTime}
           onChange={(e) => setScheduleTime(e.target.value)}
-          className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
+          className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-text"
         >
           {timePresets.map((preset) => (
             <option key={preset.value} value={preset.value}>{preset.label}</option>
           ))}
         </select>
-        <p className="mt-1 text-xs text-slate-500">Backup runs at the selected UK time (BST in summer, GMT in winter).</p>
+        <p className="mt-1 text-xs text-text-muted">Backup runs at the selected UK time (BST in summer, GMT in winter).</p>
       </label>
 
       <div className="flex items-center gap-3">
         <button
           onClick={save}
           disabled={saving}
-          className="inline-flex items-center gap-2 rounded-md bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-cyan-400 transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent transition-colors disabled:opacity-50"
         >
           <Save className="h-4 w-4" />
           {saving ? "Saving..." : "Save"}
         </button>
         {message && (
-          <span className={`text-sm ${message === "Settings saved" ? "text-emerald-300" : "text-red-300"}`}>
+          <span className={`text-sm ${message === "Settings saved" ? "text-status-success" : "text-status-danger"}`}>
             {message}
           </span>
         )}

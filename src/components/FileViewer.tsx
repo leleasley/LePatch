@@ -147,21 +147,21 @@ export function FileViewer({
         {/* Header */}
         <div className="flex items-center gap-3 border-b border-line bg-panel/60 px-4 py-3 sm:px-5">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#21262d]">
-            <FileIcon className="h-4 w-4 text-slate-400" />
+            <FileIcon className="h-4 w-4 text-text-muted" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1 text-sm">
               {pathParts.map((part, i) => (
                 <span key={i} className="flex items-center gap-1">
-                  {i > 0 && <ChevronRight className="h-3 w-3 text-slate-600" />}
-                  <span className={i === pathParts.length - 1 ? "font-medium text-white" : "text-slate-400"}>
+                  {i > 0 && <ChevronRight className="h-3 w-3 text-text-faint" />}
+                  <span className={i === pathParts.length - 1 ? "font-medium text-text" : "text-text-muted"}>
                     {part}
                   </span>
                 </span>
               ))}
             </div>
-            <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
-              <span className="inline-flex items-center rounded-md bg-[#21262d] px-1.5 py-0.5 font-medium text-slate-300">
+            <div className="mt-0.5 flex items-center gap-2 text-xs text-text-muted">
+              <span className="inline-flex items-center rounded-md bg-[#21262d] px-1.5 py-0.5 font-medium text-text">
                 {language}
               </span>
               <span>{formatBytes(fileSize)}</span>
@@ -173,7 +173,7 @@ export function FileViewer({
               href={htmlUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#21262d] px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:border-[#484f58] hover:bg-[#30363d] hover:text-white"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#21262d] px-3 py-1.5 text-xs font-medium text-text transition-colors hover:border-[#484f58] hover:bg-[#30363d] hover:text-text"
             >
               <ExternalLink className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">GitHub</span>
@@ -181,10 +181,10 @@ export function FileViewer({
             {content && !isBin && (
               <button
                 onClick={handleCopy}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#21262d] px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:border-[#484f58] hover:bg-[#30363d] hover:text-white"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#21262d] px-3 py-1.5 text-xs font-medium text-text transition-colors hover:border-[#484f58] hover:bg-[#30363d] hover:text-text"
               >
                 {copied ? (
-                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  <Check className="h-3.5 w-3.5 text-status-success" />
                 ) : (
                   <Copy className="h-3.5 w-3.5" />
                 )}
@@ -193,7 +193,7 @@ export function FileViewer({
             )}
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-[#21262d] hover:text-white"
+              className="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-[#21262d] hover:text-text"
             >
               <X className="h-4 w-4" />
             </button>
@@ -204,20 +204,20 @@ export function FileViewer({
         <div className="flex-1 overflow-auto">
           {loading && (
             <div className="flex flex-col items-center justify-center gap-3 py-20">
-              <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
-              <p className="text-sm text-slate-400">Loading file...</p>
+              <Loader2 className="h-6 w-6 animate-spin text-accent" />
+              <p className="text-sm text-text-muted">Loading file...</p>
             </div>
           )}
 
           {error && (
             <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10">
-                <FileText className="h-6 w-6 text-red-400" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-status-danger/10">
+                <FileText className="h-6 w-6 text-status-danger" />
               </div>
-              <p className="text-sm text-red-300">{error}</p>
+              <p className="text-sm text-status-danger">{error}</p>
               <button
                 onClick={loadContent}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#21262d] px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:border-[#484f58] hover:bg-[#30363d] hover:text-white"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#21262d] px-3 py-1.5 text-xs font-medium text-text transition-colors hover:border-[#484f58] hover:bg-[#30363d] hover:text-text"
               >
                 Retry
               </button>
@@ -227,17 +227,17 @@ export function FileViewer({
           {!loading && !error && isBin && (
             <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#21262d]">
-                <FileText className="h-8 w-8 text-slate-500" />
+                <FileText className="h-8 w-8 text-text-muted" />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-300">Binary file</p>
-                <p className="mt-1 text-xs text-slate-500">This file type cannot be previewed</p>
+                <p className="text-sm font-medium text-text">Binary file</p>
+                <p className="mt-1 text-xs text-text-muted">This file type cannot be previewed</p>
               </div>
               <a
                 href={htmlUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-medium text-slate-950 transition-colors hover:bg-cyan-400"
+                className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent"
               >
                 <ExternalLink className="h-4 w-4" />
                 View on GitHub

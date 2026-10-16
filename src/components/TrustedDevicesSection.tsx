@@ -112,13 +112,13 @@ export function TrustedDevicesSection() {
 
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Monitor className="h-4 w-4 text-cyan-400" />
+          <Monitor className="h-4 w-4 text-accent" />
           <h2 className="text-lg font-medium">Trusted Devices</h2>
         </div>
         <div className="flex gap-2">
           <button
             onClick={loadDevices}
-            className="focus-ring inline-flex items-center gap-1 rounded-md border border-line px-3 py-1.5 text-sm text-slate-300 hover:text-white transition-colors"
+            className="focus-ring inline-flex items-center gap-1 rounded-md border border-line px-3 py-1.5 text-sm text-text hover:text-text transition-colors"
           >
             <RefreshCw className="h-3 w-3" />
             Refresh
@@ -126,7 +126,7 @@ export function TrustedDevicesSection() {
           {devices.length > 0 && (
             <button
               onClick={() => setConfirmRevokeAll(true)}
-              className="focus-ring inline-flex items-center gap-1 rounded-md border border-red-500/40 px-3 py-1.5 text-sm text-red-300 hover:bg-red-500/10 transition-colors"
+              className="focus-ring inline-flex items-center gap-1 rounded-md border border-red-500/40 px-3 py-1.5 text-sm text-status-danger hover:bg-status-danger/10 transition-colors"
             >
               <ShieldOff className="h-3 w-3" />
               Revoke all
@@ -135,17 +135,17 @@ export function TrustedDevicesSection() {
         </div>
       </div>
 
-      <p className="mb-4 text-sm text-slate-400">
+      <p className="mb-4 text-sm text-text-muted">
         Devices that skip MFA after &quot;Remember this device&quot; is checked at login.
       </p>
 
       {loading ? (
-        <p className="text-sm text-slate-400">Loading trusted devices...</p>
+        <p className="text-sm text-text-muted">Loading trusted devices...</p>
       ) : devices.length === 0 ? (
         <div className="rounded-md border border-line/50 bg-surface/50 p-4 text-center">
-          <Monitor className="mx-auto mb-2 h-8 w-8 text-slate-600" />
-          <p className="text-sm text-slate-500">No trusted devices</p>
-          <p className="mt-1 text-xs text-slate-600">Check &quot;Remember this device&quot; when verifying MFA to add one.</p>
+          <Monitor className="mx-auto mb-2 h-8 w-8 text-text-faint" />
+          <p className="text-sm text-text-muted">No trusted devices</p>
+          <p className="mt-1 text-xs text-text-faint">Check &quot;Remember this device&quot; when verifying MFA to add one.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -154,21 +154,21 @@ export function TrustedDevicesSection() {
               key={device.id}
               className="group flex items-center gap-3 rounded-md border border-line bg-surface p-3 text-sm transition-colors hover:border-line/80"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10">
-                <Monitor className="h-4 w-4 text-cyan-400" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+                <Monitor className="h-4 w-4 text-accent" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-slate-200 truncate">
+                  <span className="font-medium text-text truncate">
                     {device.name || "Unknown device"}
                   </span>
                   {isExpiringSoon(device.expiresAt) && (
-                    <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-400">
+                    <span className="shrink-0 rounded-full bg-status-warning/10 px-2 py-0.5 text-xs text-status-warning">
                       Expiring soon
                     </span>
                   )}
                 </div>
-                <div className="mt-0.5 flex items-center gap-3 text-xs text-slate-500">
+                <div className="mt-0.5 flex items-center gap-3 text-xs text-text-muted">
                   <span>Added: {formatDate(device.createdAt)}</span>
                   <span>&middot;</span>
                   <span>Expires: {formatDate(device.expiresAt)}</span>
@@ -176,7 +176,7 @@ export function TrustedDevicesSection() {
               </div>
               <button
                 onClick={() => setConfirmRevokeId(device.id)}
-                className="focus-ring shrink-0 rounded-md border border-line px-2.5 py-1.5 text-xs text-slate-400 opacity-0 transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300 group-hover:opacity-100"
+                className="focus-ring shrink-0 rounded-md border border-line px-2.5 py-1.5 text-xs text-text-muted opacity-0 transition-all hover:border-red-500/40 hover:bg-status-danger/10 hover:text-status-danger group-hover:opacity-100"
                 title="Revoke this device"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -190,8 +190,8 @@ export function TrustedDevicesSection() {
         <p
           className={`mt-3 rounded-md border p-3 text-sm ${
             message.includes("Failed") || message.includes("failed")
-              ? "border-red-500/40 bg-red-500/10 text-red-200"
-              : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+              ? "border-red-500/40 bg-status-danger/10 text-red-200"
+              : "border-emerald-500/40 bg-status-success/10 text-emerald-200"
           }`}
         >
           {message}

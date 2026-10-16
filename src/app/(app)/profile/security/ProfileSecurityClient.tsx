@@ -28,12 +28,12 @@ function SectionHeader({
 }) {
   return (
     <div className="mb-4 flex items-center gap-3">
-      <div className="rounded-lg bg-cyan-500/10 p-2">
-        <Icon className="h-4 w-4 text-cyan-400" />
+      <div className="rounded-lg bg-accent/10 p-2">
+        <Icon className="h-4 w-4 text-accent" />
       </div>
       <div>
-        <h2 className="text-sm font-semibold text-white uppercase tracking-wider">{title}</h2>
-        <p className="text-xs text-slate-400">{description}</p>
+        <h2 className="text-sm font-semibold text-text uppercase tracking-wider">{title}</h2>
+        <p className="text-xs text-text-muted">{description}</p>
       </div>
     </div>
   );
