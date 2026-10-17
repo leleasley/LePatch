@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { ExternalLink, GitBranch, Star, Lock, Globe } from "lucide-react";
 import type { GitHubUserRepo } from "@/app/api/github/user-repos/route";
+import { EmptyState, ErrorState, SkeletonRows, Badge } from "@/components/ui/Card";
+import { List, ListRow, Panel, RowAvatar } from "@/components/ui/List";
 
 type RepoState =
   | { status: "loading" }
@@ -29,89 +31,82 @@ export function ReposClient() {
 
   if (state.status === "loading") {
     return (
-      <div className="space-y-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="animate-pulse rounded-xl border border-line/50 bg-panel/60 p-5">
-            <div className="mb-2 h-5 w-56 rounded bg-slate-700/40" />
-            <div className="mb-3 h-3 w-3/4 rounded bg-slate-700/30" />
-            <div className="flex gap-4">
-              <div className="h-3 w-16 rounded bg-slate-700/30" />
-              <div className="h-3 w-12 rounded bg-slate-700/30" />
-              <div className="h-3 w-24 rounded bg-slate-700/30" />
-            </div>
-          </div>
-        ))}
-      </div>
+      <Panel title="Repositories" description="Loading your GitHub repositories." flush>
+        <SkeletonRows rows={6} columns={3} />
+      </Panel>
     );
   }
 
   if (state.status === "error") {
     return (
-      <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-6 text-center">
-        <p className="text-sm text-red-400">{state.message}</p>
-      </div>
+      <ErrorState
+        title="Could not load your repositories"
+        description={state.message}
+      />
     );
   }
 
   if (state.repos.length === 0) {
     return (
-      <div className="rounded-xl border border-line/50 bg-panel/60 p-12 text-center">
-        <GitBranch className="mx-auto mb-3 h-8 w-8 text-slate-500" />
-        <p className="text-sm text-slate-400">No repositories found on your GitHub account.</p>
-      </div>
+      <EmptyState
+        icon={<GitBranch className="h-4 w-4" />}
+        title="No repositories found"
+        description="Your connected GitHub account does not expose any repositories."
+      />
     );
   }
 
   return (
-    <div className="space-y-2">
-      {state.repos.map((repo) => (
-        <a
-          key={repo.id}
-          href={`/repos/${repo.owner.login}/${repo.name}`}
-          className="group block rounded-xl border border-line/50 bg-panel/60 p-5 transition-colors hover:border-cyan-500/30 hover:bg-cyan-500/[0.02]"
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h3 className="truncate text-sm font-semibold text-white group-hover:text-cyan-300">
-                  {repo.full_name}
-                </h3>
-                {repo.fork && (
-                  <span className="shrink-0 rounded-full border border-slate-600/50 px-2 py-0.5 text-[10px] font-medium text-slate-400">
-                    fork
-                  </span>
-                )}
-              </div>
-              {repo.description && (
-                <p className="mt-1.5 line-clamp-2 text-xs text-slate-400">{repo.description}</p>
-              )}
-              <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-500">
+    <Panel
+      title="Repositories"
+      description="Public and private repositories on your connected GitHub account."
+      flush
+    >
+      <List>
+        {state.repos.map((repo) => (
+          <ListRow
+            key={repo.id}
+            href={`/repos/${repo.owner.login}/${repo.name}`}
+            leading={
+              <RowAvatar>
+                <GitBranch className="h-4 w-4" aria-hidden="true" />
+              </RowAvatar>
+            }
+            title={
+              <>
+                <span className="truncate text-sm font-medium text-text">{repo.full_name}</span>
+                {repo.fork && <Badge tone="neutral">Fork</Badge>}
+              </>
+            }
+            subtitle={repo.description || undefined}
+            meta={
+              <>
                 {repo.language && (
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-cyan-400/60" />
+                  <span className="inline-flex items-center gap-1.5">
+                    <span aria-hidden="true" className="h-2 w-2 rounded-full bg-accent" />
                     {repo.language}
                   </span>
                 )}
-                <span className="flex items-center gap-1">
-                  <Star className="h-3 w-3" />
+                <span className="inline-flex items-center gap-1">
+                  <Star className="h-3 w-3" aria-hidden="true" />
                   {repo.stargazers_count}
                 </span>
-                <span className="flex items-center gap-1">
+                <span className="inline-flex items-center gap-1">
                   {repo.private ? (
-                    <Lock className="h-3 w-3" />
+                    <Lock className="h-3 w-3" aria-hidden="true" />
                   ) : (
-                    <Globe className="h-3 w-3" />
+                    <Globe className="h-3 w-3" aria-hidden="true" />
                   )}
                   {repo.private ? "Private" : "Public"}
                 </span>
                 <span>Updated {formatDate(repo.updated_at)}</span>
-              </div>
-            </div>
-            <ExternalLink className="mt-1 h-4 w-4 shrink-0 text-slate-600 transition-colors group-hover:text-cyan-400" />
-          </div>
-        </a>
-      ))}
-    </div>
+              </>
+            }
+            trailing={<ExternalLink className="h-4 w-4 text-text-faint" aria-hidden="true" />}
+          />
+        ))}
+      </List>
+    </Panel>
   );
 }
 

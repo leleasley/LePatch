@@ -62,7 +62,7 @@ export function LiveTimestamp({
   }, [date]);
 
   return (
-    <span className={className} title={date ? new Date(date).toLocaleString() : undefined}>
+    <span className={className} title={date ? new Date(date).toLocaleString() : undefined} suppressHydrationWarning>
       {display}
     </span>
   );

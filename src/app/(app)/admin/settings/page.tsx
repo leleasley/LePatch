@@ -1,8 +1,7 @@
 import { requirePageModerator } from "@/lib/auth";
 import { isAdministrator } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { Settings } from "lucide-react";
-import { HeroCard } from "@/components/HeroCard";
+import { PageHeader } from "@/components/ui/PageHeader";
 import type { UserRole } from "@prisma/client";
 import { SettingsTabs } from "./SettingsTabs";
 
@@ -30,8 +29,6 @@ export default async function SettingsPage() {
     passwordEnabled: boolean;
   }[] = [];
 
-  let categories: string[] = [];
-
   if (admin) {
     const rawUsers = await prisma.user.findMany({
       orderBy: { createdAt: "asc" },
@@ -52,25 +49,17 @@ export default async function SettingsPage() {
     }));
   }
 
-  const categoryGroups = await prisma.catalogueEntry.groupBy({
-    by: ["category"],
-    _count: true,
-  });
-  categories = categoryGroups.map((c) => c.category);
-
   return (
     <>
-      <HeroCard
-        icon={<Settings className="h-5 w-5" />}
+      <PageHeader
         title="Settings"
-        subtitle="Configure application, integrations, and services."
+        description="Configure the application, integrations and background services."
       />
       <SettingsTabs
         settings={settings}
         role={user.role}
         users={users}
         currentUserId={user.id}
-        initialCategories={categories}
       />
     </>
   );

@@ -283,16 +283,27 @@ export async function editMessageReplyMarkup(
   }
 }
 
-export async function getTelegramRecipientChatIds(defaultChatId?: string | null) {
-  const linked = await prisma.telegramLink.findMany({ select: { chatId: true } });
-  const recipients = new Set<string>();
-
-  if (defaultChatId) recipients.add(defaultChatId);
-  for (const link of linked) {
-    if (link.chatId) recipients.add(link.chatId);
+/**
+ * Resolve who should receive a Telegram message.
+ *
+ * Passing `userId` sends only to that user's linked chat — a shared bot must
+ * never broadcast one user's private watched apps to everybody else. The
+ * configured default chat is used only when that user has not linked Telegram
+ * (or, with no `userId`, as the legacy broadcast fallback when nobody has
+ * linked at all).
+ */
+export async function getTelegramRecipientChatIds(defaultChatId?: string | null, userId?: string) {
+  if (userId) {
+    const link = await prisma.telegramLink.findUnique({ where: { userId }, select: { chatId: true } });
+    if (link?.chatId) return [link.chatId];
+    return defaultChatId ? [defaultChatId] : [];
   }
 
-  return Array.from(recipients);
+  const linked = await prisma.telegramLink.findMany({ select: { chatId: true } });
+  const chatIds = linked.map((l) => l.chatId).filter(Boolean);
+
+  if (chatIds.length > 0) return Array.from(new Set(chatIds));
+  return defaultChatId ? [defaultChatId] : [];
 }
 
 export async function sendTelegramMessageToUser(

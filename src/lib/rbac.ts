@@ -22,7 +22,3 @@ export function canManageApps(role: UserRole | string | null | undefined): boole
 export function canBrowseApps(role: UserRole | string | null | undefined): boolean {
   return role === "administrator" || role === "moderator" || role === "user" || role === "restricted";
 }
-
-export function canUseAdminShell(role: UserRole | string | null | undefined): boolean {
-  return role === "administrator" || role === "moderator";
-}

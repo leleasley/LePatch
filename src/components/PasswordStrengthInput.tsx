@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { KeyRound, Check, Copy, Eye, EyeOff } from "lucide-react";
 
 export function passwordStrength(pw: string): { score: number; label: string; color: string } {
@@ -12,9 +12,9 @@ export function passwordStrength(pw: string): { score: number; label: string; co
   if (/\d/.test(pw)) score++;
   if (/[^a-zA-Z0-9]/.test(pw)) score++;
 
-  if (score <= 2) return { score, label: "Weak", color: "bg-red-500" };
-  if (score <= 4) return { score, label: "Medium", color: "bg-amber-500" };
-  return { score, label: "Strong", color: "bg-emerald-500" };
+  if (score <= 2) return { score, label: "Weak", color: "bg-status-danger" };
+  if (score <= 4) return { score, label: "Medium", color: "bg-status-warning" };
+  return { score, label: "Strong", color: "bg-status-success" };
 }
 
 export function generatePassword(length = 20): string {
@@ -43,18 +43,20 @@ export function StrengthMeter({ password }: { password: string }) {
   if (!password) return null;
   const { score, label, color } = passwordStrength(password);
   return (
-    <div className="mt-2">
+    <div className="mt-2" aria-live="polite">
       <div className="flex gap-1">
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <div
             key={i}
-            className={`h-1 flex-1 rounded-full transition-colors ${
-              i <= score ? color : "bg-slate-700"
-            }`}
+            className={`h-1 flex-1 rounded-full transition-colors ${i <= score ? color : "bg-border"}`}
           />
         ))}
       </div>
-      <p className={`mt-1 text-xs ${score <= 2 ? "text-red-400" : score <= 4 ? "text-amber-400" : "text-emerald-400"}`}>
+      <p
+        className={`mt-1 text-xs ${
+          score <= 2 ? "text-status-danger" : score <= 4 ? "text-status-warning" : "text-status-success"
+        }`}
+      >
         {label}
       </p>
     </div>
@@ -76,6 +78,7 @@ export function PasswordInput({
 }) {
   const [show, setShow] = useState(false);
   const [copied, setCopied] = useState(false);
+  const inputId = useId();
 
   function handleGenerate() {
     onChange(generatePassword());
@@ -88,49 +91,58 @@ export function PasswordInput({
   }
 
   return (
-    <div>
-      {label && <label className="block text-sm text-slate-300 font-medium mb-1.5">{label}</label>}
+    <div className="flex flex-col gap-1">
+      {label && (
+        <label htmlFor={inputId} className="text-xs font-medium text-text-muted">
+          {label}
+        </label>
+      )}
       <div className="relative">
         <input
+          id={inputId}
           type={show ? "text" : "password"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 pr-20 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
+          className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 pr-16 text-sm text-text placeholder:text-text-faint transition-colors focus:border-accent"
         />
-        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+        <div className="absolute right-0.5 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
           <button
             type="button"
-            onClick={() => setShow(!show)}
-            className="rounded-md p-1.5 text-slate-500 hover:text-white hover:bg-white/5 transition-colors"
+            onClick={() => setShow((value) => !value)}
+            className="icon-button h-7 w-7"
             aria-label={show ? "Hide password" : "Show password"}
           >
-            {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {show ? (
+              <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
           </button>
           {value && (
             <button
               type="button"
               onClick={handleCopy}
-              className="rounded-md p-1.5 text-slate-500 hover:text-white hover:bg-white/5 transition-colors"
+              className="icon-button h-7 w-7"
               aria-label="Copy password"
             >
-              {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? (
+                <Check className="h-3.5 w-3.5 text-status-success" aria-hidden="true" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
             </button>
           )}
         </div>
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        {showGenerate && (
-          <button
-            type="button"
-            onClick={handleGenerate}
-            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-cyan-400 bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/20 transition-colors"
-          >
-            <KeyRound className="h-3 w-3" />
+      {showGenerate && (
+        <div className="mt-1">
+          <button type="button" onClick={handleGenerate} className="btn btn--ghost btn--sm">
+            <KeyRound className="h-3 w-3" aria-hidden="true" />
             Generate
           </button>
-        )}
-      </div>
+        </div>
+      )}
       <StrengthMeter password={value} />
     </div>
   );

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { AuthShell } from "@/components/StatusPage";
 import { SetupWizard } from "./SetupWizard";
 
 export const metadata = { title: "Setup" };
@@ -10,15 +11,14 @@ export default async function SetupPage() {
   if (count > 0) redirect("/login");
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface px-4">
-      <div className="w-full max-w-lg rounded-lg border border-line bg-panel p-8">
-        <div className="mb-6 text-center">
-          <img src="/assets/Logo.png" alt="LePatch" className="mx-auto h-12 w-12" />
-          <h1 className="mt-4 text-2xl font-semibold">LePatch Setup</h1>
-          <p className="mt-1 text-sm text-slate-400">Configure your self-hosted release monitor</p>
-        </div>
+    <AuthShell>
+      <img src="/icons/icon-192.png" alt="LePatch" className="h-9 w-9 rounded-md" />
+      <h1 className="mt-5 text-xl font-semibold tracking-tight text-text">Set up LePatch</h1>
+      <p className="mt-1 text-sm text-text-muted">Create the first admin account and connect notifications.</p>
+
+      <div className="mt-6">
         <SetupWizard />
       </div>
-    </div>
+    </AuthShell>
   );
 }

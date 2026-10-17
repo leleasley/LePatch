@@ -1,11 +1,32 @@
 "use client";
 
 import { useState, useEffect, useCallback, startTransition } from "react";
-import { Database, Download, Trash2, Loader2, HardDrive, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Edit3, Circle, CircleDot } from "lucide-react";
+import {
+  Database,
+  Download,
+  Trash2,
+  Loader2,
+  HardDrive,
+  Calendar,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Edit3,
+  Circle,
+  CircleDot,
+  AlertCircle,
+  Search,
+  X,
+} from "lucide-react";
 import { csrfFetch } from "@/lib/csrf-client";
 import { useToast } from "@/lib/toast";
 import { ModalShell } from "@/components/ModalShell";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { BackupScheduleForm } from "@/components/BackupScheduleForm";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState, SkeletonRows } from "@/components/ui/Card";
+import { List, ListRow, MetricStrip, Panel, RowAvatar, StatusDot, Toolbar, type StatusTone } from "@/components/ui/List";
+import { Input } from "@/components/ui/Input";
 
 type Backup = {
   id: string;
@@ -68,37 +89,18 @@ function formatRemaining(ms: number): string {
   return `${minutes}m`;
 }
 
-function StatusBadge({ status }: { status: Backup["status"] }) {
-  const styles: Record<string, string> = {
-    pending: "bg-slate-500/10 text-slate-400 border-slate-500/30",
-    running: "bg-cyan-500/10 text-cyan-300 border-cyan-500/30",
-    completed: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
-    failed: "bg-red-500/10 text-red-300 border-red-500/30",
-  };
-  const icons: Record<string, React.ReactNode> = {
-    pending: <Clock className="h-3 w-3" />,
-    running: <Loader2 className="h-3 w-3 animate-spin" />,
-    completed: <CheckCircle className="h-3 w-3" />,
-    failed: <XCircle className="h-3 w-3" />,
-  };
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${styles[status] || ""}`}>
-      {icons[status]}
-      {status}
-    </span>
-  );
+function statusTone(status: Backup["status"]): StatusTone {
+  if (status === "completed") return "success";
+  if (status === "failed") return "danger";
+  if (status === "running") return "accent";
+  return "neutral";
 }
 
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
-  return (
-    <div className="rounded-xl border border-line/50 bg-panel/80 px-4 py-3 backdrop-blur-sm">
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-slate-500">
-        {icon}
-        {label}
-      </div>
-      <div className="mt-1.5 truncate text-sm font-semibold text-white">{value}</div>
-    </div>
-  );
+function statusIcon(status: Backup["status"]) {
+  if (status === "pending") return <Clock className="h-4 w-4" aria-hidden="true" />;
+  if (status === "running") return <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />;
+  if (status === "completed") return <CheckCircle className="h-4 w-4" aria-hidden="true" />;
+  return <XCircle className="h-4 w-4" aria-hidden="true" />;
 }
 
 export function BackupsClient() {
@@ -113,6 +115,8 @@ export function BackupsClient() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [deleting, setDeleting] = useState(false);
   const [showEditSchedule, setShowEditSchedule] = useState(false);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | Backup["status"]>("all");
   const [nowTick, setNowTick] = useState(Date.now());
 
   useEffect(() => {
@@ -184,171 +188,244 @@ export function BackupsClient() {
 
   const showNextBackup = schedule?.enabled && msUntilNext !== null && msUntilNext > 0;
 
+  const statusCounts: Record<"all" | Backup["status"], number> = {
+    all: backups.length,
+    completed: backups.filter((b) => b.status === "completed").length,
+    running: backups.filter((b) => b.status === "running").length,
+    pending: backups.filter((b) => b.status === "pending").length,
+    failed: backups.filter((b) => b.status === "failed").length,
+  };
+
+  const visible = backups.filter((b) => {
+    if (statusFilter !== "all" && b.status !== statusFilter) return false;
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return b.filename.toLowerCase().includes(q);
+  });
+
   return (
     <>
-      <div className="mb-8 overflow-hidden rounded-xl border border-line/50 bg-gradient-to-br from-surface via-panel to-surface p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="rounded-xl bg-cyan-500/10 p-3">
-              <Database className="h-6 w-6 text-cyan-400" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-white">Backups</h1>
-              <p className="mt-1 text-sm text-slate-400">Database backups — max 5 kept, oldest auto-removed.</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowEditSchedule(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-line/50 bg-panel/80 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/[0.04] hover:text-white"
-            >
-              <Edit3 className="h-4 w-4" />
+      <PageHeader
+        title="Backups"
+        description="Database backups — a maximum of 5 are kept, the oldest is removed automatically."
+        actions={
+          <>
+            <button type="button" onClick={() => setShowEditSchedule(true)} className="btn btn--ghost btn--sm">
+              <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
               Edit schedule
             </button>
-            <button
-              onClick={createBackup}
-              disabled={creating}
-              className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950 transition-colors hover:bg-cyan-400 disabled:opacity-50"
-            >
-              {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-              {creating ? "Creating..." : "Create Backup"}
+            <button type="button" onClick={createBackup} disabled={creating} className="btn btn--primary btn--sm">
+              {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Database className="h-3.5 w-3.5" aria-hidden="true" />}
+              {creating ? "Creating…" : "Create backup"}
             </button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-          <AlertCircle className="h-4 w-4 shrink-0" />
+        <p role="alert" className="mb-5 flex items-center gap-2 rounded-lg border border-status-danger/40 bg-status-danger/10 px-4 py-3 text-sm text-status-danger">
+          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
           {error}
-        </div>
+        </p>
       )}
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <StatCard icon={<Database className="h-4 w-4" />} label="Total" value={stats?.total ?? "—"} />
-        <StatCard icon={<CheckCircle className="h-4 w-4 text-emerald-400" />} label="Completed" value={stats?.completed ?? "—"} />
-        <StatCard icon={<XCircle className="h-4 w-4 text-red-400" />} label="Failed" value={stats?.failed ?? "—"} />
-        <StatCard icon={<Clock className="h-4 w-4" />} label="Last Backup" value={stats?.lastBackupAt ? formatDate(stats.lastBackupAt) : "Never"} />
-        <StatCard
-          icon={<Calendar className={`h-4 w-4 ${showNextBackup ? "text-cyan-400" : "text-slate-500"}`} />}
-          label="Next Backup"
-          value={showNextBackup ? formatRemaining(msUntilNext) : schedule?.enabled ? "Calculating..." : "Disabled"}
+      <div className="mb-5">
+        <MetricStrip
+          items={[
+            { label: "Total", value: stats?.total ?? "—" },
+            { label: "Completed", value: stats?.completed ?? "—", tone: "success" },
+            { label: "Failed", value: stats?.failed ?? "—", tone: (stats?.failed ?? 0) > 0 ? "danger" : undefined },
+            { label: "Last backup", value: stats?.lastBackupAt ? formatDate(stats.lastBackupAt) : "Never" },
+            {
+              label: "Next backup",
+              // Countdown depends on the current time, so the server render and
+              // hydration can disagree at a minute boundary. Opt out of the
+              // check for this value rather than breaking hydration.
+              value: (
+                <span suppressHydrationWarning>
+                  {showNextBackup
+                    ? msUntilNext !== null
+                      ? formatRemaining(msUntilNext)
+                      : "—"
+                    : schedule?.enabled
+                      ? "Calculating…"
+                      : "Disabled"}
+                </span>
+              ),
+            },
+          ]}
         />
       </div>
 
-      <div className="mb-6 rounded-xl border border-line/50 bg-panel/80 px-5 py-3 backdrop-blur-sm">
+      <div className="mb-5 rounded-lg border border-border bg-panel px-4 py-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Backup Slots</span>
-          <span className="text-xs text-slate-500">{stats?.completed ?? 0} / 5 used</span>
+          <span className="text-xs font-medium text-text-muted">Backup slots</span>
+          <span className="text-xs text-text-faint">{stats?.completed ?? 0} of 5 used</span>
         </div>
-        <div className="mt-2 flex items-center gap-1.5">
+        <div className="mt-2 flex items-center gap-1.5" role="img" aria-label={`${stats?.completed ?? 0} of 5 backup slots used`}>
           {Array.from({ length: 5 }, (_, i) => (
             i < (stats?.completed ?? 0) ? (
-              <CircleDot key={i} className="h-4 w-4 text-emerald-400" />
+              <CircleDot key={i} className="h-4 w-4 text-status-success" aria-hidden="true" />
             ) : (
-              <Circle key={i} className="h-4 w-4 text-slate-600" />
+              <Circle key={i} className="h-4 w-4 text-text-faint" aria-hidden="true" />
             )
           ))}
         </div>
       </div>
 
-      <div className="rounded-xl border border-line/50 bg-panel/60">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
+      {backups.length > 0 && (
+        <Toolbar className="mb-5 justify-between">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <div className="relative min-w-56 flex-1 sm:max-w-xs">
+              <Search
+                aria-hidden="true"
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-faint"
+              />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Filter by filename"
+                aria-label="Filter backups by filename"
+                className="pl-8 pr-8"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label="Clear filter"
+                  className="icon-button absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2"
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              )}
+            </div>
+
+            <div className="chip-row" role="group" aria-label="Filter backups by status">
+              {(
+                [
+                  ["all", "All"],
+                  ["completed", "Completed"],
+                  ["running", "Running"],
+                  ["pending", "Pending"],
+                  ["failed", "Failed"],
+                ] as Array<["all" | Backup["status"], string]>
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className="chip"
+                  data-active={statusFilter === key}
+                  aria-pressed={statusFilter === key}
+                  onClick={() => setStatusFilter(key)}
+                  disabled={statusCounts[key] === 0 && key !== "all"}
+                >
+                  {label}
+                  <span className="mono text-2xs opacity-70">{statusCounts[key]}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        ) : backups.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-            <HardDrive className="mb-2 h-8 w-8" />
-            <p className="text-sm">No backups yet</p>
-            <p className="mt-1 text-xs">Click &quot;Create Backup&quot; to get started</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-line/50">
-            {backups.map((backup) => (
-              <div key={backup.id} className="flex items-center justify-between px-4 py-3 sm:px-6">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium text-white">{backup.filename}</span>
-                    <StatusBadge status={backup.status} />
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-3 text-xs text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
+        </Toolbar>
+      )}
+
+      {loading && backups.length === 0 ? (
+        <div className="rounded-lg border border-border bg-panel">
+          <SkeletonRows rows={4} columns={3} />
+        </div>
+      ) : backups.length === 0 ? (
+        <EmptyState
+          icon={<HardDrive className="h-4 w-4" />}
+          title="No backups yet"
+          description="Create a backup now, or enable the schedule to run one automatically."
+          action={
+            <button type="button" onClick={createBackup} disabled={creating} className="btn btn--primary btn--sm">
+              <Database className="h-3.5 w-3.5" aria-hidden="true" />
+              Create backup
+            </button>
+          }
+        />
+      ) : visible.length === 0 ? (
+        <EmptyState
+          title="Nothing matches this view"
+          description="Try a different search term or status filter."
+          action={
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => { setQuery(""); setStatusFilter("all"); }}
+            >
+              Clear filters
+            </button>
+          }
+        />
+      ) : (
+        <Panel flush>
+          <List>
+            {visible.map((backup) => (
+              <ListRow
+                key={backup.id}
+                leading={<RowAvatar tone={statusTone(backup.status)}>{statusIcon(backup.status)}</RowAvatar>}
+                title={
+                  <>
+                    <span className="truncate text-sm font-medium text-text">{backup.filename}</span>
+                    <StatusDot tone={statusTone(backup.status)}>{backup.status}</StatusDot>
+                  </>
+                }
+                meta={
+                  <>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Calendar className="h-3 w-3" aria-hidden="true" />
                       {formatDate(backup.createdAt)}
                     </span>
-                    <span className="flex items-center gap-1">
-                      <HardDrive className="h-3 w-3" />
+                    <span className="inline-flex items-center gap-1.5">
+                      <HardDrive className="h-3 w-3" aria-hidden="true" />
                       {formatSize(backup.sizeBytes)}
                     </span>
                     <span>{backup.type}</span>
-                  </div>
-                  {backup.error && (
-                    <p className="mt-1 text-xs text-red-400">{backup.error}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 shrink-0 ml-3">
-                  {backup.status === "completed" && (
-                    <a
-                      href={`/api/admin/backups/${backup.id}`}
-                      download
-                      className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/[0.04] hover:text-white"
-                      title="Download"
+                    {backup.error && <span className="text-status-danger">{backup.error}</span>}
+                  </>
+                }
+                trailing={
+                  <>
+                    {backup.status === "completed" && (
+                      <a
+                        href={`/api/admin/backups/${backup.id}`}
+                        download
+                        className="icon-button"
+                        aria-label={`Download ${backup.filename}`}
+                      >
+                        <Download className="h-4 w-4" aria-hidden="true" />
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget({ id: backup.id, filename: backup.filename })}
+                      className="icon-button text-text-faint hover:text-status-danger"
+                      aria-label={`Delete ${backup.filename}`}
                     >
-                      <Download className="h-4 w-4" />
-                    </a>
-                  )}
-                  <button
-                    onClick={() => setDeleteTarget({ id: backup.id, filename: backup.filename })}
-                    className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
-                    title="Delete"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </>
+                }
+              />
             ))}
-          </div>
-        )}
-      </div>
+          </List>
+        </Panel>
+      )}
 
-      <ModalShell open={deleteTarget !== null} onClose={() => !deleting && setDeleteTarget(null)}>
-        <div className="p-6 w-full max-w-md">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="rounded-full bg-red-500/20 p-2">
-              <Trash2 className="h-5 w-5 text-red-400" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white">Delete Backup</h3>
-              <p className="text-sm text-slate-400 mt-0.5">This action cannot be undone.</p>
-            </div>
-          </div>
-          <p className="text-sm text-slate-300 mb-6">
-            Are you sure you want to delete <span className="font-medium text-white">{deleteTarget?.filename}</span>?
-          </p>
-          <div className="flex items-center justify-end gap-3">
-            <button
-              onClick={() => setDeleteTarget(null)}
-              disabled={deleting}
-              className="rounded-lg border border-line/50 bg-panel/80 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/[0.04] hover:text-white disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmDelete}
-              disabled={deleting}
-              className="inline-flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-400 disabled:opacity-50"
-            >
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              {deleting ? "Deleting..." : "Delete"}
-            </button>
-          </div>
-        </div>
-      </ModalShell>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete backup"
+        message={deleteTarget ? `Delete "${deleteTarget.filename}"? This action cannot be undone.` : ""}
+        confirmLabel={deleting ? "Deleting…" : "Delete"}
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => !deleting && setDeleteTarget(null)}
+      />
 
-      <ModalShell open={showEditSchedule} onClose={() => setShowEditSchedule(false)}>
-        <div className="p-6 w-full max-w-lg">
-          <h2 className="mb-4 text-lg font-medium text-white">Edit Backup Schedule</h2>
+      <ModalShell open={showEditSchedule} onClose={() => setShowEditSchedule(false)} title="Edit backup schedule">
+        <div className="w-full max-w-lg p-6">
+          <h2 className="mb-4 text-base font-semibold text-text">Edit backup schedule</h2>
           {schedule && (
             <BackupScheduleForm
               schedule={{

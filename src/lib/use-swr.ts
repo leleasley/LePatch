@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR, { SWRConfiguration, SWRResponse } from "swr";
+import useSWRInfinite from "swr/infinite";
 import { csrfFetch } from "@/lib/csrf-client";
 
 export const swrFetcher = async (url: string) => {
@@ -17,7 +18,7 @@ export function useSWRData<T>(
   options?: SWRConfiguration<T>
 ): SWRResponse<T, Error> {
   return useSWR<T>(key, swrFetcher, {
-    revalidateOnFocus: false,
+    revalidateOnFocus: true,
     revalidateOnReconnect: true,
     dedupingInterval: 15000,
     refreshWhenHidden: false,
@@ -25,71 +26,37 @@ export function useSWRData<T>(
   });
 }
 
-export function useDashboard() {
+export function useDashboard(initialData?: {
+  total: number; updates: number; failed: number; stale: number;
+  recent: Array<{ id: string; tagName: string; name: string | null; htmlUrl: string; prerelease: boolean; publishedAt: Date | string | null; detectedAt: Date | string; changelogSummary: string | null; watchedApp: { id: string; name: string; repoFullName: string } }>;
+}) {
   return useSWRData<{
     total: number;
     updates: number;
     failed: number;
+    stale: number;
     recent: Array<{
       id: string;
       tagName: string;
       name: string | null;
       htmlUrl: string;
       prerelease: boolean;
-      publishedAt: Date | null;
-      detectedAt: Date;
+      publishedAt: Date | string | null;
+      detectedAt: Date | string;
+      changelogSummary: string | null;
       watchedApp: {
         id: string;
         name: string;
         repoFullName: string;
-        updateAvailable: boolean;
       };
     }>;
-    lastCheckedAt: Date | null;
-    pendingEvents: number;
-    successCount: number;
-    noReleasesCount: number;
-    recentlyCheckedCount: number;
-    releasesThisWeek: number;
-    prereleasesThisWeek: number;
-    activity: Array<{ date: string; label: string; count: number; prereleases: number }>;
-    prereleases: Array<{
-      id: string;
-      tagName: string;
-      name: string | null;
-      htmlUrl: string;
-      publishedAt: Date | null;
-      detectedAt: Date;
-      watchedApp: { id: string; name: string; repoFullName: string };
-    }>;
-    mostActive: Array<{ watchedAppId: string; name: string; repoFullName: string; releaseCount: number }>;
-    notificationsDisabled: number;
-    staleApps: number;
-    attentionApps: Array<{
-      id: string;
-      name: string;
-      repoOwner?: string;
-      repoName?: string;
-      repoFullName: string;
-      latestSeenTag: string | null;
-      lastCheckedAt: Date | null;
-      checkStatus: string;
-      checkError: string | null;
-      updateAvailable: boolean;
-      notificationsEnabled: boolean;
-      includePrereleases: boolean;
-      updatedAt: Date;
-    }>;
-    neverChecked: number;
-    statusHealthy: boolean;
-    lastCheckContext: string;
   }>("/api/dashboard", {
+    fallbackData: initialData,
     refreshInterval: 60000,
   });
 }
 
-export function useApps() {
-  return useSWRData<{
+export type AppsPayload = {
     apps: Array<{
       id: string;
       name: string;
@@ -100,31 +67,24 @@ export function useApps() {
       updateAvailable: boolean;
       notificationsEnabled: boolean;
       includePrereleases: boolean;
-      serverInstallCount: number;
-      serverBehindCount: number;
-      servers: Array<{
-        server: {
-          id: string;
-          name: string;
-          status: string;
-          lastSeenAt: string | null;
-          isLePatchHost: boolean;
-        };
-        packages: Array<{
-          id: string;
-          serverId: string;
-          name: string;
-          currentVersion: string | null;
-          latestVersion: string | null;
-          manager: string;
-          updateAvailable: boolean;
-        }>;
-        updateAvailable: boolean;
-      }>;
     }>;
-  }>("/api/apps", {
-    refreshInterval: 60000,
-  });
+    total: number;
+    page: number;
+    perPage: number;
+};
+
+export function useApps(initialData: AppsPayload) {
+  return useSWRInfinite<AppsPayload>(
+    (index, previous) => previous && previous.apps.length === 0 ? null : `/api/apps?page=${index + 1}&perPage=200`,
+    swrFetcher,
+    {
+      fallbackData: [initialData],
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: 60000,
+      persistSize: true,
+    }
+  );
 }
 
 export function useNotifications() {

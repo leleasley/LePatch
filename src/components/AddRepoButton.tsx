@@ -5,17 +5,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AppDetailLink } from "@/components/AppDetailLink";
 import { csrfFetch } from "@/lib/csrf-client";
+import { cn } from "@/lib/cn";
 
-function buttonSizeClasses(size: "sm" | "xs") {
-  if (size === "xs") return "gap-1.5 rounded-md px-3 py-2 text-xs";
-  return "gap-2 rounded-md px-3 py-2 text-sm";
-}
-
-function iconSizeClasses(size: "sm" | "xs") {
-  return size === "xs" ? "h-3.5 w-3.5" : "h-4 w-4";
-}
-
-export function AddRepoButton({ repoFullName, name, initialAdded = false, appId, size = "sm", catalogueEntryId, canAdd = true }: { repoFullName: string; name?: string; initialAdded?: boolean; appId?: string; size?: "sm" | "xs"; catalogueEntryId?: string; canAdd?: boolean }) {
+export function AddRepoButton({ repoFullName, name, initialAdded = false, appId, size = "sm", canAdd = true }: { repoFullName: string; name?: string; initialAdded?: boolean; appId?: string; size?: "sm" | "xs"; canAdd?: boolean }) {
   const [loading, setLoading] = useState(false);
   const [added, setAdded] = useState(initialAdded);
   const [watchedAppId, setWatchedAppId] = useState(appId);
@@ -25,32 +17,42 @@ export function AddRepoButton({ repoFullName, name, initialAdded = false, appId,
   async function add() {
     setLoading(true);
     setMessage("");
-    const response = await csrfFetch("/api/apps", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ repoFullName, name, ...(catalogueEntryId ? { catalogueEntryId } : {}) })
-    });
-    setLoading(false);
-    if (!response.ok) {
-      setMessage((await response.json()).error || "Unable to add");
-      return;
+    try {
+      const response = await csrfFetch("/api/apps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repoFullName, name })
+      });
+      if (!response.ok) {
+        setMessage((await response.json()).error || "Unable to add");
+        return;
+      }
+      const data = await response.json();
+      setWatchedAppId(data.app?.id);
+      setAdded(true);
+      setMessage("");
+      window.dispatchEvent(new Event("lepatch:apps-changed"));
+      router.refresh();
+    } catch {
+      setMessage("Could not add this repository. Check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
-    const data = await response.json();
-    setWatchedAppId(data.app?.id);
-    setAdded(true);
-    setMessage("");
-    router.refresh();
   }
 
   if (added) {
     return (
       <div className="flex flex-wrap items-center gap-2">
-        <span className={`inline-flex items-center border border-emerald-400/40 bg-emerald-400/10 font-medium text-emerald-200 ${buttonSizeClasses(size)}`}>
-          <Check className={iconSizeClasses(size)} />
+        <span className="badge badge--success">
+          <Check className="h-3.5 w-3.5" aria-hidden="true" />
           Added
         </span>
         {watchedAppId && (
-          <AppDetailLink href={`/apps/${watchedAppId}`} appName={name || repoFullName} className={`focus-ring border border-line text-slate-200 hover:bg-white/5 ${buttonSizeClasses(size)}`}>
+          <AppDetailLink
+            href={`/apps/${watchedAppId}`}
+            appName={name || repoFullName}
+            className={cn("btn btn--secondary", size === "xs" ? "btn--sm" : "")}
+          >
             View
           </AppDetailLink>
         )}
@@ -63,14 +65,15 @@ export function AddRepoButton({ repoFullName, name, initialAdded = false, appId,
   return (
     <div className="flex items-center gap-2">
       <button
+        type="button"
         onClick={add}
         disabled={loading}
-        className={`focus-ring inline-flex items-center bg-cyan-500 font-medium text-slate-950 hover:bg-cyan-400 disabled:opacity-60 ${buttonSizeClasses(size)}`}
+        className={cn("btn btn--primary", size === "xs" ? "btn--sm" : "")}
       >
-        <Plus className={iconSizeClasses(size)} />
+        <Plus className="h-3.5 w-3.5" aria-hidden="true" />
         {loading ? "Adding" : "Add"}
       </button>
-      {message && <span className="text-xs text-slate-400">{message}</span>}
+      {message && <span role="alert" className="text-xs text-status-danger">{message}</span>}
     </div>
   );
 }

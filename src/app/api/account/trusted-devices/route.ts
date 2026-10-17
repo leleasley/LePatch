@@ -31,7 +31,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Missing device id" }, { status: 400 });
     }
 
-    await revokeTrustedDevice(id);
+    await revokeTrustedDevice(id, session.userId);
     return NextResponse.json({ success: true });
   } catch (error) {
     return handleApiError(error);

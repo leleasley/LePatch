@@ -1,187 +1,157 @@
 # LePatch
 
-LePatch is a self-hosted **GitHub release monitoring and notification app**. It
-watches repositories, classifies releases, surfaces interesting ones, tracks
-issues, and sends Discord or Telegram notifications when attention is needed.
+**Self-hosted GitHub release tracking and notifications.**
 
-LePatch tracks and notifies. It does **not** deploy or install updates, and it
-does **not** manage remote servers. There is no agent, no host-helper, and no
-package manager integration. Release detection never triggers an automatic
-install — anything that changes a system requires an explicit human action.
+LePatch watches the repositories you care about, classifies what actually
+shipped, and tells you where it matters — Discord, Telegram, or the dashboard.
+It is a release radar, not a deployment tool: nothing is ever installed or
+deployed on your behalf.
 
-## Stack
+```
+Repository → scheduled check → classified release → notification
+```
 
-- Next.js (App Router), TypeScript, Tailwind CSS
-- PostgreSQL with Prisma
-- Redis and BullMQ workers
-- Local admin login with bcrypt password hashes, TOTP MFA, and WebAuthn passkeys
-- Discord webhook and Telegram bot notifications
-- GitHub REST/GraphQL APIs for releases, commits, issues, and repo metadata
+## Features
 
-## Quick Start
+- **Release monitoring** for any public or private repository you have access to
+- **Release classification** into major / minor / patch / pre-release, with
+  changelog parsing into sections
+- **Notifications** to Discord webhooks and a shared Telegram bot
+- **Per-user preferences**: enable/disable, quiet hours, severity filters,
+  digest intervals, and issue-comment alerts
+- **Issue tracking** with mention notifications
+- **Repository browsing**: releases, commits, pull requests, issues, branches,
+  workflow runs and file contents without leaving the app
+- **Access control**: administrator, moderator, user and restricted roles, plus
+  TOTP MFA, WebAuthn passkeys and GitHub OAuth
+- **Audit log** for every administrative action
+- **Database backups** on a schedule you control
+- **Dark, light and system themes** — both designed from the same token set
+- **Live updates** across open tabs and devices, with offline and reconnect states
+- **Installable PWA** with a real app icon and offline shell
 
-1. Create `.env` from the example:
+## Design preview
+
+The clickable preview uses a seeded demo workspace so the screens can be reviewed
+without access to a GitHub account or production database. Open
+[`preview/design-direction.html`](preview/design-direction.html) to switch
+between Feed, Watched apps, and Release detail, and between light and dark mode.
+
+| Feed on phone | Feed on desktop |
+| --- | --- |
+| ![LePatch feed on a phone](preview/screenshots/feed-390-light.png) | ![LePatch feed on desktop](preview/screenshots/feed-1440-light.png) |
+
+The [design direction](docs/design-direction.md) includes the dark captures,
+watched-app and release-detail screenshots, tokens, and responsive layout notes.
+
+## Quick start
+
+### Docker Compose (recommended)
 
 ```bash
+git clone https://github.com/OWNER/lepatch.git
+cd lepatch
 cp .env.example .env
 ```
 
-2. Edit at least these values:
+Edit `.env` — at minimum:
 
 ```env
-SESSION_SECRET=replace-with-a-long-random-secret
-ENCRYPTION_KEY=replace-with-a-32-byte-minimum-secret
-DEFAULT_ADMIN_EMAIL=admin@example.com
-DEFAULT_ADMIN_PASSWORD=replace-me
-GITHUB_TOKEN=
-APP_URL=http://your-server-ip:3000
+APP_URL=https://lepatch.example.com
+SESSION_SECRET=<64+ random characters>
+ENCRYPTION_KEY=<32+ random characters>
+DEFAULT_ADMIN_EMAIL=you@example.com
+DEFAULT_ADMIN_PASSWORD=<a strong password>
+GITHUB_TOKEN=ghp_...        # optional but strongly recommended
 ```
-
-`ENCRYPTION_KEY` encrypts notification channel secrets at rest and cannot be
-changed later without re-entering those secrets. `GITHUB_TOKEN` is optional but
-strongly recommended — unauthenticated GitHub API calls are rate limited to 60
-per hour.
-
-3. Start LePatch:
 
 ```bash
 docker compose up -d
 ```
 
-4. Open `http://your-server-ip:3000` and sign in with `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD`.
+Open `APP_URL` and sign in with the admin credentials. The first-run wizard
+walks through GitHub, Telegram and Discord setup.
 
-## Migrations and Admin User
-
-The compose command runs Prisma migrations and then runs `prisma/seed.ts` automatically. The seed script only creates the first admin when the `User` table is empty, and it never overwrites existing users.
-
-For maintenance, run migrations only:
+Generate secrets with:
 
 ```bash
-docker compose exec lepatch npx prisma migrate deploy
+openssl rand -base64 48   # SESSION_SECRET
+openssl rand -base64 32   # ENCRYPTION_KEY
 ```
 
-Do not manually run the seed script against a live database unless you are deliberately changing first-run bootstrap behavior.
-
-Never use `prisma db push` or `prisma migrate dev` against a real database —
-write a proper migration instead.
-
-## Validation
+### Local development
 
 ```bash
-npm run check
+npm ci
+npx prisma generate
+docker compose up -d postgres redis
+npx prisma migrate deploy
+npm run dev            # app on http://localhost:3000
+npm run worker         # in a second terminal
 ```
 
-This runs ESLint, the Vitest suite, and a production build. There is no Go
-toolchain in this repository.
+## Configuration
 
-## Logs
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `APP_URL` | yes | Public URL. Anchors WebAuthn and OAuth redirects. |
+| `SESSION_SECRET` | yes | Signs session JWTs and the OAuth state. |
+| `ENCRYPTION_KEY` | yes | Encrypts secrets at rest. Changing it requires re-entering secrets. |
+| `DATABASE_URL` | yes | PostgreSQL connection string. |
+| `REDIS_URL` | yes | Redis for queues and rate limits. |
+| `TRUST_PROXY` | no | Set `true` only behind a proxy you control. |
+| `GITHUB_TOKEN` | no | Shared token for release checks. Without it GitHub rate-limits you to 60 requests/hour. |
+| `WEB_AUTHN_EXTRA_ORIGINS` | no | Comma-separated extra origins allowed for passkeys (LAN aliases). |
+| `DEFAULT_ADMIN_EMAIL` / `DEFAULT_ADMIN_PASSWORD` | no | Seeds the first administrator on an empty database only. |
+| `DISCORD_WEBHOOK_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | no | Optional first-run channel defaults. |
+
+See [`.env.example`](.env.example) for the full list.
+
+## How it works
+
+- The worker schedules release checks on a 60-second tick with per-app jitter so
+  a large watch list does not stampede the GitHub API.
+- Releases are compared by GitHub release ID and tag name — never by sorting
+  version strings.
+- Notification jobs retry with exponential backoff and carry stable job IDs, so
+  a retry cannot deliver the same release twice.
+- Secrets are encrypted with AES-256-GCM before they touch the database.
+
+See [`AGENTS.md`](AGENTS.md) for the architecture and invariants, and
+[`docs/design-system.md`](docs/design-system.md) for UI conventions. The
+[`roadmap`](docs/roadmap.md) separates worker fixes from future product features.
+
+## Development
 
 ```bash
-docker compose logs -f lepatch
-docker compose logs -f worker
+npm run check       # lint + typecheck + tests + production build
+npm test            # vitest
+npm run dev         # dev server
+npm run worker      # background worker
+npm run deps:outdated
 ```
 
-Both services emit structured JSON logs. See `AGENTS.md` for the logging
-convention used in code (`@/lib/logger`).
-
-## Updating LePatch
+Database schema changes require a real migration:
 
 ```bash
-git pull
-docker compose build lepatch
-docker compose up -d && docker image prune -f
+npx prisma migrate dev --name describe_the_change   # development only
 ```
 
-Migrations run automatically on container start via the compose `command`.
+Never run `prisma db push` or `prisma migrate dev` against a production
+database; ship the generated migration and apply it with
+`prisma migrate deploy`.
 
-## Notifications
+## Tech stack
 
-Discord and Telegram Bot can be configured in the LePatch UI. Environment
-variables can seed initial channel settings:
+Next.js (App Router) · React · TypeScript · Tailwind CSS v4 · PostgreSQL ·
+Prisma · Redis · BullMQ
 
-```env
-DISCORD_WEBHOOK_URL=
-TELEGRAM_BOT_TOKEN=
-TELEGRAM_CHAT_ID=
-```
+## Contributing
 
-Channel secrets (webhook URLs, bot tokens) are encrypted at rest with
-`ENCRYPTION_KEY` before being written to the database.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) and
+[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). Security issues: see
+[`SECURITY.md`](SECURITY.md).
 
-## Telegram Bot
+## License
 
-LePatch includes a shared Telegram Bot for all users.
-
-Setup:
-
-1. Create a bot with `@BotFather`
-2. Configure the bot token in LePatch under `Settings -> Telegram Bot`
-3. Set the webhook from the same screen after `APP_URL` is publicly reachable over HTTPS
-4. Users link from `Settings -> Security -> Telegram Bot Access`
-5. The user sends `/link CODE` to the bot in a private Telegram chat
-
-Notes:
-
-- Link codes are single-use, 8 characters, and valid for 10 minutes
-- One bot serves all LePatch users
-- Linked users receive Telegram Bot release alerts directly
-- `TELEGRAM_CHAT_ID` is optional and acts only as a fallback broadcast destination
-- One bot can send both release alerts and interactive callbacks (e.g. starring a repo from the bot)
-
-Secrets are not printed by the app. For a production install, use strong random values for `SESSION_SECRET` and `ENCRYPTION_KEY`, keep `.env` private, and expose only the Next.js app port.
-
-## Worker Behavior
-
-The worker owns five BullMQ queues:
-
-| Queue | Purpose |
-|---|---|
-| `release-check` | Scheduled and manual GitHub release checks |
-| `notification-send` | Retryable Discord and Telegram sends |
-| `catalogue-stats` | Refreshes star counts and latest release for catalogue entries |
-| issue comment checks | Polling for comments on tracked issues |
-| backups | Database backup jobs |
-
-Schedulers run on a 60-second tick with deliberate jitter so many watched apps do
-not all enqueue in the same minute. A 6-hour cleanup job prunes expired
-sessions and trusted devices.
-
-Watched apps use a 360 minute check interval unless changed. GitHub release
-comparison uses the GitHub release ID and tag name, not semantic version sorting.
-
-## Security Notes
-
-- Dashboard routes and API routes require a session. Admin routes require an admin role.
-- Roles are `Administrator`, `Moderator`, `User`, and `Restricted`. A `Restricted` user can browse the app catalogue and repo preview flows but cannot manage watched apps or reach admin pages.
-- Login is rate limited to 10 attempts per minute per client IP (Redis-backed, with an in-process fallback).
-- MFA code entry is limited to 5 attempts per 15 minutes per user.
-- Additional rate limits cover GitHub-backed endpoints, package search, WebAuthn option generation, and the Telegram webhook.
-- Passwords are stored as bcrypt hashes.
-- Session cookies are HTTP-only and secure in production.
-- Notification channel secrets and integration secrets are encrypted at rest.
-- Mutating browser requests use CSRF protection.
-- Administrative actions are recorded in the audit log (viewable at `Settings -> Audit Log`).
-- Security response headers are set centrally in `src/lib/security-headers.ts`.
-- Release checks never auto-install or deploy anything.
-
-## Retired: Server Management
-
-Earlier versions of LePatch managed remote servers via a Go agent and a local
-host-helper, and scanned host packages for updates. Both were removed when the
-product pivoted to GitHub release tracking only.
-
-Hosts that still run the old agent can remove it with:
-
-```sh
-curl -fsSL https://your-lepatch-host/api/agent/uninstall | sh
-```
-
-See `docs/agent-uninstall.md`. No re-pairing or server record is needed
-afterwards — those tables no longer exist.
-
-## Further Reading
-
-- `AGENTS.md` — development conventions and invariants
-- `docs/operations.md` — backup/restore, dependency updates, Docker hardening
-- `docs/roadmap.md` — feature status
-- `docs/agent-uninstall.md` — removing the retired agent
+[MIT](LICENSE)

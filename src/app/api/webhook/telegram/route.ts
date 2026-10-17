@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
@@ -18,6 +19,13 @@ import {
 } from "@/lib/telegram-bot";
 import { checkWebhookRateLimit } from "@/lib/api-rate-limit";
 import { webhookRequestHandler } from "@/lib/api-helpers";
+
+/** Constant-time secret comparison (plain `!==` leaks length/prefix timing). */
+function secretsMatch(provided: string, expected: string): boolean {
+  const a = crypto.createHash("sha256").update(provided).digest();
+  const b = crypto.createHash("sha256").update(expected).digest();
+  return crypto.timingSafeEqual(a, b);
+}
 
 function formatTelegramCommandHelp(admin: boolean): string {
   const visibleCommands = telegramBotCommands.filter((command) => admin || !command.adminOnly);
@@ -48,12 +56,19 @@ export const POST = webhookRequestHandler(async ({ request }) => {
       return NextResponse.json({ error: "Webhook not configured" }, { status: 401 });
     }
 
-    if (secretToken !== config.webhookSecret) {
+    if (!secretsMatch(secretToken, config.webhookSecret)) {
       return NextResponse.json({ error: "Invalid secret token" }, { status: 401 });
     }
 
     const update = (await request.json()) as TelegramUpdate;
-    logger.info("Telegram webhook received", { update });
+    // Log metadata only. Logging the raw update leaked chat ids, usernames and
+    // message bodies — including the plaintext `/link <CODE>` credential.
+    logger.info("Telegram webhook received", {
+      updateId: update.update_id,
+      type: update.message ? "message" : update.callback_query ? "callback_query" : "other",
+      chatId: update.message?.chat?.id,
+      command: update.message?.text ? extractTelegramCommand(update.message.text)?.command : undefined,
+    });
 
     // Handle callback queries (inline keyboard button presses)
     if (update.callback_query) {
@@ -369,7 +384,17 @@ export const POST = webhookRequestHandler(async ({ request }) => {
       }
 
       const app = apps[0];
-      await getReleaseCheckQueue().add("telegram-manual-check", { watchedAppId: app.id, manual: true });
+      await getReleaseCheckQueue().add(
+        "telegram-manual-check",
+        { watchedAppId: app.id, manual: true },
+        {
+          jobId: `telegram-manual-${app.id}-${Math.floor(Date.now() / 30000)}`,
+          attempts: 2,
+          backoff: { type: "exponential", delay: 15_000 },
+          removeOnComplete: { count: 200 },
+          removeOnFail: { count: 500 },
+        }
+      );
       await sendTelegramBotMessage(
         config.botToken,
         chatId,
@@ -396,17 +421,31 @@ export const POST = webhookRequestHandler(async ({ request }) => {
         return NextResponse.json({ ok: true });
       }
 
+      // Cap the fan-out: /checkall previously enqueued one job per app with no
+      // limit and no dedupe key, so it could be spammed from a single chat.
+      const batch = apps.slice(0, 50);
+      const checkAllBatch = Math.floor(Date.now() / 60000);
       await Promise.all(
-        apps.map((app) =>
-          getReleaseCheckQueue().add("telegram-manual-check", { watchedAppId: app.id, manual: true })
+        batch.map((app) =>
+          getReleaseCheckQueue().add(
+            "telegram-manual-check",
+            { watchedAppId: app.id, manual: true },
+            {
+              jobId: `telegram-checkall-${app.id}-${checkAllBatch}`,
+              attempts: 2,
+              backoff: { type: "exponential", delay: 15_000 },
+              removeOnComplete: { count: 200 },
+              removeOnFail: { count: 500 },
+            }
+          )
         )
       );
 
       await sendTelegramBotMessage(
         config.botToken,
         chatId,
-        `🔄 Queued release checks for <b>${apps.length}</b> watched apps:\n\n` +
-        apps.map((a) => `• ${escapeHtml(a.name)}`).join("\n") +
+        `🔄 Queued release checks for <b>${batch.length}</b> watched apps:\n\n` +
+        batch.map((a) => `• ${escapeHtml(a.name)}`).join("\n") +
         `\n\nI'll notify you when checks complete.`,
         "HTML"
       );

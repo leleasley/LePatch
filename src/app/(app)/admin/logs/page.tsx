@@ -7,7 +7,7 @@ export const metadata = {
   title: "Logs & Queues - LePatch",
 };
 
-export default function LogsPage() {
-  requirePageAdmin();
+export default async function LogsPage() {
+  await requirePageAdmin();
   return <LogsClient />;
 }

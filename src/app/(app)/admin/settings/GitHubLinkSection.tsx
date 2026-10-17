@@ -3,6 +3,7 @@
 import { Link2, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { csrfFetch } from "@/lib/csrf-client";
+import { Panel } from "@/components/ui/List";
 
 type LinkStatus = {
   linked: boolean;
@@ -58,71 +59,83 @@ export function GitHubLinkSection() {
     return value ? new Date(value).toLocaleString() : "N/A";
   }
 
+  const failed = message.includes("Failed") || message.includes("failed");
+
   return (
-    <section className="rounded-lg border border-line bg-panel p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <img src="/assets/github.svg" alt="" className="h-5 w-5" />
-          <h2 className="text-lg font-medium">GitHub Account</h2>
-        </div>
-        {!link.linked && (
+    <Panel
+      title="GitHub"
+      description="Connect your GitHub account to sign in with GitHub and create issues from LePatch."
+      actions={
+        !link.linked ? (
           <button
+            type="button"
             onClick={connect}
             disabled={working || !enabled}
-            className="focus-ring inline-flex items-center gap-2 rounded-md bg-cyan-500 px-3 py-1.5 text-sm font-medium text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
+            className="btn btn--primary btn--sm"
           >
-            <Link2 className="h-4 w-4" />
+            <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
             Connect GitHub
           </button>
-        )}
-      </div>
-
+        ) : undefined
+      }
+      flush
+    >
       {!enabled ? (
-        <p className="text-sm text-slate-400">An administrator must configure GitHub OAuth first.</p>
+        <p className="p-4 text-sm text-text-muted">
+          An administrator must configure GitHub OAuth first.
+        </p>
       ) : (
-        <div className="space-y-4 text-sm">
-          <p className="text-slate-400">
-            Connect your GitHub account to sign in with GitHub and create issues directly from LePatch.
+        <div className="flex flex-col gap-4 p-4 text-sm">
+          <p className="text-text-muted">
+            Connect your GitHub account to sign in with GitHub and create issues directly from
+            LePatch.
           </p>
 
-          <div className="rounded-md border border-line bg-surface p-3">
-            <div className="text-slate-300">Current connection</div>
+          <div className="rounded-md border border-border bg-surface p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-text-faint">
+              Current connection
+            </p>
             {link.linked ? (
-              <div className="mt-2 space-y-1 text-slate-400">
+              <div className="mt-2 space-y-1 text-text-muted">
                 <div className="flex items-center gap-2">
-                  <img src="/assets/github.svg" alt="" className="h-4 w-4" />
-                  <span className="font-medium text-white">{link.githubUsername}</span>
+                  <img src="/assets/github.svg" alt="" className="h-4 w-4" aria-hidden="true" />
+                  <span className="font-medium text-text">{link.githubUsername}</span>
                 </div>
                 <div>Connected: {formatDate(link.linkedAt)}</div>
                 <div>Last used: {formatDate(link.lastUsedAt)}</div>
               </div>
             ) : (
-              <p className="mt-2 text-slate-500">No GitHub account connected yet.</p>
+              <p className="mt-2 text-text-muted">No GitHub account connected yet.</p>
             )}
           </div>
 
           {link.linked && (
-            <button
-              onClick={unlink}
-              disabled={working}
-              className="focus-ring inline-flex items-center gap-2 rounded-md border border-red-500/40 px-3 py-1.5 text-sm text-red-300 hover:bg-red-500/10 disabled:opacity-50"
-            >
-              <Trash2 className="h-4 w-4" />
-              Disconnect GitHub
-            </button>
+            <div>
+              <button
+                type="button"
+                onClick={unlink}
+                disabled={working}
+                className="btn btn--danger btn--sm"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                Disconnect GitHub
+              </button>
+            </div>
           )}
         </div>
       )}
 
       {message && (
-        <p className={`mt-4 rounded-md border p-3 text-sm ${
-          message.includes("Failed") || message.includes("failed")
-            ? "border-red-500/40 bg-red-500/10 text-red-200"
-            : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-        }`}>
+        <p
+          role={failed ? "alert" : "status"}
+          aria-live="polite"
+          className={`border-t border-border px-4 py-2.5 text-xs ${
+            failed ? "text-status-danger" : "text-status-success"
+          }`}
+        >
           {message}
         </p>
       )}
-    </section>
+    </Panel>
   );
 }

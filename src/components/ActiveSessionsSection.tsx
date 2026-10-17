@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Laptop2, LogOut, RefreshCw, ShieldCheck, Smartphone } from "lucide-react";
+import { Laptop2, LogOut, RefreshCw, Smartphone } from "lucide-react";
 import { csrfFetch } from "@/lib/csrf-client";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { List, ListRow, Panel, RowAvatar } from "@/components/ui/List";
+import { Badge } from "@/components/ui/Card";
 
 type Session = {
   id: string;
@@ -72,8 +74,93 @@ export function ActiveSessionsSection({ currentSessionId }: { currentSessionId?:
     loadSessions();
   }
 
+  const failed = message.includes("failed") || message.includes("Failed");
+
   return (
-    <section className="rounded-xl border border-line/50 bg-panel/80 p-4 backdrop-blur-sm">
+    <>
+      <Panel
+        title="Active sessions"
+        description="Sessions expire from when they were created, not from recent activity."
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={loadSessions}
+              className="btn btn--ghost btn--sm"
+            >
+              <RefreshCw className="h-3 w-3" aria-hidden="true" />
+              Refresh
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmLogoutAll(true)}
+              className="btn btn--danger btn--sm"
+            >
+              <LogOut className="h-3 w-3" aria-hidden="true" />
+              Logout all
+            </button>
+          </>
+        }
+        flush
+      >
+        {loading ? (
+          <p className="px-4 py-3 text-sm text-text-muted">Loading sessions…</p>
+        ) : sessions.length === 0 ? (
+          <p className="px-4 py-3 text-sm text-text-muted">No active sessions.</p>
+        ) : (
+          <List>
+            {sessions.map((session) => {
+              const Icon = sessionIcon(session.deviceName, session.userAgent);
+              const isCurrent = currentSessionId === session.id;
+
+              return (
+                <ListRow
+                  key={session.id}
+                  leading={
+                    <RowAvatar tone={isCurrent ? "success" : "neutral"}>
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                    </RowAvatar>
+                  }
+                  title={
+                    <>
+                      <span className="truncate text-sm font-medium text-text">
+                        {session.deviceName || truncateUserAgent(session.userAgent)}
+                      </span>
+                      {isCurrent && <Badge tone="success">Current</Badge>}
+                    </>
+                  }
+                  subtitle={
+                    session.userAgent && session.deviceName
+                      ? truncateUserAgent(session.userAgent, 90)
+                      : undefined
+                  }
+                  meta={
+                    <>
+                      <span>Last used {formatDate(session.lastUsedAt)}</span>
+                      <span>Created {formatDate(session.createdAt)}</span>
+                      <span>Expires {formatDate(session.expiresAt)}</span>
+                      {session.ipAddress && <span className="mono">IP {session.ipAddress}</span>}
+                    </>
+                  }
+                />
+              );
+            })}
+          </List>
+        )}
+
+        {message ? (
+          <p
+            role={failed ? "alert" : "status"}
+            aria-live="polite"
+            className={`border-t border-border px-4 py-2.5 text-xs ${
+              failed ? "text-status-danger" : "text-status-success"
+            }`}
+          >
+            {message}
+          </p>
+        ) : null}
+      </Panel>
+
       <ConfirmDialog
         open={confirmLogoutAll}
         title="Logout all other sessions"
@@ -87,108 +174,6 @@ export function ActiveSessionsSection({ currentSessionId }: { currentSessionId?:
         }}
         onCancel={() => setConfirmLogoutAll(false)}
       />
-
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-lg font-medium text-white">Active Sessions</h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Sessions now expire from when they were created, not from recent activity.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={loadSessions}
-            className="focus-ring inline-flex items-center gap-1 rounded-md border border-line px-3 py-1.5 text-sm text-slate-300 transition-colors hover:text-white"
-          >
-            <RefreshCw className="h-3 w-3" />
-            Refresh
-          </button>
-          <button
-            onClick={() => setConfirmLogoutAll(true)}
-            className="focus-ring inline-flex items-center gap-1 rounded-md border border-red-500/40 px-3 py-1.5 text-sm text-red-300 transition-colors hover:bg-red-500/10"
-          >
-            <LogOut className="h-3 w-3" />
-            Logout all
-          </button>
-        </div>
-      </div>
-
-      {loading ? (
-        <p className="text-sm text-slate-400">Loading sessions...</p>
-      ) : sessions.length === 0 ? (
-        <p className="text-sm text-slate-500">No active sessions</p>
-      ) : (
-        <div className="space-y-3">
-          {sessions.map((session) => {
-            const Icon = sessionIcon(session.deviceName, session.userAgent);
-            const isCurrent = currentSessionId === session.id;
-
-            return (
-              <div
-                key={session.id}
-                className="rounded-xl border border-line/60 bg-surface/80 p-3 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-300">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium text-slate-200">
-                          {session.deviceName || truncateUserAgent(session.userAgent)}
-                        </div>
-                        {session.userAgent && session.deviceName ? (
-                          <div className="mt-0.5 truncate text-xs text-slate-500" title={session.userAgent}>
-                            {truncateUserAgent(session.userAgent, 90)}
-                          </div>
-                        ) : null}
-                      </div>
-                      {isCurrent ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
-                          <ShieldCheck className="h-3 w-3" />
-                          Current
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <div className="mt-3 grid gap-2 text-xs text-slate-400 sm:grid-cols-3">
-                      <div className="rounded-lg border border-line/50 bg-black/20 px-3 py-2">
-                        <div className="text-[11px] uppercase tracking-wide text-slate-500">Last used</div>
-                        <div className="mt-1 text-slate-300">{formatDate(session.lastUsedAt)}</div>
-                      </div>
-                      <div className="rounded-lg border border-line/50 bg-black/20 px-3 py-2">
-                        <div className="text-[11px] uppercase tracking-wide text-slate-500">Created</div>
-                        <div className="mt-1 text-slate-300">{formatDate(session.createdAt)}</div>
-                      </div>
-                      <div className="rounded-lg border border-line/50 bg-black/20 px-3 py-2">
-                        <div className="text-[11px] uppercase tracking-wide text-slate-500">Expires</div>
-                        <div className="mt-1 text-slate-300">{formatDate(session.expiresAt)}</div>
-                      </div>
-                    </div>
-
-                    {session.ipAddress ? (
-                      <div className="mt-2 text-xs text-slate-500">IP: {session.ipAddress}</div>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {message ? (
-        <p
-          className={`mt-3 rounded-md border p-3 text-sm ${
-            message.includes("failed") || message.includes("Failed")
-              ? "border-red-500/40 bg-red-500/10 text-red-200"
-              : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-          }`}
-        >
-          {message}
-        </p>
-      ) : null}
-    </section>
+    </>
   );
 }

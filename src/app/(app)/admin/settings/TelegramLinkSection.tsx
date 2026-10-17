@@ -1,9 +1,10 @@
 "use client";
 
-import { Copy, Eye, EyeOff, Link2, Send, Trash2 } from "lucide-react";
+import { Copy, Eye, EyeOff, Link2, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { csrfFetch } from "@/lib/csrf-client";
 import { telegramBotCommands } from "@/lib/telegram-commands";
+import { Panel } from "@/components/ui/List";
 
 type LinkStatus = {
   linked: boolean;
@@ -89,114 +90,138 @@ export function TelegramLinkSection() {
 
   const botHandle = botUsername ? `@${botUsername}` : "your configured Telegram Bot";
   const visibleCommands = telegramBotCommands.filter((command) => !command.adminOnly);
+  const failed = message.includes("Failed") || message.includes("failed");
 
   return (
-    <section className="rounded-lg border border-line bg-panel p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Send className="h-5 w-5 text-cyan-300" />
-          <h2 className="text-lg font-medium">Telegram Bot Access</h2>
-        </div>
+    <Panel
+      title="Telegram"
+      description="Link your Telegram account to use bot commands and receive direct release alerts."
+      actions={
         <button
+          type="button"
           onClick={generateCode}
           disabled={working || !enabled}
-          className="focus-ring inline-flex items-center gap-2 rounded-md bg-cyan-500 px-3 py-1.5 text-sm font-medium text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
+          className="btn btn--primary btn--sm"
         >
-          <Link2 className="h-4 w-4" />
+          <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
           Generate link code
         </button>
-      </div>
-
+      }
+      flush
+    >
       {!enabled ? (
-        <p className="text-sm text-slate-400">An administrator must configure and enable Telegram Bot first.</p>
+        <p className="p-4 text-sm text-text-muted">
+          An administrator must configure and enable Telegram Bot first.
+        </p>
       ) : (
-        <div className="space-y-4 text-sm">
-          <p className="text-slate-400">
-            Link your Telegram account to {botName || "the Telegram Bot"} so only signed-in LePatch users can use bot commands and receive direct release alerts.
+        <div className="flex flex-col gap-4 p-4 text-sm">
+          <p className="text-text-muted">
+            Link your Telegram account to {botName || "the Telegram Bot"} so only signed-in LePatch
+            users can use bot commands and receive direct release alerts.
           </p>
 
-          <div className="rounded-md border border-line bg-surface p-3">
-            <div className="text-slate-300">Current link</div>
+          <div className="rounded-md border border-border bg-surface p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-text-faint">
+              Current link
+            </p>
             {link.linked ? (
-              <div className="mt-2 space-y-1 text-slate-400">
-                <div>Bot account: {link.username ? `@${link.username}` : "Unnamed Telegram account"}</div>
+              <dl className="mt-2 space-y-1 text-text-muted">
+                <div>
+                  Bot account:{" "}
+                  <span className="text-text">
+                    {link.username ? `@${link.username}` : "Unnamed Telegram account"}
+                  </span>
+                </div>
                 <div className="flex items-center gap-2">
                   <span>
-                    Chat ID: {showChatId ? link.chatId : "*".repeat(Math.max(8, link.chatId?.length || 8))}
+                    Chat ID:{" "}
+                    <span className="mono text-text">
+                      {showChatId ? link.chatId : "*".repeat(Math.max(8, link.chatId?.length || 8))}
+                    </span>
                   </span>
                   <button
                     type="button"
                     onClick={() => setShowChatId((value) => !value)}
-                    className="rounded-md p-1 text-slate-500 transition-colors hover:bg-white/5 hover:text-white"
+                    className="icon-button h-6 w-6"
                     aria-label={showChatId ? "Hide Chat ID" : "Show Chat ID"}
                   >
-                    {showChatId ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    {showChatId ? (
+                      <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
+                    ) : (
+                      <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                    )}
                   </button>
                 </div>
                 <div>Linked: {formatDate(link.linkedAt)}</div>
                 <div>Last seen: {formatDate(link.lastSeenAt)}</div>
-              </div>
+              </dl>
             ) : (
-              <p className="mt-2 text-slate-500">No Telegram account linked yet.</p>
+              <p className="mt-2 text-text-muted">No Telegram account linked yet.</p>
             )}
           </div>
 
           {linkCode && (
-            <div className="rounded-md border border-cyan-500/30 bg-cyan-500/10 p-3">
+            <div className="rounded-md border border-accent/40 bg-accent/10 p-3">
               <div className="flex items-center justify-between gap-3">
-                <div className="font-medium text-cyan-200">Link code</div>
-                <button
-                  type="button"
-                  onClick={copyLinkCommand}
-                  className="inline-flex items-center gap-1 rounded-md border border-cyan-500/30 px-2 py-1 text-xs text-cyan-100 transition-colors hover:bg-cyan-500/10"
-                >
-                  <Copy className="h-3 w-3" />
+                <p className="font-medium text-accent">Link code</p>
+                <button type="button" onClick={copyLinkCommand} className="btn btn--ghost btn--sm">
+                  <Copy className="h-3 w-3" aria-hidden="true" />
                   Copy command
                 </button>
               </div>
-              <div className="mt-2 font-mono text-base text-white">{linkCode}</div>
-              <div className="mt-2 text-slate-300">
-                Open {botHandle} in Telegram and send:
+              <div className="mono mt-2 text-base text-text">{linkCode}</div>
+              <p className="mt-2 text-text">Open {botHandle} in Telegram and send:</p>
+              <div className="mono mt-1 rounded-md border border-border bg-surface px-3 py-2 text-accent">
+                /link {linkCode}
               </div>
-              <div className="mt-1 rounded bg-slate-950/60 px-3 py-2 font-mono text-cyan-200">/link {linkCode}</div>
-              <div className="mt-2 text-xs text-slate-400">Expires: {formatDate(expiresAt)}</div>
+              <p className="mt-2 text-xs text-text-muted">Expires: {formatDate(expiresAt)}</p>
             </div>
           )}
 
-          <div className="rounded-md border border-line bg-surface p-3 text-slate-400">
-            <div>Available bot commands after linking:</div>
-            <div className="mt-2 space-y-1">
+          <div className="rounded-md border border-border bg-surface p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-text-faint">
+              Available bot commands after linking
+            </p>
+            <ul className="mt-2 divide-y divide-divider">
               {visibleCommands.map((command) => (
-                <div key={command.command} className="flex items-center justify-between gap-3 rounded-md border border-line/40 bg-black/10 px-3 py-2">
-                  <div className="font-mono text-xs text-cyan-200">/{command.command}</div>
-                  <div className="text-right text-xs text-slate-500">{command.description}</div>
-                </div>
+                <li
+                  key={command.command}
+                  className="flex items-center justify-between gap-3 py-1.5"
+                >
+                  <span className="mono text-xs text-accent">/{command.command}</span>
+                  <span className="text-right text-xs text-text-muted">{command.description}</span>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
 
           {link.linked && (
-            <button
-              onClick={unlink}
-              disabled={working}
-              className="focus-ring inline-flex items-center gap-2 rounded-md border border-red-500/40 px-3 py-1.5 text-sm text-red-300 hover:bg-red-500/10 disabled:opacity-50"
-            >
-              <Trash2 className="h-4 w-4" />
-              Unlink Telegram Bot
-            </button>
+            <div>
+              <button
+                type="button"
+                onClick={unlink}
+                disabled={working}
+                className="btn btn--danger btn--sm"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                Unlink Telegram Bot
+              </button>
+            </div>
           )}
         </div>
       )}
 
       {message && (
-        <p className={`mt-4 rounded-md border p-3 text-sm ${
-          message.includes("Failed") || message.includes("failed")
-            ? "border-red-500/40 bg-red-500/10 text-red-200"
-            : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-        }`}>
+        <p
+          role={failed ? "alert" : "status"}
+          aria-live="polite"
+          className={`border-t border-border px-4 py-2.5 text-xs ${
+            failed ? "text-status-danger" : "text-status-success"
+          }`}
+        >
           {message}
         </p>
       )}
-    </section>
+    </Panel>
   );
 }

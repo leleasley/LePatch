@@ -5,6 +5,7 @@ import { getEnabledNotificationChannels } from "@/lib/notifications";
 import { refreshRepoSnapshot } from "@/lib/repo-snapshot";
 import { classifyRelease, parseChangelog } from "@/lib/release-classifier";
 import { GITHUB_TOKEN_EXPIRED_MESSAGE } from "@/lib/github";
+import { publishLiveEvent } from "@/lib/live-events";
 
 export async function checkWatchedApp(watchedAppId: string) {
   const app = await prisma.watchedApp.findUnique({ where: { id: watchedAppId } });
@@ -25,56 +26,56 @@ export async function checkWatchedApp(watchedAppId: string) {
     );
 
     if (relevant.length === 0) {
-      return await prisma.watchedApp.update({
+      const updated = await prisma.watchedApp.update({
         where: { id: app.id },
         data: { lastCheckedAt: new Date(), checkStatus: "no_releases", checkError: null }
       });
+      await publishLiveEvent(app.userId, "check.finished", app.id);
+      return updated;
     }
 
     const previousTag = app.latestSeenTag;
     const newTagNames: string[] = [];
 
-    for (const release of relevant) {
-      const githubReleaseId = String(release.id);
-      const existing = await prisma.release.findUnique({
-        where: { watchedAppId_githubReleaseId: { watchedAppId: app.id, githubReleaseId } }
+    // One query to learn which releases we already have, then one bulk insert
+    // for the rest. This used to be 2 sequential queries per release (up to 60
+    // round-trips per app per check) and re-parsed the changelog every time.
+    const githubReleaseIds = relevant.map((r) => String(r.id));
+    const existingRows = await prisma.release.findMany({
+      where: { watchedAppId: app.id, githubReleaseId: { in: githubReleaseIds } },
+      select: { githubReleaseId: true },
+    });
+    const existingIds = new Set(existingRows.map((row) => row.githubReleaseId));
+
+    const newRows = relevant
+      .filter((release) => {
+        const isNewRow = !existingIds.has(String(release.id));
+        if (isNewRow) newTagNames.push(release.tag_name);
+        return isNewRow;
+      })
+      .map((release) => {
+        const releaseType = classifyRelease(release.tag_name, release.prerelease);
+        const changelog = parseChangelog(release.body);
+        return {
+          watchedAppId: app.id,
+          githubReleaseId: String(release.id),
+          tagName: release.tag_name,
+          name: release.name,
+          body: release.body,
+          htmlUrl: release.html_url,
+          prerelease: release.prerelease,
+          draft: release.draft,
+          releaseType,
+          changelogSummary: changelog.summary,
+          changelogSections: changelog.sections.length > 0 ? (changelog.sections as unknown as object) : undefined,
+          publishedAt: release.published_at ? new Date(release.published_at) : null,
+        };
       });
 
-      if (!existing) {
-        newTagNames.push(release.tag_name);
-      }
-
-      const releaseType = classifyRelease(release.tag_name, release.prerelease);
-      const changelog = parseChangelog(release.body);
-
-      await prisma.release.upsert({
-        where: { watchedAppId_githubReleaseId: { watchedAppId: app.id, githubReleaseId } },
-        update: {
-          tagName: release.tag_name,
-          name: release.name,
-          body: release.body,
-          htmlUrl: release.html_url,
-          prerelease: release.prerelease,
-          draft: release.draft,
-          releaseType,
-          changelogSummary: changelog.summary,
-          changelogSections: changelog.sections.length > 0 ? changelog.sections as any : undefined,
-          publishedAt: release.published_at ? new Date(release.published_at) : null
-        },
-        create: {
-          watchedAppId: app.id,
-          githubReleaseId,
-          tagName: release.tag_name,
-          name: release.name,
-          body: release.body,
-          htmlUrl: release.html_url,
-          prerelease: release.prerelease,
-          draft: release.draft,
-          releaseType,
-          changelogSummary: changelog.summary,
-          changelogSections: changelog.sections.length > 0 ? changelog.sections as any : undefined,
-          publishedAt: release.published_at ? new Date(release.published_at) : null
-        }
+    if (newRows.length > 0) {
+      await prisma.release.createMany({
+        data: newRows,
+        skipDuplicates: true,
       });
     }
 
@@ -134,12 +135,26 @@ export async function checkWatchedApp(watchedAppId: string) {
               // Already queued or sent — never send twice for the same release.
               return;
             }
-            await getNotificationSendQueue().add("send", { eventId: event.id });
+            // Idempotency key: a stable jobId means a retry (or a stalled-job
+            // replay) cannot enqueue a second delivery for the same event.
+            await getNotificationSendQueue().add(
+              "send",
+              { eventId: event.id },
+              {
+                jobId: `notify-${event.id}`,
+                attempts: 5,
+                backoff: { type: "exponential", delay: 5_000 },
+                removeOnComplete: { count: 500 },
+                removeOnFail: { count: 1_000 },
+              }
+            );
           })
         );
       }
     }
 
+    if (newRows.length > 0) await publishLiveEvent(app.userId, "release.discovered", app.id);
+    await publishLiveEvent(app.userId, "check.finished", app.id);
     return { release: { ...latest, id: String(latest.id) }, previousTag, newTagNames, updateAvailable: isNew && Boolean(app.latestSeenReleaseId) };
   } catch (error) {
     // Surface token expiry plainly so the user knows to reconnect GitHub
@@ -155,6 +170,7 @@ export async function checkWatchedApp(watchedAppId: string) {
         checkError,
       }
     });
+    await publishLiveEvent(app.userId, "check.finished", app.id);
     throw error;
   }
 }

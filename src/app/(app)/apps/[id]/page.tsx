@@ -1,83 +1,58 @@
-import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
+  AlertTriangle,
+  ArrowUpRight,
   Bell,
   BellOff,
-  CheckCircle,
-  AlertTriangle,
-  Clock,
+  Code2,
   ExternalLink,
+  GitBranch,
   GitFork,
+  RefreshCw,
   Star,
   Tag,
-  Code2,
-  RefreshCw,
-  GitBranch,
-  Calendar,
-  Server,
-  Hash,
-  Settings2,
-  ArrowUpRight,
 } from "lucide-react";
 import { AppActions, DisableNotificationsButton, RemoveAppButton } from "@/components/ActionButtons";
 import { AppDetailTabs, type AppTab } from "@/components/AppDetailTabs";
 import { ClearPendingAppName } from "@/components/ClearPendingAppName";
 import { EditAppModal } from "@/components/EditAppModal";
-import { HeroCard } from "@/components/HeroCard";
-import { StatPill } from "@/components/StatPill";
+import { PageHeader, MetaItem } from "@/components/ui/PageHeader";
+import { MetricStrip, Panel, StatusDot, type StatusTone } from "@/components/ui/List";
 import { prisma } from "@/lib/prisma";
 import { getRepoSnapshot } from "@/lib/repo-snapshot";
 import { getCurrentPageUser } from "@/lib/auth";
+import { formatRelativeTime } from "@/lib/time-ago";
 
 export const dynamic = "force-dynamic";
+
+const TAB_KEYS = ["readme", "files", "releases", "issues", "commits", "pulls", "branches", "actions"];
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const currentUser = await getCurrentPageUser().catch(() => null);
   const app = currentUser
-    ? await prisma.watchedApp.findUnique({
-        where: { id, userId: currentUser.id },
-        select: { name: true },
-      })
+    ? await prisma.watchedApp.findUnique({ where: { id, userId: currentUser.id }, select: { name: true } })
     : null;
-  return { title: app ? app.name : "App" };
+  return { title: app ? app.name : "Repository" };
 }
 
 function formatInterval(minutes: number): string {
-  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"}`;
-  if (minutes < 1440) {
-    const hours = minutes / 60;
-    return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} hour${hours === 1 ? "" : "s"}`;
-  }
-  const days = minutes / 1440;
-  return `${Number.isInteger(days) ? days : days.toFixed(1)} day${days === 1 ? "" : "s"}`;
+  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 1440) return `${Number((minutes / 60).toFixed(minutes % 60 ? 1 : 0))}h`;
+  return `${Number((minutes / 1440).toFixed(1))}d`;
 }
 
-function timeAgo(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return date.toLocaleDateString();
-}
-
-function checkStatusLabel(status: string): { label: string; tone: "success" | "failure" | "muted" } {
-  // checkStatus reflects whether the last automated check call to GitHub succeeded.
-  // It does NOT mean the app itself is healthy.
+function checkState(status: string): { label: string; tone: StatusTone } {
   switch (status) {
     case "failed":
-      return { label: "Check failed", tone: "failure" };
+      return { label: "Check failed", tone: "danger" };
     case "success":
-      return { label: "Check ok", tone: "success" };
+      return { label: "Checks passing", tone: "success" };
     case "no_releases":
-      return { label: "No releases", tone: "muted" };
+      return { label: "No releases published", tone: "neutral" };
     default:
-      return { label: "Not checked", tone: "muted" };
+      return { label: "Not checked yet", tone: "neutral" };
   }
 }
 
@@ -95,20 +70,15 @@ export default async function AppDetailPage({
   const app = await prisma.watchedApp.findUnique({
     where: { id, userId: currentUser.id },
     include: {
-      releases: {
-        orderBy: [{ publishedAt: "desc" }, { detectedAt: "desc" }],
-        take: 50,
-      },
+      releases: { orderBy: [{ publishedAt: "desc" }, { detectedAt: "desc" }], take: 50 },
     },
   });
   if (!app) notFound();
 
-  const activeTab: AppTab = (["readme", "files", "releases", "issues", "commits", "pulls", "branches", "actions"] as string[]).includes(tab || "")
-    ? (tab as AppTab)
-    : "readme";
-  // Private repos resolve via the viewer's own token inside getRepoSnapshot.
-  // If GitHub is unreachable (or access was revoked), degrade to the stored
-  // DB releases instead of failing the whole page.
+  const activeTab = (TAB_KEYS.includes(tab ?? "") ? tab : "releases") as AppTab;
+
+  // Private repos resolve via the viewer's own token. If GitHub is unreachable,
+  // degrade to stored releases rather than failing the page.
   let snapshot;
   try {
     snapshot = await getRepoSnapshot(app.repoOwner, app.repoName, { userId: currentUser.id });
@@ -129,8 +99,9 @@ export default async function AppDetailPage({
       cachedAt: new Date().toISOString(),
     };
   }
+
   const storedReleasesByGitHubId = new Map(app.releases.map((release) => [release.githubReleaseId, release]));
-  const displayReleases = (
+  const githubReleases =
     snapshot.releases.length > 0
       ? snapshot.releases
       : app.releases.map((release) => ({
@@ -142,11 +113,12 @@ export default async function AppDetailPage({
           prerelease: release.prerelease,
           draft: release.draft,
           published_at: release.publishedAt ? release.publishedAt.toISOString() : null,
-        }))
-  ).map((release) => {
+        }));
+
+  const displayReleases = githubReleases.map((release) => {
     const stored = storedReleasesByGitHubId.get(String(release.id));
     return {
-      id: stored?.id || `github-${release.id}`,
+      id: stored?.id ?? `github-${release.id}`,
       tagName: release.tag_name,
       name: release.name,
       body: stored?.body ?? release.body,
@@ -157,180 +129,142 @@ export default async function AppDetailPage({
       detectedAt: stored?.detectedAt ?? new Date(snapshot.cachedAt),
       ignored: stored?.ignored ?? false,
       notificationSent: stored?.notificationSent ?? false,
+      releaseType: stored?.releaseType ?? null,
     };
   });
-  const latestRelease = displayReleases[0] || null;
-  const previousTag = displayReleases[1]?.tagName || null;
 
-  const check = checkStatusLabel(app.checkStatus);
+  const latestRelease = displayReleases[0] ?? null;
+  const previousTag = displayReleases[1]?.tagName ?? null;
+  const check = checkState(app.checkStatus);
 
   return (
     <>
       <ClearPendingAppName />
 
-      <HeroCard
-        compact
-        icon={<Code2 className="h-5 w-5" />}
-        kicker="Watched app"
+      <PageHeader
+        breadcrumb={[{ label: "Watched repositories", href: "/apps" }, { label: app.name }]}
         title={app.name}
-        subtitle={
-          snapshot.repo.description ||
-          app.description ||
-          "No repository description available."
-        }
-        badges={
+        description={snapshot.repo.description || app.description || "No repository description."}
+        meta={
           <>
-            <Link
+            <a
               href={app.githubUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-md border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] px-2.5 py-1 text-[0.78rem] text-[var(--theme-text-muted)] hover:text-[var(--theme-accent)] hover:border-[var(--theme-accent-border)] transition-colors"
+              className="inline-flex items-center gap-1.5 transition-colors hover:text-accent"
             >
-              <GitFork className="h-3 w-3" />
-              <span className="app-mono">{app.repoFullName}</span>
-              <ExternalLink className="h-3 w-3" />
-            </Link>
-            {app.updateAvailable && (
-              <span
-                className="status-pill status-pill--pending ml-1"
-                style={{ background: "var(--theme-status-pending-bg)", color: "var(--theme-status-pending)" }}
-              >
-                <span className="pulse-dot" />
-                Update available
-              </span>
+              <GitFork className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="mono">{app.repoFullName}</span>
+              <ExternalLink className="h-3 w-3" aria-hidden="true" />
+            </a>
+            <MetaItem icon={<Star className="h-3.5 w-3.5" />}>{snapshot.repo.stargazers_count.toLocaleString()} stars</MetaItem>
+            {snapshot.repo.language && (
+              <MetaItem icon={<Code2 className="h-3.5 w-3.5" />}>{snapshot.repo.language}</MetaItem>
             )}
-            {app.notificationsEnabled ? (
-              <span className="status-pill status-pill--success">
-                <Bell className="h-3 w-3" />
-                Notifications on
-              </span>
-            ) : (
-              <span className="status-pill status-pill--neutral">
-                <BellOff className="h-3 w-3" />
-                Notifications off
-              </span>
-            )}
+            <MetaItem icon={<GitBranch className="h-3.5 w-3.5" />}>{snapshot.repo.default_branch}</MetaItem>
           </>
         }
         actions={
-          <div className="flex flex-wrap items-center gap-1.5">
-            <AppActions appId={app.id} size="icon" />
+          <>
+            <AppActions appId={app.id} />
             <EditAppModal
               appId={app.id}
               initialIncludePrereleases={app.includePrereleases}
               initialNotificationsEnabled={app.notificationsEnabled}
               initialCheckInterval={app.checkIntervalMinutes}
             />
-          </div>
+          </>
         }
       />
 
-      <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-        <StatPill
-          icon={<Hash className="h-3 w-3" />}
-          label="Latest"
-          value={app.latestSeenTag || latestRelease?.tagName || "—"}
-          tone={app.updateAvailable ? "pending" : "default"}
-        />
-        <StatPill
-          icon={<Star className="h-3 w-3" />}
-          label="Stars"
-          value={snapshot.repo.stargazers_count.toLocaleString()}
-        />
-        <StatPill
-          icon={<Clock className="h-3 w-3" />}
-          label="Last checked"
-          value={app.lastCheckedAt ? timeAgo(app.lastCheckedAt) : "Never"}
-          tone={app.checkStatus === "failed" ? "failure" : "default"}
-        />
-        <StatPill
-          icon={app.checkStatus === "failed" ? <AlertTriangle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
-          label="Check"
-          value={check.label}
-          tone={check.tone}
-        />
-        <StatPill
-          icon={<GitBranch className="h-3 w-3" />}
-          label="Branch"
-          value={snapshot.repo.default_branch}
-        />
-        <StatPill
-          icon={<Code2 className="h-3 w-3" />}
-          label="Language"
-          value={snapshot.repo.language || "—"}
+      <div className="mb-5">
+        <MetricStrip
+          items={[
+            {
+              label: "Latest release",
+              value: app.latestSeenTag ?? latestRelease?.tagName ?? "—",
+              tone: app.updateAvailable ? "warning" : undefined,
+            },
+            { label: "Check status", value: check.label, tone: check.tone === "danger" ? "danger" : check.tone === "success" ? "success" : undefined },
+            { label: "Last checked", value: app.lastCheckedAt ? formatRelativeTime(app.lastCheckedAt) : "never" },
+            { label: "Stored releases", value: app.releases.length },
+          ]}
         />
       </div>
 
-      <div className="mt-4">
-        <AppDetailTabs
-          owner={app.repoOwner}
-          repo={app.repoName}
-          activeTab={activeTab}
-          tabBaseUrl={`/apps/${app.id}`}
-          snapshot={snapshot}
-          releases={displayReleases}
-          latestRelease={latestRelease}
-          previousTag={previousTag}
-          updateAvailable={app.updateAvailable}
-          storedReleaseCount={app.releases.length}
-          appId={app.id}
-          mode="watched"
-        />
+      <div className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-border bg-panel px-4 py-3 text-xs text-text-muted">
+        {app.updateAvailable ? (
+          <StatusDot tone="warning" pulse>
+            New release waiting to be acknowledged
+          </StatusDot>
+        ) : (
+          <StatusDot tone={check.tone}>{check.label}</StatusDot>
+        )}
+        <StatusDot tone={app.notificationsEnabled ? "success" : "neutral"}>
+          {app.notificationsEnabled ? "Notifications on" : "Notifications muted"}
+        </StatusDot>
+        <StatusDot tone="neutral">
+          {app.includePrereleases ? "Pre-releases included" : "Stable releases only"}
+        </StatusDot>
+        <StatusDot tone="neutral">
+          <RefreshCw className="h-3 w-3" aria-hidden="true" />
+          Checking every {formatInterval(app.checkIntervalMinutes)}
+        </StatusDot>
+        {app.checkError && app.checkStatus === "failed" && (
+          <span className="inline-flex items-center gap-1.5 text-status-danger">
+            <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+            {app.checkError}
+          </span>
+        )}
       </div>
 
-      <div className="mt-6 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-        <SideCard icon={<RefreshCw className="h-3.5 w-3.5" />} label="Check interval">
-          {formatInterval(app.checkIntervalMinutes)}
-        </SideCard>
-        <SideCard icon={<Settings2 className="h-3.5 w-3.5" />} label="Pre-releases">
-          {app.includePrereleases ? "Included" : "Stable only"}
-        </SideCard>
-        <SideCard icon={<Calendar className="h-3.5 w-3.5" />} label="Snapshot cached">
-          {new Date(snapshot.cachedAt).toLocaleString()}
-        </SideCard>
-        <SideCard icon={<Server className="h-3.5 w-3.5" />} label="Quick actions">
-          <div className="flex flex-wrap gap-1.5">
-            <DisableNotificationsButton appId={app.id} size="xs" />
-            <RemoveAppButton appId={app.id} size="xs" />
+      <AppDetailTabs
+        owner={app.repoOwner}
+        repo={app.repoName}
+        activeTab={activeTab}
+        tabBaseUrl={`/apps/${app.id}`}
+        snapshot={snapshot}
+        releases={displayReleases}
+        latestRelease={latestRelease}
+        previousTag={previousTag}
+        updateAvailable={app.updateAvailable}
+        storedReleaseCount={app.releases.length}
+        appId={app.id}
+        mode="watched"
+      />
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <Panel title="Quick actions" description="Changes take effect on the next check.">
+          <div className="flex flex-wrap gap-2">
+            <DisableNotificationsButton appId={app.id} />
+            <RemoveAppButton appId={app.id} />
           </div>
-        </SideCard>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-[0.78rem] text-[var(--theme-text-faint)]">
-        <Link
-          href={`/apps/repo/${encodeURIComponent(app.repoOwner)}/${encodeURIComponent(app.repoName)}`}
-          className="inline-flex items-center gap-1 hover:text-[var(--theme-text-muted)] transition-colors"
-        >
-          View public repo preview <ArrowUpRight className="h-3 w-3" />
-        </Link>
-        <span>·</span>
-        <Link
-          href={`/apps/${app.id}/releases`}
-          className="inline-flex items-center gap-1 hover:text-[var(--theme-text-muted)] transition-colors"
-        >
-          <Tag className="h-3 w-3" /> All releases
-        </Link>
+        </Panel>
+        <Panel title="Elsewhere" description="Same repository, other views.">
+          <div className="flex flex-col gap-2 text-sm">
+            <Link
+              href={`/apps/${app.id}/releases`}
+              className="inline-flex items-center gap-2 text-text-muted transition-colors hover:text-accent"
+            >
+              <Tag className="h-3.5 w-3.5" aria-hidden="true" /> Full release history
+            </Link>
+            <Link
+              href={`/apps/repo/${encodeURIComponent(app.repoOwner)}/${encodeURIComponent(app.repoName)}`}
+              className="inline-flex items-center gap-2 text-text-muted transition-colors hover:text-accent"
+            >
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" /> Public repo preview
+            </Link>
+            <span className="inline-flex items-center gap-2 text-text-faint">
+              {app.notificationsEnabled ? (
+                <Bell className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <BellOff className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Snapshot cached {new Date(snapshot.cachedAt).toLocaleString()}
+            </span>
+          </div>
+        </Panel>
       </div>
     </>
-  );
-}
-
-function SideCard({
-  icon,
-  label,
-  children,
-}: {
-  icon?: ReactNode;
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="app-stat">
-      <div className="app-stat-label">
-        {icon}
-        {label}
-      </div>
-      <div className="app-stat-value">{children}</div>
-    </div>
   );
 }

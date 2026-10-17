@@ -1,35 +1,34 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { requirePageCanManageApps } from "@/lib/auth";
 import { ClearPendingAppName } from "@/components/ClearPendingAppName";
-import { HeroCard } from "@/components/HeroCard";
+import { PageHeader, MetaItem } from "@/components/ui/PageHeader";
 import { ReleaseHistory } from "@/components/ReleaseHistory";
+import { EmptyState } from "@/components/ui/Card";
 import { prisma } from "@/lib/prisma";
-import { Tag, Code2, ArrowUpRight } from "lucide-react";
+import { formatRelativeTime } from "@/lib/time-ago";
+import { ExternalLink, Hash, Tag } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const app = await prisma.watchedApp.findUnique({ where: { id }, select: { name: true } });
-  return { title: app ? `${app.name} Releases` : "Releases" };
+  return { title: app ? `${app.name} releases` : "Releases" };
 }
 
 export default async function ReleasesPage({ params }: { params: Promise<{ id: string }> }) {
   await requirePageCanManageApps();
   const { id } = await params;
+
   const app = await prisma.watchedApp.findUnique({
     where: { id },
     include: {
-      releases: {
-        orderBy: [{ publishedAt: "desc" }, { detectedAt: "desc" }],
-        take: 50,
-      },
+      releases: { orderBy: [{ publishedAt: "desc" }, { detectedAt: "desc" }], take: 100 },
     },
   });
   if (!app) notFound();
 
-  const displayReleases = app.releases.map((release) => ({
+  const releases = app.releases.map((release) => ({
     id: release.id,
     tagName: release.tagName,
     name: release.name,
@@ -41,59 +40,53 @@ export default async function ReleasesPage({ params }: { params: Promise<{ id: s
     detectedAt: release.detectedAt,
     ignored: release.ignored,
     notificationSent: release.notificationSent,
+    releaseType: release.releaseType,
   }));
+
+  const latest = releases[0] ?? null;
 
   return (
     <>
       <ClearPendingAppName />
 
-      <HeroCard
-        icon={<Code2 className="h-5 w-5" />}
-        kicker={
-          <Link
-            href={`/apps/${app.id}`}
-            className="inline-flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-faint)] hover:text-[var(--theme-text-muted)] transition-colors"
-          >
-            ← {app.name}
-          </Link>
-        }
+      <PageHeader
+        breadcrumb={[{ label: "Watched repositories", href: "/apps" }, { label: app.name, href: `/apps/${app.id}` }, { label: "Releases" }]}
         title={`${app.name} releases`}
-        subtitle={
+        description="Every release LePatch has stored for this repository, newest first."
+        meta={
           <>
-            <span className="app-mono">{app.repoFullName}</span>
-            {" · "}
-            {app.releases.length} release{app.releases.length === 1 ? "" : "s"} stored
+            <MetaItem icon={<Hash className="h-3.5 w-3.5" />}>{releases.length} stored</MetaItem>
+            {latest && <MetaItem icon={<Tag className="h-3.5 w-3.5" />}>latest {latest.tagName}</MetaItem>}
+            {latest && <span>detected {formatRelativeTime(latest.detectedAt)}</span>}
           </>
         }
         actions={
-          <a
-            href={app.githubUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn--ghost btn--sm"
-          >
-            View on GitHub
-            <ArrowUpRight className="h-3.5 w-3.5" />
-          </a>
+          <>
+            <a href={app.githubUrl} target="_blank" rel="noopener noreferrer" className="btn btn--ghost btn--sm">
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              GitHub
+            </a>
+            <a href={`/apps/${app.id}`} className="btn btn--primary btn--sm">
+              Repository overview
+            </a>
+          </>
         }
       />
 
-      <div className="mt-5">
-        {displayReleases.length === 0 ? (
-          <div className="empty-state">
-            <span className="empty-state-icon">
-              <Tag className="h-5 w-5" />
-            </span>
-            <p className="empty-state-title">No releases stored yet</p>
-            <p className="empty-state-copy">Run a check to populate release history for this repository.</p>
-            <Link href={`/apps/${app.id}`} className="btn btn--primary btn--sm mt-4">
-              Back to app
-            </Link>
-          </div>
-        ) : (
-          <ReleaseHistory releases={displayReleases} />
-        )}
-      </div>
+      {releases.length === 0 ? (
+        <EmptyState
+          icon={<Tag className="h-4 w-4" />}
+          title="No releases stored yet"
+          description="Run a check to populate release history for this repository."
+          action={
+            <a href={`/apps/${app.id}`} className="btn btn--primary btn--sm">
+              Back to repository
+            </a>
+          }
+        />
+      ) : (
+        <ReleaseHistory releases={releases} appId={id} />
+      )}
     </>
   );
 }

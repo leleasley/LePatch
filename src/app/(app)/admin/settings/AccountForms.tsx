@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, KeyRound, X, Loader2 } from "lucide-react";
+import { KeyRound, Loader2, Pencil, X } from "lucide-react";
 import { ModalShell } from "@/components/ModalShell";
 import { csrfFetch } from "@/lib/csrf-client";
 import { PasswordInput } from "@/components/PasswordStrengthInput";
+import { Input } from "@/components/ui/Input";
+import { Panel } from "@/components/ui/List";
 
 type User = {
   id: string;
@@ -57,77 +59,66 @@ function ChangePasswordModal({
   if (!open) return null;
 
   return (
-    <ModalShell open={open} onClose={onClose} panelClassName="w-auto max-w-lg overflow-y-auto p-5 sm:p-6">
-      <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/[0.03] to-transparent pointer-events-none rounded-t-2xl sm:rounded-xl" />
-        <div className="relative">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-cyan-500/10 p-2">
-                <KeyRound className="h-4 w-4 text-cyan-400" />
-              </div>
-              <h2 className="text-lg font-semibold text-white">Change Password</h2>
-            </div>
-            <button
-              onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-500 hover:text-white hover:bg-white/5 transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-slate-300 font-medium mb-1.5">
-                Current Password
-              </label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter your current password"
-                className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors"
-              />
-            </div>
-
-            <PasswordInput
-              label="New Password"
-              value={newPassword}
-              onChange={setNewPassword}
-              placeholder="min 10 characters"
-            />
-
-            {error && (
-              <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                {error}
-              </div>
-            )}
-
-            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">
-              <button
-                onClick={onClose}
-                className="w-full sm:w-auto rounded-lg border border-line/50 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/[0.06] transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleChange}
-                disabled={submitting || !currentPassword || newPassword.length < 10}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-medium text-slate-950 hover:bg-cyan-400 disabled:opacity-50 transition-all"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Changing...
-                  </>
-                ) : (
-                  "Change Password"
-                )}
-              </button>
-            </div>
-          </div>
+    <ModalShell open onClose={onClose} panelClassName="w-auto max-w-lg overflow-y-auto p-5 sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <KeyRound className="h-4 w-4 text-text-muted" aria-hidden="true" />
+          <h2 className="text-base font-semibold text-text">Change password</h2>
         </div>
+        <button type="button" onClick={onClose} aria-label="Close" className="icon-button">
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
       </div>
+
+      <form
+        className="mt-4 flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleChange();
+        }}
+      >
+        <Input
+          label="Current password"
+          type="password"
+          autoComplete="current-password"
+          value={currentPassword}
+          onChange={(event) => setCurrentPassword(event.target.value)}
+          placeholder="Enter your current password"
+        />
+
+        <PasswordInput
+          label="New password"
+          value={newPassword}
+          onChange={setNewPassword}
+          placeholder="At least 10 characters"
+        />
+
+        {error && (
+          <p role="alert" className="text-xs text-status-danger">
+            {error}
+          </p>
+        )}
+
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button type="button" onClick={onClose} className="btn btn--ghost">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={submitting || !currentPassword || newPassword.length < 10}
+            className="btn btn--primary"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                Changing…
+              </>
+            ) : (
+              "Change password"
+            )}
+          </button>
+        </div>
+      </form>
     </ModalShell>
   );
 }
@@ -174,101 +165,88 @@ export function AccountForms({ user }: { user: User }) {
 
   return (
     <>
-      <div className="rounded-xl border border-line/50 bg-panel/80 p-5 backdrop-blur-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-cyan-500/10 p-2">
-              <Pencil className="h-4 w-4 text-cyan-400" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-white">Account Details</h3>
-              <p className="text-xs text-slate-400">Update your name and email address</p>
-            </div>
-          </div>
-          {!editing && (
-            <button
-              onClick={() => setEditing(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-line/50 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-white/[0.06] transition-colors"
-            >
-              <Pencil className="h-3 w-3" />
+      <Panel
+        title="Account"
+        description="Your display name, email address and password."
+        actions={
+          !editing ? (
+            <button type="button" onClick={() => setEditing(true)} className="btn btn--ghost btn--sm">
+              <Pencil className="h-3 w-3" aria-hidden="true" />
               Edit
             </button>
-          )}
-        </div>
-
+          ) : undefined
+        }
+        flush
+      >
         {editing ? (
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm text-slate-300 font-medium mb-1.5">Name</label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-500/50 transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-300 font-medium mb-1.5">Email</label>
-              <input
-                value={email}
-                type="email"
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg border border-line/50 bg-surface px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-500/50 transition-colors"
-              />
-            </div>
-            <div className="flex items-center gap-3 pt-1">
-              <button
-                onClick={saveProfile}
-                disabled={saving || !hasChanges}
-                className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-cyan-400 disabled:opacity-50 transition-colors"
-              >
-                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+          <form
+            className="flex flex-col gap-3 p-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void saveProfile();
+            }}
+          >
+            <Input label="Name" value={name} onChange={(event) => setName(event.target.value)} />
+            <Input
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+            <div className="flex items-center gap-2">
+              <button type="submit" disabled={saving || !hasChanges} className="btn btn--primary btn--sm">
+                {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
                 Save
               </button>
               <button
+                type="button"
+                className="btn btn--ghost btn--sm"
                 onClick={() => {
                   setEditing(false);
                   setName(user.name);
                   setEmail(user.email);
                 }}
-                className="rounded-lg border border-line/50 bg-white/[0.03] px-4 py-2 text-sm text-slate-300 hover:bg-white/[0.06] transition-colors"
               >
                 Cancel
               </button>
             </div>
-          </div>
+          </form>
         ) : (
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between rounded-lg border border-line/40 bg-surface/50 px-3 py-2.5">
-              <span className="text-slate-400">Name</span>
-              <span className="font-medium text-white">{user.name}</span>
+          <dl className="divide-y divide-divider">
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+              <dt className="text-sm text-text-muted">Name</dt>
+              <dd className="truncate text-sm font-medium text-text">{user.name}</dd>
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-line/40 bg-surface/50 px-3 py-2.5">
-              <span className="text-slate-400">Email</span>
-              <span className="font-medium text-white">{user.email}</span>
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+              <dt className="text-sm text-text-muted">Email</dt>
+              <dd className="truncate text-sm font-medium text-text">{user.email}</dd>
             </div>
-          </div>
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+              <dt className="text-sm text-text-muted">Password</dt>
+              <dd>
+                <button
+                  type="button"
+                  onClick={() => setPasswordOpen(true)}
+                  className="btn btn--secondary btn--sm"
+                >
+                  <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
+                  Change password
+                </button>
+              </dd>
+            </div>
+          </dl>
         )}
 
-        <div className="mt-4 border-t border-line/50 pt-4">
-          <button
-            onClick={() => setPasswordOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg border border-line/50 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/[0.06] hover:text-white transition-colors"
-          >
-            <KeyRound className="h-4 w-4 text-cyan-400" />
-            Change Password
-          </button>
-        </div>
-
-        {message && (
-          <p className={`mt-4 rounded-lg border p-3 text-sm ${
-            messageType === "error"
-              ? "border-red-500/40 bg-red-500/10 text-red-200"
-              : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-          }`}>
-            {message}
-          </p>
-        )}
-      </div>
+        <p
+          aria-live="polite"
+          role={messageType === "error" ? "alert" : undefined}
+          className={`border-t border-border px-4 py-2.5 text-xs ${
+            message ? "" : "sr-only"
+          } ${messageType === "error" ? "text-status-danger" : "text-status-success"}`}
+        >
+          {message}
+        </p>
+      </Panel>
 
       <ChangePasswordModal open={passwordOpen} onClose={() => setPasswordOpen(false)} />
     </>

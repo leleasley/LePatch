@@ -3,8 +3,8 @@
 ## Scope: What LePatch Is Today
 
 LePatch is a **GitHub release monitoring and notification app**. It watches
-repositories, classifies releases, keeps a catalogue, tracks issues, and sends
-Discord/Telegram notifications.
+repositories, classifies releases, tracks issues, and sends Discord/Telegram
+notifications. Repository search and sponsored maintainers cover discovery.
 
 It is **not** a server management product. The remote Go agent, the host-helper,
 server/package scanning, and the agent self-update system were all **removed**.
@@ -72,7 +72,7 @@ Every mutation (POST/PUT/PATCH/DELETE) **must** include CSRF protection:
 
 The app is optimized for adding more watched apps. Keep these rules in place:
 
-- Do NOT return all `Release` or `CatalogueEntry` rows from list endpoints or SSR pages. Paginate, filter, and sort at the database layer.
+- Do NOT return all `Release` rows from list endpoints or SSR pages. Paginate, filter, and sort at the database layer.
 - Release checks are enqueued by the worker's 60-second scheduler with deliberate **jitter** so many apps do not all enqueue in the same minute. Preserve that jitter when touching `enqueueDueChecks()` in `src/worker/index.ts`.
 - GitHub API calls are the main rate-limit risk. Keep them off hot paths and let the queues absorb bursts. If GitHub is down or rate-limited, code should degrade gracefully — keep showing the last known release data rather than failing the request.
 - Release comparison uses the GitHub release **ID and tag name**, not semver sorting. Do not "fix" this to semver; see `src/lib/releases.ts`.
@@ -86,7 +86,6 @@ All queues live in `src/lib/queues.ts` and are accessed via lazy getters:
 |---|---|---|
 | `getReleaseCheckQueue()` | `release-check` | Scheduled/manual GitHub release checks |
 | `getNotificationSendQueue()` | `notification-send` | Retryable Discord/Telegram sends |
-| `getCatalogueStatsQueue()` | `catalogue-stats` | Star counts + latest release refresh |
 | `getIssueCommentCheckQueue()` | issue comment checks | Tracked-issue comment polling |
 | `getBackupQueue()` | backups | Database backup jobs |
 
@@ -185,8 +184,6 @@ holds only the client component. The audit API is separately available at
 | `settings.updated` | System settings change |
 | `notification.created` / `notification.updated` / `notification.deleted` | Notification channels |
 | `mfa.setup` / `mfa.disabled` | MFA lifecycle |
-| `catalogue.created` / `catalogue.updated` / `catalogue.deleted` / `catalogue.featured` | Catalogue entry CRUD |
-| `catalogue.suggestion_created` / `.suggestion_approved` / `.suggestion_rejected` | Catalogue suggestions |
 | `github.connected` / `github.disconnected` | GitHub account linking |
 | `github.issue_created` / `.issue_tracked` / `.issue_untracked` / `.issue_commented` / `.issue_closed` / `.issue_reopened` | GitHub issue actions |
 | `backup.created` / `backup.deleted` / `backup.downloaded` | Database backups |
@@ -213,7 +210,7 @@ createAuditLog({
 - `createAuditLog` already try/catches internally, so it does not throw. The trailing `.catch(() => {})` is belt-and-braces — keep it.
 - Use `requestIp` from `@/lib/auth` for the client IP.
 - Use `session.userId` from `assertApiSession()`, or the id returned by `requireAdmin()` / `requireModerator()` / `getCurrentUser()` for the acting user.
-- The `action` string should follow the `domain.verb` convention (e.g. `catalogue.suggestion_approved`).
+- The `action` string should follow the `domain.verb` convention (e.g. `app.check_triggered`).
 - The `target` field is a human-readable name, `targetId` is the DB record ID.
 
 ### Single source of truth for audit actions
@@ -226,10 +223,8 @@ keep importing `createAuditLog` from `@/lib/audit` while the UI imports
 When you add a new action, edit **only** `src/lib/audit-actions.ts` — the union
 and the `descriptions` record in the same file. Nothing else needs touching.
 
-These two definitions were previously duplicated in both files and had silently
-drifted: one copy carried an `adb.apk_pushed` action that was never logged, and
-the two `describeAction` maps disagreed on the label for
-`catalogue.deleted`. Do not reintroduce a second copy.
+These definitions were previously duplicated in both files and had silently
+drifted. Do not reintroduce a second copy.
 
 ## Removed Subsystems
 

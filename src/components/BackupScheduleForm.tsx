@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Save, Database } from "lucide-react";
 import { csrfFetch } from "@/lib/csrf-client";
+import { Select, Switch } from "@/components/ui/Input";
 
 const timePresets = [
   { label: "00:00 BST/GMT", value: "00:00" },
@@ -84,92 +85,66 @@ export function BackupScheduleForm({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3 rounded-lg border border-line/50 bg-surface/50 p-3">
-        <Database className="h-5 w-5 text-cyan-400" />
-        <div className="text-xs text-slate-400">
-          Automated PostgreSQL database backups. Stored as compressed SQL dumps. Max 5 kept — oldest removed automatically.
-        </div>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-start gap-3 rounded-md border border-border bg-surface p-3">
+        <Database className="mt-0.5 h-4 w-4 shrink-0 text-text-faint" aria-hidden="true" />
+        <p className="text-xs text-text-muted">
+          Automated PostgreSQL backups stored as compressed SQL dumps. A maximum of 5 are kept — the oldest is
+          removed automatically.
+        </p>
       </div>
 
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => setEnabled(e.target.checked)}
-          className="rounded border-line"
-        />
-        <span className="text-slate-300">Enable automated backups</span>
-      </label>
+      <Switch
+        checked={enabled}
+        onChange={setEnabled}
+        label="Enable automated backups"
+        description="Run a database dump on the schedule below."
+      />
 
-      <label className="block text-sm">
-        <span className="text-slate-300">Frequency</span>
-        <select
-          value={frequency}
-          onChange={(e) => setFrequency(e.target.value)}
-          className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
-        >
-          {frequencyOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-      </label>
+      <Select label="Frequency" value={frequency} onChange={(e) => setFrequency(e.target.value)}>
+        {frequencyOptions.map((opt) => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </Select>
 
       {frequency === "weekly" && (
-        <label className="block text-sm">
-          <span className="text-slate-300">Day of week</span>
-          <select
-            value={dayOfWeek}
-            onChange={(e) => setDayOfWeek(e.target.value)}
-            className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
-          >
-            {dayOfWeekOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </label>
+        <Select label="Day of week" value={dayOfWeek} onChange={(e) => setDayOfWeek(e.target.value)}>
+          {dayOfWeekOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </Select>
       )}
 
       {frequency === "monthly" && (
-        <label className="block text-sm">
-          <span className="text-slate-300">Day of month</span>
-          <select
-            value={dayOfMonth}
-            onChange={(e) => setDayOfMonth(e.target.value)}
-            className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
-          >
-            {dayOfMonthOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </label>
+        <Select label="Day of month" value={dayOfMonth} onChange={(e) => setDayOfMonth(e.target.value)}>
+          {dayOfMonthOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </Select>
       )}
 
-      <label className="block text-sm">
-        <span className="text-slate-300">Time (BST/GMT)</span>
-        <select
-          value={scheduleTime}
-          onChange={(e) => setScheduleTime(e.target.value)}
-          className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
-        >
-          {timePresets.map((preset) => (
-            <option key={preset.value} value={preset.value}>{preset.label}</option>
-          ))}
-        </select>
-        <p className="mt-1 text-xs text-slate-500">Backup runs at the selected UK time (BST in summer, GMT in winter).</p>
-      </label>
+      <Select
+        label="Time (BST/GMT)"
+        value={scheduleTime}
+        hint="Backups run at the selected UK time (BST in summer, GMT in winter)."
+        onChange={(e) => setScheduleTime(e.target.value)}
+      >
+        {timePresets.map((preset) => (
+          <option key={preset.value} value={preset.value}>{preset.label}</option>
+        ))}
+      </Select>
 
       <div className="flex items-center gap-3">
-        <button
-          onClick={save}
-          disabled={saving}
-          className="inline-flex items-center gap-2 rounded-md bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-cyan-400 transition-colors disabled:opacity-50"
-        >
-          <Save className="h-4 w-4" />
-          {saving ? "Saving..." : "Save"}
+        <button type="button" onClick={save} disabled={saving} className="btn btn--primary btn--sm">
+          <Save className="h-3.5 w-3.5" aria-hidden="true" />
+          {saving ? "Saving…" : "Save"}
         </button>
         {message && (
-          <span className={`text-sm ${message === "Settings saved" ? "text-emerald-300" : "text-red-300"}`}>
+          <span
+            aria-live="polite"
+            role={message === "Settings saved" ? undefined : "alert"}
+            className={message === "Settings saved" ? "text-sm text-status-success" : "text-sm text-status-danger"}
+          >
             {message}
           </span>
         )}

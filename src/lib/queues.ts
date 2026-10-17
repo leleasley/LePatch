@@ -15,7 +15,6 @@ export function redisConnection() {
 
 let releaseCheckQueue: Queue<ReleaseCheckJob> | undefined;
 let notificationSendQueue: Queue<NotificationSendJob> | undefined;
-let catalogueStatsQueue: Queue<CatalogueStatsJob> | undefined;
 let issueCommentCheckQueue: Queue<IssueCommentCheckJob> | undefined;
 let backupQueue: Queue<BackupJob> | undefined;
 
@@ -29,11 +28,6 @@ export function getNotificationSendQueue() {
   return notificationSendQueue;
 }
 
-export function getCatalogueStatsQueue() {
-  catalogueStatsQueue ||= new Queue<CatalogueStatsJob>("catalogue-stats", { connection: redisConnection() });
-  return catalogueStatsQueue;
-}
-
 export function getIssueCommentCheckQueue() {
   issueCommentCheckQueue ||= new Queue<IssueCommentCheckJob>("issue-comment-check", { connection: redisConnection() });
   return issueCommentCheckQueue;
@@ -41,7 +35,6 @@ export function getIssueCommentCheckQueue() {
 
 export type ReleaseCheckJob = { watchedAppId: string; manual?: boolean };
 export type NotificationSendJob = { eventId: string };
-export type CatalogueStatsJob = { entryId: string; repoFullName: string };
 
 export type IssueCommentCheckJob = { trackedIssueId: string };
 

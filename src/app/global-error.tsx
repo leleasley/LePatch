@@ -17,21 +17,11 @@ export default function GlobalError({
           title="Application error"
           description="LePatch hit an unexpected failure while building this screen."
           note={error.digest ? `Reference: ${error.digest}` : "Try reloading the page. If the problem persists, check the server logs."}
+          actions={[{ href: "/", label: "Go home", variant: "secondary" }]}
         >
-          <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:flex-wrap sm:gap-3">
-            <button
-              onClick={reset}
-              className="focus-ring inline-flex items-center justify-center rounded-lg bg-cyan-500 px-5 py-2.5 text-sm font-medium text-slate-950 shadow-lg shadow-cyan-500/20 transition-all hover:bg-cyan-400"
-            >
-              Try Again
-            </button>
-            <a
-              href="/"
-              className="focus-ring inline-flex items-center justify-center rounded-lg border border-line/60 bg-surface px-5 py-2.5 text-sm font-medium text-slate-200 transition-all hover:border-cyan-500/30 hover:text-white"
-            >
-              Go Home
-            </a>
-          </div>
+          <button onClick={reset} className="btn btn--primary btn--lg mt-6 w-full">
+            Try again
+          </button>
         </StatusPage>
       </body>
     </html>

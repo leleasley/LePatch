@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, startTransition } from "react";
-import { GitCommit, Loader2, RefreshCw, AlertTriangle, XCircle, CheckCircle2, Clock } from "lucide-react";
+import { GitCommit, Loader2, RefreshCw, AlertTriangle, Clock } from "lucide-react";
 import { CommitRow } from "@/components/CommitRow";
-import { StatusBadge } from "@/components/StatusBadge";
+import { EmptyState } from "@/components/ui/Card";
+import { List, StatusDot } from "@/components/ui/List";
 import type { CommitSnapshot, CommitWithStatus } from "@/lib/commit-snapshot";
 
 const REFRESH_WHEN_VISIBLE_MS = 5 * 60_000;
@@ -140,21 +141,27 @@ export function CommitsTab({
 
   const hasMore = data?.hasMore ?? false;
 
+  function retry() {
+    setAllCommits([]);
+    setPage(1);
+    fetchPage(1, true);
+  }
+
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-col">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-text-muted">
           {counts && (
             <>
-              {counts.failure > 0 && <StatusBadge status="failure" size="sm" label={`${counts.failure} failing`} />}
-              {counts.pending > 0 && <StatusBadge status="in_progress" size="sm" label={`${counts.pending} running`} />}
-              {counts.success > 0 && <StatusBadge status="success" size="sm" label={`${counts.success} passing`} />}
+              {counts.failure > 0 && <StatusDot tone="danger">{counts.failure} failing</StatusDot>}
+              {counts.pending > 0 && <StatusDot tone="warning">{counts.pending} running</StatusDot>}
+              {counts.success > 0 && <StatusDot tone="success">{counts.success} passing</StatusDot>}
               {counts.failure === 0 && counts.pending === 0 && counts.success === 0 && counts.total > 0 && (
-                <StatusBadge status="neutral" size="sm" label="No CI on these commits" />
+                <StatusDot tone="neutral">No CI on these commits</StatusDot>
               )}
               {defaultBranch && (
-                <span className="text-[0.72rem] text-[var(--theme-text-faint)] ml-1">
-                  on <span className="app-mono">{defaultBranch}</span>
+                <span className="text-text-faint">
+                  on <span className="mono">{defaultBranch}</span>
                 </span>
               )}
             </>
@@ -163,44 +170,40 @@ export function CommitsTab({
         <div className="flex items-center gap-2">
           {lastRefreshed && (
             <span
-              className="hidden sm:inline-flex items-center gap-1 text-[0.7rem] text-[var(--theme-text-faint)]"
+              className="hidden items-center gap-1 text-xs text-text-faint sm:inline-flex"
               title={lastRefreshed.toLocaleString()}
             >
-              <Clock className="h-3 w-3" />
+              <Clock className="h-3 w-3" aria-hidden="true" />
               {lastRefreshed.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </span>
           )}
           <button
             type="button"
-            onClick={() => {
-              setPage(1);
-              setAllCommits([]);
-              fetchPage(1, true);
-            }}
+            onClick={retry}
             disabled={refreshing}
             className="btn btn--ghost btn--sm"
             title="Refresh commits"
+            aria-label="Refresh commits"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "spin" : ""}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} aria-hidden="true" />
             <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>
       </div>
 
       {error && !allCommits.length && (
-        <div className="flex items-start gap-2 rounded-lg border border-[var(--theme-status-failure-border)] bg-[var(--theme-status-failure-bg)] p-3 text-sm text-[var(--theme-status-failure)]">
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+        <div
+          role="alert"
+          className="flex items-start gap-2 border-b border-border bg-status-danger/10 px-4 py-3 text-sm text-status-danger"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <div>
-            <p className="font-medium">Couldn't load commits</p>
-            <p className="text-[0.78rem] opacity-80 mt-0.5">{error}</p>
+            <p className="font-medium">Could not load commits</p>
+            <p className="mt-0.5 text-xs opacity-80">{error}</p>
             <button
               type="button"
-              onClick={() => {
-                setAllCommits([]);
-                setPage(1);
-                fetchPage(1, true);
-              }}
-              className="mt-2 inline-flex items-center gap-1.5 text-[0.78rem] font-medium underline underline-offset-2 hover:no-underline"
+              onClick={retry}
+              className="mt-2 text-xs font-medium underline underline-offset-2 hover:no-underline"
             >
               Try again
             </button>
@@ -209,9 +212,9 @@ export function CommitsTab({
       )}
 
       {loading ? (
-        <div className="app-shell-card p-2">
+        <div role="status" aria-busy="true" className="flex flex-col divide-y divide-divider">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="commit-row">
+            <div key={i} className="flex items-start gap-3 px-4 py-3">
               <div className="skeleton h-8 w-8 rounded-full" />
               <div className="flex-1 space-y-2 py-1">
                 <div className="skeleton h-3.5 w-3/4" />
@@ -222,14 +225,14 @@ export function CommitsTab({
         </div>
       ) : allCommits.length > 0 ? (
         <>
-          <div className="app-shell-card p-2">
+          <List>
             {allCommits.map((commit: CommitWithStatus, idx) => (
               <CommitRow key={commit.sha} commit={commit} expanded={idx === 0 && commit.status.checks.length > 1} />
             ))}
-          </div>
+          </List>
 
           {hasMore && (
-            <div className="flex justify-center pt-1">
+            <div className="flex justify-center border-t border-border px-4 py-3">
               <button
                 type="button"
                 onClick={() => {
@@ -239,58 +242,35 @@ export function CommitsTab({
                 disabled={loadingMore}
                 className="btn btn--ghost btn--sm"
               >
-                {loadingMore && <Loader2 className="h-3.5 w-3.5 spin" />}
+                {loadingMore && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
                 Load older commits
               </button>
             </div>
           )}
 
-          <p className="text-center text-[0.7rem] text-[var(--theme-text-faint)] pt-1">
-            {allCommits.length} commit{allCommits.length === 1 ? "" : "s"} · cached 10 min · auto-refresh when tab is open
-          </p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border px-4 py-3 text-xs text-text-faint">
+            <StatusDot tone="success">Passing</StatusDot>
+            <StatusDot tone="danger">Failing</StatusDot>
+            <StatusDot tone="warning">Running</StatusDot>
+            <StatusDot tone="neutral">No CI</StatusDot>
+            <span className="ml-auto">
+              {allCommits.length} commit{allCommits.length === 1 ? "" : "s"} · cached 10 min · auto-refresh when tab is open
+            </span>
+          </div>
         </>
       ) : (
-        <div className="empty-state">
-          <span className="empty-state-icon">
-            <GitCommit className="h-5 w-5" />
-          </span>
-          <p className="empty-state-title">No commits yet</p>
-          <p className="empty-state-copy">
-            This repository doesn't have any commits, or we couldn't reach GitHub. Try refreshing.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setAllCommits([]);
-              setPage(1);
-              fetchPage(1, true);
-            }}
-            className="btn btn--ghost btn--sm mt-3"
-            disabled={refreshing}
-          >
-            {refreshing ? <Loader2 className="h-3.5 w-3.5 spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-            Refresh
-          </button>
-        </div>
-      )}
-
-      {allCommits.length > 0 && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[0.7rem] text-[var(--theme-text-faint)]">
-          <span className="inline-flex items-center gap-1.5">
-            <CheckCircle2 className="h-3 w-3 text-[var(--theme-status-success)]" /> Passing
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <XCircle className="h-3 w-3 text-[var(--theme-status-failure)]" /> Failing
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Loader2 className="h-3 w-3 text-[var(--theme-status-pending)]" /> Running
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="status-pill status-pill--neutral" style={{ padding: "0.15rem 0.4rem", fontSize: "0.65rem" }}>
-              —
-            </span>{" "}
-            No CI
-          </span>
+        <div className="p-4">
+          <EmptyState
+            icon={<GitCommit className="h-4 w-4" />}
+            title="No commits yet"
+            description="This repository does not have any commits, or we could not reach GitHub. Try refreshing."
+            action={
+              <button type="button" onClick={retry} className="btn btn--ghost btn--sm" disabled={refreshing}>
+                {refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />}
+                Refresh
+              </button>
+            }
+          />
         </div>
       )}
     </div>

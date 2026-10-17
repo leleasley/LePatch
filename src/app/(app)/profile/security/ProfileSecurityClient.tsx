@@ -1,6 +1,5 @@
 "use client";
 
-import { Shield, Link2, Monitor, Fingerprint } from "lucide-react";
 import { AccountForms } from "@/app/(app)/admin/settings/AccountForms";
 import { PasskeysSection } from "@/app/(app)/admin/settings/PasskeysSection";
 import { TelegramLinkSection } from "@/app/(app)/admin/settings/TelegramLinkSection";
@@ -17,28 +16,6 @@ type User = {
   passwordEnabled: boolean;
 };
 
-function SectionHeader({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="mb-4 flex items-center gap-3">
-      <div className="rounded-lg bg-cyan-500/10 p-2">
-        <Icon className="h-4 w-4 text-cyan-400" />
-      </div>
-      <div>
-        <h2 className="text-sm font-semibold text-white uppercase tracking-wider">{title}</h2>
-        <p className="text-xs text-slate-400">{description}</p>
-      </div>
-    </div>
-  );
-}
-
 export function ProfileSecurityClient({
   user,
   sessionId,
@@ -47,53 +24,14 @@ export function ProfileSecurityClient({
   sessionId: string;
 }) {
   return (
-    <div className="space-y-8">
-      {/* Account */}
-      <section>
-        <SectionHeader
-          icon={Shield}
-          title="Account"
-          description="Manage your profile and credentials"
-        />
-        <AccountForms user={user} />
-      </section>
-
-      {/* Authentication */}
-      <section>
-        <SectionHeader
-          icon={Fingerprint}
-          title="Authentication"
-          description="Passkeys, multi-factor authentication, and trusted devices"
-        />
-        <div className="space-y-4">
-          <PasskeysSection passwordEnabled={user.passwordEnabled} sessionId={sessionId} />
-          <MfaSection userEmail={user.email} />
-          <TrustedDevicesSection />
-        </div>
-      </section>
-
-      {/* Integrations */}
-      <section>
-        <SectionHeader
-          icon={Link2}
-          title="Integrations"
-          description="Connect external accounts for notifications and sign-in"
-        />
-        <div className="space-y-4">
-          <TelegramLinkSection />
-          <GitHubLinkSection />
-        </div>
-      </section>
-
-      {/* Sessions */}
-      <section>
-        <SectionHeader
-          icon={Monitor}
-          title="Sessions"
-          description="View and manage your active sessions"
-        />
-        <ActiveSessionsSection currentSessionId={sessionId} />
-      </section>
+    <div className="flex flex-col gap-6">
+      <AccountForms user={user} />
+      <PasskeysSection passwordEnabled={user.passwordEnabled} sessionId={sessionId} />
+      <MfaSection userEmail={user.email} />
+      <TrustedDevicesSection />
+      <TelegramLinkSection />
+      <GitHubLinkSection />
+      <ActiveSessionsSection currentSessionId={sessionId} />
     </div>
   );
 }

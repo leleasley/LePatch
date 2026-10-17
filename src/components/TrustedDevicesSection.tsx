@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Monitor, Trash2, RefreshCw, ShieldOff } from "lucide-react";
 import { csrfFetch } from "@/lib/csrf-client";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { List, ListRow, Panel, RowAvatar } from "@/components/ui/List";
+import { Badge } from "@/components/ui/Card";
 
 type TrustedDevice = {
   id: string;
@@ -79,8 +81,87 @@ export function TrustedDevicesSection() {
     return diff < 7 * 24 * 60 * 60 * 1000; // less than 7 days
   }
 
+  const failed = message.includes("Failed") || message.includes("failed");
+
   return (
-    <section className="rounded-lg border border-line bg-panel p-4">
+    <>
+      <Panel
+        title="Trusted devices"
+        description='Devices that skip MFA after "Remember this device" is checked at sign-in.'
+        actions={
+          <>
+            <button type="button" onClick={loadDevices} className="btn btn--ghost btn--sm">
+              <RefreshCw className="h-3 w-3" aria-hidden="true" />
+              Refresh
+            </button>
+            {devices.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setConfirmRevokeAll(true)}
+                className="btn btn--danger btn--sm"
+              >
+                <ShieldOff className="h-3 w-3" aria-hidden="true" />
+                Revoke all
+              </button>
+            )}
+          </>
+        }
+        flush
+      >
+        {loading ? (
+          <p className="px-4 py-3 text-sm text-text-muted">Loading trusted devices…</p>
+        ) : devices.length === 0 ? (
+          <p className="flex items-center gap-2 px-4 py-3 text-sm text-text-muted">
+            <Monitor className="h-4 w-4 text-text-faint" aria-hidden="true" />
+            No trusted devices. Check &ldquo;Remember this device&rdquo; when verifying MFA to add one.
+          </p>
+        ) : (
+          <List>
+            {devices.map((device) => (
+              <ListRow
+                key={device.id}
+                leading={
+                  <RowAvatar>
+                    <Monitor className="h-4 w-4" aria-hidden="true" />
+                  </RowAvatar>
+                }
+                title={
+                  <>
+                    <span className="truncate text-sm font-medium text-text">
+                      {device.name || "Unknown device"}
+                    </span>
+                    {isExpiringSoon(device.expiresAt) && <Badge tone="warning">Expiring soon</Badge>}
+                  </>
+                }
+                subtitle={`Added ${formatDate(device.createdAt)} · Expires ${formatDate(device.expiresAt)}`}
+                trailing={
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRevokeId(device.id)}
+                    className="icon-button text-text-faint hover:text-status-danger"
+                    aria-label={`Revoke ${device.name || "unknown device"}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                }
+              />
+            ))}
+          </List>
+        )}
+
+        {message ? (
+          <p
+            role={failed ? "alert" : "status"}
+            aria-live="polite"
+            className={`border-t border-border px-4 py-2.5 text-xs ${
+              failed ? "text-status-danger" : "text-status-success"
+            }`}
+          >
+            {message}
+          </p>
+        ) : null}
+      </Panel>
+
       <ConfirmDialog
         open={!!confirmRevokeId}
         title="Revoke trusted device"
@@ -109,94 +190,6 @@ export function TrustedDevicesSection() {
         }}
         onCancel={() => setConfirmRevokeAll(false)}
       />
-
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Monitor className="h-4 w-4 text-cyan-400" />
-          <h2 className="text-lg font-medium">Trusted Devices</h2>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={loadDevices}
-            className="focus-ring inline-flex items-center gap-1 rounded-md border border-line px-3 py-1.5 text-sm text-slate-300 hover:text-white transition-colors"
-          >
-            <RefreshCw className="h-3 w-3" />
-            Refresh
-          </button>
-          {devices.length > 0 && (
-            <button
-              onClick={() => setConfirmRevokeAll(true)}
-              className="focus-ring inline-flex items-center gap-1 rounded-md border border-red-500/40 px-3 py-1.5 text-sm text-red-300 hover:bg-red-500/10 transition-colors"
-            >
-              <ShieldOff className="h-3 w-3" />
-              Revoke all
-            </button>
-          )}
-        </div>
-      </div>
-
-      <p className="mb-4 text-sm text-slate-400">
-        Devices that skip MFA after &quot;Remember this device&quot; is checked at login.
-      </p>
-
-      {loading ? (
-        <p className="text-sm text-slate-400">Loading trusted devices...</p>
-      ) : devices.length === 0 ? (
-        <div className="rounded-md border border-line/50 bg-surface/50 p-4 text-center">
-          <Monitor className="mx-auto mb-2 h-8 w-8 text-slate-600" />
-          <p className="text-sm text-slate-500">No trusted devices</p>
-          <p className="mt-1 text-xs text-slate-600">Check &quot;Remember this device&quot; when verifying MFA to add one.</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {devices.map((device) => (
-            <div
-              key={device.id}
-              className="group flex items-center gap-3 rounded-md border border-line bg-surface p-3 text-sm transition-colors hover:border-line/80"
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10">
-                <Monitor className="h-4 w-4 text-cyan-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-slate-200 truncate">
-                    {device.name || "Unknown device"}
-                  </span>
-                  {isExpiringSoon(device.expiresAt) && (
-                    <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-400">
-                      Expiring soon
-                    </span>
-                  )}
-                </div>
-                <div className="mt-0.5 flex items-center gap-3 text-xs text-slate-500">
-                  <span>Added: {formatDate(device.createdAt)}</span>
-                  <span>&middot;</span>
-                  <span>Expires: {formatDate(device.expiresAt)}</span>
-                </div>
-              </div>
-              <button
-                onClick={() => setConfirmRevokeId(device.id)}
-                className="focus-ring shrink-0 rounded-md border border-line px-2.5 py-1.5 text-xs text-slate-400 opacity-0 transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300 group-hover:opacity-100"
-                title="Revoke this device"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {message && (
-        <p
-          className={`mt-3 rounded-md border p-3 text-sm ${
-            message.includes("Failed") || message.includes("failed")
-              ? "border-red-500/40 bg-red-500/10 text-red-200"
-              : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-          }`}
-        >
-          {message}
-        </p>
-      )}
-    </section>
+    </>
   );
 }

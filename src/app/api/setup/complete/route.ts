@@ -5,6 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { syncNotificationChannel } from "@/lib/notifications";
 import { upsertIntegrationSetting } from "@/lib/integration-secrets";
 import { setupRequestHandler } from "@/lib/api-helpers";
+import { createRateLimiter } from "@/lib/rate-limit";
+import { resolveClientIp } from "@/lib/request-ip";
+
+const limiter = createRateLimiter({ windowMs: 60_000, max: 10 });
 
 const schema = z.object({
   email: z.string().email(),
@@ -27,20 +31,31 @@ const schema = z.object({
 
 export const POST = setupRequestHandler(
   async ({ request }) => {
-    const existing = await prisma.user.count();
-  if (existing > 0) throw new Error("Setup already complete");
+    const { allowed } = await limiter(`setup-complete:${resolveClientIp(request)}`);
+    if (!allowed) {
+      return NextResponse.json({ error: "Too many setup attempts" }, { status: 429 });
+    }
 
-  const body = schema.parse(await request.json());
-  const passwordHash = await bcrypt.hash(body.password, 12);
+    const body = schema.parse(await request.json());
+    const passwordHash = await bcrypt.hash(body.password, 12);
 
-  await prisma.user.create({
-    data: {
-      name: "Admin",
-      email: body.email,
-      passwordHash,
-      role: "administrator",
-    },
-  });
+    // Create first and treat a unique/serialization failure as "setup already
+    // complete". Counting users before inserting left a window where two
+    // concurrent requests could each create an administrator.
+    try {
+      await prisma.user.create({
+        data: {
+          name: "Admin",
+          email: body.email.toLowerCase(),
+          passwordHash,
+          role: "administrator",
+        },
+      });
+    } catch (error) {
+      const alreadySetUp = (await prisma.user.count()) > 0;
+      if (alreadySetUp) return NextResponse.json({ error: "Setup already complete" }, { status: 409 });
+      throw error;
+    }
 
   await prisma.systemSetting.upsert({
     where: { key: "appUrl" },

@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin, requestIp } from "@/lib/auth";
+import { createAuditLog } from "@/lib/audit";
 import { handleApiError } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
@@ -10,9 +11,9 @@ export const dynamic = "force-dynamic";
  * agent host to remove the binary, systemd unit, and config. No re-pairing or
  * server record is needed afterwards.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const script = `#!/bin/sh
 # LePatch agent uninstall (one-time cleanup — LePatch no longer manages servers)
 set -eu
@@ -26,8 +27,21 @@ sudo rm -f /usr/local/bin/lepatch-agent
 sudo rm -rf /etc/lepatch-agent /var/lib/lepatch-agent
 echo "LePatch agent uninstalled."
 `;
+
+    createAuditLog({
+      userId: session.id,
+      action: "agent.uninstall_script_served",
+      target: "agent-uninstall",
+      ipAddress: requestIp(request),
+    }).catch(() => {});
+
     return new NextResponse(script, {
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        // Never let this be rendered or cached as a document.
+        "Content-Disposition": "attachment; filename=lepatch-agent-uninstall.sh",
+        "Cache-Control": "no-store",
+      },
     });
   } catch (error) {
     return handleApiError(error);

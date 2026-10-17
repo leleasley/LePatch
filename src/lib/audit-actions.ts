@@ -25,16 +25,11 @@ type AuditAction =
   | "notification.created"
   | "notification.updated"
   | "notification.deleted"
+  | "notification.test_sent"
   | "mfa.setup"
   | "mfa.disabled"
   | "admin.audit_view"
-  | "catalogue.created"
-  | "catalogue.updated"
-  | "catalogue.deleted"
-  | "catalogue.featured"
-  | "catalogue.suggestion_created"
-  | "catalogue.suggestion_approved"
-  | "catalogue.suggestion_rejected"
+  | "agent.uninstall_script_served"
   | "github.connected"
   | "github.disconnected"
   | "github.issue_created"
@@ -68,16 +63,11 @@ export function describeAction(action: string): string {
     "notification.created": "Notification channel created",
     "notification.updated": "Notification channel updated",
     "notification.deleted": "Notification channel removed",
+    "notification.test_sent": "Test notification sent",
     "mfa.setup": "MFA enabled",
     "mfa.disabled": "MFA disabled",
     "admin.audit_view": "Audit log viewed",
-    "catalogue.created": "Catalogue entry created",
-    "catalogue.updated": "Catalogue entry updated",
-    "catalogue.deleted": "Catalogue entry removed",
-    "catalogue.featured": "Catalogue feature status changed",
-    "catalogue.suggestion_created": "App suggestion submitted",
-    "catalogue.suggestion_approved": "App suggestion approved",
-    "catalogue.suggestion_rejected": "App suggestion rejected",
+    "agent.uninstall_script_served": "Agent uninstall script downloaded",
     "github.connected": "GitHub account connected",
     "github.disconnected": "GitHub account disconnected",
     "github.issue_created": "GitHub issue created",

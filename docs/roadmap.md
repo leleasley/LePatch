@@ -25,7 +25,7 @@ Status: Complete.
 
 - [x] Add explicit API wrappers: user mutation, admin mutation, setup request, webhook request.
 - [x] Keep RBAC to `Administrator`, `Moderator`, `User`, and `Restricted`.
-- [x] Enforce `Restricted` so it can browse app search/catalogue/repo preview flows but cannot manage apps or reach admin pages.
+- [x] Enforce `Restricted` so it can browse repository search and preview flows but cannot manage apps or reach admin pages.
 - [x] Encrypt integration secrets at rest and migrate old plaintext values.
 - [x] Encrypt notification channel secrets at rest.
 - [x] Add rate limits to GitHub-backed user APIs.
@@ -86,12 +86,8 @@ Status: Complete for the current product.
 
 Status: Complete.
 
-## Phase 7: Catalogue And Release Intelligence
+## Phase 7: Release Intelligence
 
-- [x] Improve catalogue categories/filtering.
-- [x] Add verified package mappings. *(tool mappings later dropped; entries are now repo-based)*
-- [x] Add better duplicate suggestion detection.
-- [x] Surface popularity/install/add counts.
 - [x] Classify releases.
 - [x] Improve changelog parsing.
 
@@ -103,13 +99,14 @@ Status: Complete.
 - [x] Add API tests for update job lifecycle → **retired** with the server subsystem.
 - [x] Add OpenCode asset selection tests for the agent path. → **retired** with the agent; no such test exists now.
 - [x] Add OpenCode asset selection tests for the host-helper path. → **retired** with the host-helper; no such test exists now.
-- [ ] Add Playwright smoke tests. *(requires a browser environment — still deferred)*
+- [x] Add responsive Playwright smoke tests for the 360px, 390px, 768px,
+  1024px and 1440px layouts.
 
-Current suite: 10 test files / 76 tests covering CSRF, audit, encryption,
+Current suite: 15 test files / 123 tests covering CSRF, audit, encryption,
 integration secrets, notifications, GitHub commits, HTTP helpers, private repo
-access, route security, and slugs. Run with `npm test`.
+access, route security, UI cache state, and slugs. Run with `npm test`.
 
-Status: Complete except browser tests.
+Status: Complete.
 
 ## Phase 9: Deployment And Ops
 
@@ -118,17 +115,37 @@ Status: Complete except browser tests.
 - [x] Add backup/restore docs and in-app backup UI.
 - [x] Add dependency update workflow (`npm run deps:outdated`).
 - [x] Add security advisory workflow.
-- [ ] Run the app containers as a non-root user. The `Dockerfile` still has no `USER` directive. See `docs/operations.md`.
+- [x] Run the app containers as a non-root user (`USER node`).
 - [ ] Pin base image tags/digests in `Dockerfile` and `docker-compose.yml`.
 
 Status: Mostly complete; two hardening items open.
 
 ## Current Priorities
 
-1. Run app containers as non-root (security).
+1. Add resource limits and pinned base-image digests (see `docs/operations.md`).
 2. Apply pending dependency updates — see the audit findings in `docs/operations.md`.
-3. Playwright smoke tests, when a browser environment is available.
-4. Fix the dashboard `.slice(0, 6)` truncation so releases past the sixth are visible.
+
+## Phase 2: Product enhancements
+
+- [x] Desktop command palette and quick check-all action.
+- [x] Search, repository filters and paged watched-app loading.
+- [ ] Suggest the next semver tag from the previous release.
+- [ ] Compare changelog notes between releases.
+- [ ] Add clearer draft and pre-release workflow states.
+- [ ] Show GitHub asset download statistics.
+
+## Worker Backlog
+
+These worker and notification defects were identified during the frontend audit.
+They are intentionally deferred from the UI rebuild:
+
+- Fix digest scheduling so deferred notifications eventually deliver, and make
+  sure the triggering release is included in the digest message.
+- Track issue comments by processed comment IDs or a reliable timestamp so
+  polling neither repeats old comments nor skips new ones.
+- Preserve `updateAvailable` until the user acknowledges the release.
+- Represent filtered or muted notifications as suppressed rather than sent.
+- Preserve existing notification-channel enabled flags during startup seeding.
 
 ## Completed Cleanup
 

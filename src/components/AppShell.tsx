@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useCallback, startTransition } from "react
 import type { ComponentType, ReactNode } from "react";
 import {
   Boxes,
-  Gauge,
+  Rss,
   Library,
   Search,
   User,
@@ -16,9 +16,19 @@ import {
   ChevronDown,
   Terminal,
   Settings,
+  House,
+  BellRing,
+  WifiOff,
+  Activity,
 } from "lucide-react";
+import { useSWRConfig } from "swr";
+import { LiveTimestamp } from "@/components/LiveTimestamp";
+import { csrfFetch } from "@/lib/csrf-client";
+import { useToast } from "@/lib/toast";
 import { LogoutButton } from "@/components/LogoutButton";
 import { ModalShell } from "@/components/ModalShell";
+import { CommandPalette, useCommandPaletteKey, type Command } from "@/components/ui/Tabs";
+import { RepoSwitcher } from "@/components/ui/RepoSwitcher";
 import { isAdministrator, isModerator, roleLabels } from "@/lib/rbac";
 import { cn } from "@/lib/cn";
 import type { UserRole } from "@prisma/client";
@@ -34,13 +44,13 @@ type NavItem = {
 function buildNav(role: string | null) {
   const mainNav: NavItem[] = [];
   if (role !== "restricted") {
-    mainNav.push({ href: "/dashboard", label: "Overview", icon: Gauge });
+    mainNav.push({ href: "/dashboard", label: "Feed", icon: Rss });
     mainNav.push({ href: "/apps", label: "Watched apps", icon: Boxes, exact: true });
   }
 
   const discoverNav: NavItem[] = [
-    { href: "/apps/search", label: "Search repos", icon: Search },
-    { href: "/apps/catalogue", label: "Catalogue", icon: Library },
+    { href: "/apps/search", label: "Find repositories", icon: Search },
+    { href: "/profile/repos", label: "My repositories", icon: Library },
   ];
 
   const utilityNav: NavItem[] = [{ href: "/profile/security", label: "Profile", icon: User }];
@@ -224,7 +234,7 @@ function MobileDrawer({
             pathname === homeHref ? "bg-accent/10 text-accent" : "text-text-muted hover:bg-surface-elevated hover:text-text"
           )}
         >
-          <Gauge className={cn("h-4 w-4", pathname === homeHref ? "text-accent" : "text-text-faint")} />
+          <Rss className={cn("h-4 w-4", pathname === homeHref ? "text-accent" : "text-text-faint")} />
           Home
         </Link>
         {groups.map((group) => (
@@ -241,6 +251,91 @@ function MobileDrawer({
 export function AppShell({ children, userRole = null, userName = null }: { children: ReactNode; userRole?: string | null; userName?: string | null }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [online, setOnline] = useState(true);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  const { cache, mutate } = useSWRConfig();
+  const { addToast } = useToast();
+  useEffect(() => {
+    const initialState = window.setTimeout(() => {
+      setOnline(navigator.onLine);
+      setLastSynced(new Date());
+    }, 0);
+    const refresh = () => {
+      if (document.visibilityState !== "visible" || !navigator.onLine) return;
+      for (const key of cache.keys()) {
+        if (typeof key === "string" && (key.startsWith("/api/") || key.includes("/api/apps"))) void mutate(key);
+      }
+      setLastSynced(new Date());
+    };
+    const onOnline = () => { setOnline(true); refresh(); };
+    const onOffline = () => setOnline(false);
+    const onAppsChanged = () => {
+      for (const key of cache.keys()) {
+        if (typeof key === "string" && key.includes("/api/apps")) void mutate(key);
+      }
+    };
+    const source = new EventSource("/api/live");
+    source.addEventListener("release.discovered", refresh);
+    source.addEventListener("check.finished", refresh);
+    source.addEventListener("check.started", (event) => {
+      const detail = JSON.parse((event as MessageEvent<string>).data) as { appId: string };
+      window.dispatchEvent(new CustomEvent("lepatch:checking-started", { detail: { appId: detail.appId, startedAt: Date.now() } }));
+    });
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    window.addEventListener("lepatch:apps-changed", onAppsChanged);
+    return () => {
+      window.clearTimeout(initialState);
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+      window.removeEventListener("lepatch:apps-changed", onAppsChanged);
+      source.close();
+    };
+  }, [cache, mutate]);
+
+  const checkAll = useCallback(async () => {
+    try {
+      const apps: Array<{ id: string }> = [];
+      let page = 1;
+      let total = 0;
+      do {
+        const response = await csrfFetch(`/api/apps?page=${page}&perPage=200`);
+        if (!response.ok) throw new Error("Could not load watched repositories");
+        const result = await response.json();
+        apps.push(...result.apps);
+        total = result.total;
+        page += 1;
+      } while (apps.length < total);
+
+      let queued = 0;
+      for (let offset = 0; offset < apps.length; offset += 10) {
+        const batch = apps.slice(offset, offset + 10);
+        const results = await Promise.all(batch.map(async ({ id }) => {
+          const response = await csrfFetch(`/api/apps/${id}/check`, { method: "POST" });
+          if (!response.ok) return false;
+          window.dispatchEvent(new CustomEvent("lepatch:checking-started", { detail: { appId: id, startedAt: Date.now() } }));
+          return true;
+        }));
+        queued += results.filter(Boolean).length;
+      }
+      for (const key of cache.keys()) if (typeof key === "string" && key.includes("/api/apps")) void mutate(key);
+      addToast(queued === apps.length ? `Checks queued for ${queued} repositories` : `Queued ${queued} of ${apps.length} checks`, queued ? "success" : "error");
+    } catch {
+      addToast("Could not queue checks. Try again when you’re online.", "error");
+    }
+  }, [addToast, cache, mutate]);
+
+  useEffect(() => {
+    const handler = () => void checkAll();
+    window.addEventListener("lepatch:check-all", handler);
+    return () => window.removeEventListener("lepatch:check-all", handler);
+  }, [checkAll]);
+  useCommandPaletteKey(setPaletteOpen);
   const { mainNav, discoverNav, utilityNav, adminItems } = buildNav(userRole);
   const homeHref = userRole === "restricted" ? "/apps/search" : "/dashboard";
 
@@ -251,16 +346,31 @@ export function AppShell({ children, userRole = null, userName = null }: { child
     ...(adminItems.length ? [{ title: "Admin", items: adminItems }] : []),
   ];
 
+  const commands: Command[] = [
+    ...groups.flatMap((group) =>
+      group.items.map((item) => ({
+        id: item.href,
+        label: item.label,
+        group: group.title,
+        href: item.href,
+      }))
+    ),
+    { id: "search-repos", label: "Find a repository to watch", group: "Actions", href: "/apps/search" },
+    { id: "check-all", label: "Check watched repositories now", group: "Actions", run: () => window.dispatchEvent(new CustomEvent("lepatch:check-all")) },
+    { id: "copy-mcp", label: "Copy API base URL", group: "Actions", run: () => navigator.clipboard?.writeText(window.location.origin) },
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-canvas">
       {/* Desktop sidebar */}
-      <aside className="desktop-sidebar fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-border bg-surface lg:flex">
+      <aside className="desktop-sidebar fixed inset-y-0 left-0 z-40 hidden w-[248px] flex-col border-r border-border bg-surface lg:flex">
         <div className="shrink-0 p-4">
           <Link href={homeHref} className="flex items-center gap-2.5">
-            <img src="/assets/Logo.png" alt="LePatch" className="h-8 w-8 rounded-md" />
+            <img src="/icons/icon-192.png" alt="LePatch" className="h-8 w-8 rounded-md" />
             <span className="text-lg font-semibold tracking-tight text-text">LePatch</span>
           </Link>
           <UserSwitcher currentName={userName} role={userRole} />
+          <RepoSwitcher className="mt-2" />
         </div>
         <div className="flex-1 overflow-y-auto px-2 pb-4">
           {groups.map((group) => (
@@ -268,6 +378,14 @@ export function AppShell({ children, userRole = null, userName = null }: { child
           ))}
         </div>
         <div className="shrink-0 border-t border-border p-3">
+          <button
+            onClick={() => setPaletteOpen(true)}
+            className="mb-2 flex w-full items-center gap-2 rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-text-muted transition-colors hover:border-accent/50 hover:text-text"
+          >
+            <Search className="h-3.5 w-3.5" />
+            <span className="flex-1 text-left">Command palette</span>
+            <kbd className="rounded border border-border px-1 text-2xs text-text-faint">⌘K</kbd>
+          </button>
           <LogoutButton />
         </div>
       </aside>
@@ -275,23 +393,53 @@ export function AppShell({ children, userRole = null, userName = null }: { child
       {/* Mobile top bar */}
       <header className="mobile-header sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3 lg:hidden">
         <Link href={homeHref} className="flex items-center gap-2.5">
-          <img src="/assets/Logo.png" alt="LePatch" className="h-7 w-7 rounded-md" />
+          <img src="/icons/icon-192.png" alt="LePatch" className="h-7 w-7 rounded-md" />
           <span className="text-base font-semibold tracking-tight text-text">LePatch</span>
         </Link>
-        <button
-          onClick={() => setMenuOpen(true)}
-          aria-label="Open menu"
-          aria-expanded={menuOpen}
-          className="-mr-1 rounded-lg p-2 text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setPaletteOpen(true)}
+            className="hidden h-8 items-center gap-2 rounded-md border border-border bg-surface-elevated px-2 text-xs text-text-muted transition-colors hover:border-accent/50 hover:text-text lg:flex"
+            aria-label="Open command palette"
+          >
+            <Search className="h-3.5 w-3.5" />
+            <span>Search</span>
+            <kbd className="rounded border border-border px-1 text-2xs text-text-faint">⌘K</kbd>
+          </button>
+          <button
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+            aria-expanded={menuOpen}
+            aria-haspopup="dialog"
+            className="icon-button lg:hidden"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
       </header>
 
       {/* Content */}
-      <main className="mobile-content lg:pl-60">
-        <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+      <main className="mobile-content lg:pl-[248px]">
+        <div className="sync-line" aria-live="polite"><Activity className="h-3.5 w-3.5" />Updated <LiveTimestamp date={lastSynced} /></div>
+        {!online && <div className="offline-banner" role="status"><WifiOff className="h-4 w-4" />You’re offline. Showing the latest saved data.</div>}
+        <div className="mx-auto w-full max-w-[1280px] px-4 pb-28 pt-5 sm:px-6 lg:px-8 lg:py-8">{children}</div>
       </main>
+
+      <nav className="phone-tabs lg:hidden" aria-label="Primary navigation">
+        {[
+          ...(userRole === "restricted" ? [] : [{ href: "/dashboard", label: "Feed", icon: House }]),
+          ...(userRole === "restricted" ? [] : [{ href: "/apps", label: "Watch", icon: Boxes }]),
+          { href: "/apps/search", label: "Search", icon: Search },
+          ...(userRole === "administrator" ? [{ href: "/profile/notifications", label: "Alerts", icon: BellRing }] : []),
+          { href: "/profile/security", label: "Profile", icon: User },
+        ].map((item) => {
+          const Icon = item.icon;
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={cn("phone-tab", active && "phone-tab--active")}><Icon aria-hidden="true" /><span>{item.label}</span></Link>;
+        })}
+      </nav>
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} />
 
       <MobileDrawer
         open={menuOpen}

@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Bell, BellOff, Loader2, Save, Settings, Trash2, X } from "lucide-react";
+import { Loader2, Save, Settings, Trash2, X } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ModalShell } from "@/components/ModalShell";
+import { Select, Switch } from "@/components/ui/Input";
 import { csrfFetch } from "@/lib/csrf-client";
 
 const PRESETS = [
@@ -64,6 +65,7 @@ export function EditAppModal({
         }),
       });
       if (!res.ok) throw new Error("Failed to update app");
+      window.dispatchEvent(new Event("lepatch:apps-changed"));
       setOpen(false);
       router.refresh();
     } catch {
@@ -78,119 +80,87 @@ export function EditAppModal({
 
   if (!open) {
     return (
-      <>
-        <button
-          onClick={() => setOpen(true)}
-          className="focus-ring inline-flex items-center gap-2 rounded-md border border-line/50 px-3 py-2 text-sm text-slate-400 transition-all hover:border-cyan-500/30 hover:text-cyan-300"
-        >
-          <Settings className="h-4 w-4" />
-          Edit
-        </button>
-      </>
+      <button type="button" onClick={() => setOpen(true)} className="btn btn--secondary btn--sm">
+        <Settings className="h-4 w-4" aria-hidden="true" />
+        Edit
+      </button>
     );
   }
 
   return (
     <>
-      <ModalShell open={open} onClose={() => setOpen(false)} panelClassName="w-auto max-w-md overflow-hidden p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-white">Edit App Settings</h2>
-            <button onClick={() => setOpen(false)} className="rounded-lg p-1.5 text-slate-500 hover:text-white hover:bg-white/5 transition-colors">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+      <ModalShell open={open} onClose={() => setOpen(false)} title="Edit app settings" panelClassName="w-auto max-w-md p-6">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-text">Edit app settings</h2>
+          <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="icon-button -mr-1">
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
 
-          <div className="space-y-5">
-            <label className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-slate-300 font-medium">
-                {notificationsEnabled ? <Bell className="h-4 w-4 text-emerald-400" /> : <BellOff className="h-4 w-4 text-slate-500" />}
-                Notifications
-              </span>
-              <button
-                role="switch"
-                aria-checked={notificationsEnabled}
-                onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
-                  notificationsEnabled ? "bg-emerald-500" : "bg-slate-600"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
-                    notificationsEnabled ? "translate-x-4" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </label>
+        <div className="space-y-5">
+          <Switch
+            checked={notificationsEnabled}
+            onChange={setNotificationsEnabled}
+            label="Notifications"
+            description="Send a Telegram message when a new release is detected."
+          />
 
-            <label className="flex items-center justify-between text-sm">
-              <span className="text-slate-300 font-medium">Include pre-releases</span>
-              <button
-                role="switch"
-                aria-checked={includePrereleases}
-                onClick={() => setIncludePrereleases(!includePrereleases)}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
-                  includePrereleases ? "bg-cyan-500" : "bg-slate-600"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
-                    includePrereleases ? "translate-x-4" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </label>
+          <Switch
+            checked={includePrereleases}
+            onChange={setIncludePrereleases}
+            label="Include pre-releases"
+            description="Treat GitHub pre-releases as releasable versions."
+          />
 
-            <div className="border-t border-line/50 pt-4">
-              <label className="block text-sm">
-                <span className="text-slate-300 font-medium">Check interval</span>
-                <select
-                  value={checkInterval}
-                  onChange={(e) => setCheckInterval(Number(e.target.value))}
-                  className="focus-ring mt-1.5 w-full rounded-lg border border-line/50 bg-surface px-4 py-2.5 text-white transition-all focus:border-cyan-500/50"
-                >
-                  {PRESETS.map((p) => (
-                    <option key={p.value} value={p.value}>
-                      {p.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <p className="mt-1 text-xs text-slate-500">{formatInterval(checkInterval)}</p>
-            </div>
+          <Select
+            label="Check interval"
+            value={checkInterval}
+            onChange={(e) => setCheckInterval(Number(e.target.value))}
+            hint={formatInterval(checkInterval)}
+          >
+            {PRESETS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </Select>
 
-            <div className="border-t border-line/50 pt-4">
-              <button
-                onClick={() => setDeleteConfirmOpen(true)}
-                className="focus-ring inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/40 px-4 py-2.5 text-sm font-medium text-red-200 transition-all hover:bg-red-500/10"
-              >
-                <Trash2 className="h-4 w-4" />
-                Remove app
-              </button>
-              <p className="mt-1 text-xs text-slate-500">Permanently delete this app and all its releases</p>
-            </div>
-          </div>
-
-          <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+          <div className="border-t border-border pt-4">
             <button
-              onClick={() => {
-                setOpen(false);
-                setIncludePrereleases(initialIncludePrereleases);
-                setNotificationsEnabled(initialNotificationsEnabled);
-                setCheckInterval(initialCheckInterval);
-              }}
-              className="rounded-lg border border-line/50 px-4 py-2.5 text-sm font-medium text-slate-300 transition-all hover:bg-white/[0.06]"
+              type="button"
+              onClick={() => setDeleteConfirmOpen(true)}
+              className="btn btn--danger w-full"
             >
-              Cancel
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              Remove app
             </button>
-            <button
-              onClick={handleSave}
-              disabled={saving || !dirty}
-              className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-medium text-slate-950 transition-all hover:bg-cyan-400 disabled:opacity-50"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {saving ? "Saving..." : "Save"}
-            </button>
+            <p className="mt-1.5 text-xs text-text-muted">Permanently delete this app and all its releases.</p>
           </div>
+        </div>
+
+        <div className="mt-6 flex flex-col justify-end gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              setIncludePrereleases(initialIncludePrereleases);
+              setNotificationsEnabled(initialNotificationsEnabled);
+              setCheckInterval(initialCheckInterval);
+            }}
+            className="btn btn--secondary"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !dirty}
+            className="btn btn--primary"
+          >
+            {saving ? <Loader2 className="h-4 w-4 spin" aria-hidden="true" /> : <Save className="h-4 w-4" aria-hidden="true" />}
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
       </ModalShell>
 
       <ConfirmDialog
@@ -201,7 +171,9 @@ export function EditAppModal({
         variant="danger"
         confirmText="REMOVE"
         onConfirm={async () => {
-          await csrfFetch(`/api/apps/${appId}`, { method: "DELETE" });
+          const response = await csrfFetch(`/api/apps/${appId}`, { method: "DELETE" });
+          if (!response.ok) return;
+          window.dispatchEvent(new Event("lepatch:apps-changed"));
           router.push("/apps");
           router.refresh();
         }}

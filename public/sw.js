@@ -1,17 +1,20 @@
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 5;
 const CACHE_NAME = `lepatch-v${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
   "/manifest.json",
-  "/assets/Logo.png",
-  "/assets/dark_desktop_background.png",
-  "/assets/dark_mobile_background.png",
-  "/assets/light_desktop_background.png",
-  "/assets/light_mobile_background.png",
-  "/assets/splash-dark.svg",
-  "/assets/splash-light.svg",
-  "/assets/splash-dark-mobile.svg",
-  "/assets/splash-light-mobile.svg",
+  "/offline.html",
+  "/icons/lepatch-mark.svg",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/icons/icon-512-maskable.png",
+  "/icons/splash-1170x2532-dark.png",
+  "/icons/splash-1170x2532-light.png",
+  "/icons/splash-750x1334-dark.png",
+  "/icons/splash-750x1334-light.png",
+  "/icons/splash-1290x2796-dark.png",
+  "/icons/splash-1290x2796-light.png",
+  "/apple-touch-icon.png",
   "/favicon.ico",
   "/favicon.svg",
 ];
@@ -44,6 +47,14 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
+
+  // Never cache personalized HTML. Keep a small, genuine offline shell instead.
+  if (request.mode === "navigate") {
+    event.respondWith(fetch(request).catch(async () =>
+      (await caches.match("/offline.html")) || new Response("Offline", { status: 503, headers: { "Content-Type": "text/plain" } })
+    ));
+    return;
+  }
 
   // API calls: network only, offline fallback
   if (request.url.includes("/api/")) {

@@ -3,6 +3,8 @@
 import { useState, useEffect, startTransition } from "react";
 import { ChevronRight, FileCode2, FolderTree, ArrowLeft, Loader2, FileText } from "lucide-react";
 import { FileViewer } from "@/components/FileViewer";
+import { List, ListRow } from "@/components/ui/List";
+import { cn } from "@/lib/cn";
 
 type FileEntry = {
   name: string;
@@ -18,25 +20,10 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** One accent, neutral defaults — no decorative per-extension palette. */
 function fileIcon(name: string) {
   const ext = name.split(".").pop()?.toLowerCase() || "";
-  const map: Record<string, string> = {
-    md: "text-cyan-300",
-    json: "text-amber-300",
-    yml: "text-purple-300",
-    yaml: "text-purple-300",
-    toml: "text-purple-300",
-    ts: "text-blue-300",
-    tsx: "text-blue-300",
-    js: "text-yellow-300",
-    jsx: "text-yellow-300",
-    py: "text-emerald-300",
-    go: "text-cyan-300",
-    rs: "text-orange-300",
-    sh: "text-slate-300",
-    txt: "text-slate-400",
-  };
-  return map[ext] || "text-[var(--theme-text-muted)]";
+  return ext === "md" ? "text-accent" : "text-text-faint";
 }
 
 export function FileBrowser({
@@ -104,92 +91,94 @@ export function FileBrowser({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-1 border-b border-[var(--theme-divider)] px-4 py-2.5 text-[0.82rem]">
+      <nav
+        aria-label="File path"
+        className="flex flex-wrap items-center gap-1 border-b border-divider px-4 py-2.5 text-xs"
+      >
         <button
+          type="button"
           onClick={() => navigateTo(-1)}
-          className={`app-mono font-medium transition-colors ${
-            currentPath === "" ? "text-[var(--theme-text)]" : "text-[var(--theme-accent)] hover:text-[var(--theme-accent-hover)]"
-          }`}
+          className={cn(
+            "mono font-medium transition-colors",
+            currentPath === "" ? "text-text" : "text-accent hover:text-accent-hover"
+          )}
         >
           {repo}
         </button>
         {breadcrumbs.map((segment, i) => (
-          <span key={i} className="flex items-center gap-1">
-            <ChevronRight className="h-3 w-3 text-[var(--theme-text-faint)]" />
+          <span key={`${segment}-${i}`} className="flex items-center gap-1">
+            <ChevronRight className="h-3 w-3 text-text-faint" aria-hidden="true" />
             <button
+              type="button"
               onClick={() => navigateTo(i)}
-              className={`app-mono font-medium transition-colors ${
-                i === breadcrumbs.length - 1 ? "text-[var(--theme-text)]" : "text-[var(--theme-accent)] hover:text-[var(--theme-accent-hover)]"
-              }`}
+              aria-current={i === breadcrumbs.length - 1 ? "location" : undefined}
+              className={cn(
+                "mono font-medium transition-colors",
+                i === breadcrumbs.length - 1 ? "text-text" : "text-accent hover:text-accent-hover"
+              )}
             >
               {segment}
             </button>
           </span>
         ))}
-      </div>
+      </nav>
 
-      <div className="divide-y divide-[var(--theme-divider)]">
+      <List>
         {currentPath && (
-          <button
+          <ListRow
             onClick={() => navigateTo(breadcrumbs.length - 2)}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[var(--theme-text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--theme-text)_3%,transparent)]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>..</span>
-          </button>
+            leading={<ArrowLeft className="h-4 w-4 text-text-faint" aria-hidden="true" />}
+            title={<span className="text-sm text-text">Parent directory</span>}
+          />
         )}
 
         {loading && (
-          <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-[var(--theme-text-muted)]">
-            <Loader2 className="h-4 w-4 spin" />
-            Loading...
-          </div>
+          <li
+            role="status"
+            aria-busy="true"
+            className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-text-muted"
+          >
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            Loading directory
+          </li>
         )}
 
         {error && (
-          <div className="px-4 py-4 text-sm text-[var(--theme-status-failure)]">{error}</div>
+          <li role="alert" className="px-4 py-4 text-sm text-status-danger">
+            {error}
+          </li>
         )}
 
         {!loading && !error && sortedFiles.map((file) =>
           file.type === "dir" ? (
-            <button
+            <ListRow
               key={file.path}
               onClick={() => openDir(file.path)}
-              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--theme-text)_3%,transparent)]"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2.5">
-                  <FolderTree className="h-4 w-4 shrink-0 text-[var(--theme-accent)]" />
-                  <span className="truncate font-medium text-[var(--theme-text)]">{file.name}</span>
-                </div>
-              </div>
-              <span className="text-[0.72rem] text-[var(--theme-text-faint)]">Browse →</span>
-            </button>
+              leading={<FolderTree className="h-4 w-4 text-accent" aria-hidden="true" />}
+              title={<span className="truncate font-medium text-text">{file.name}</span>}
+              trailing={<span className="text-xs text-text-faint">Browse</span>}
+            />
           ) : (
-            <button
+            <ListRow
               key={file.path}
               onClick={() => setViewingFile(file)}
-              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--theme-text)_3%,transparent)]"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2.5">
-                  {file.name.toLowerCase().endsWith(".md") ? (
-                    <FileText className={`h-4 w-4 shrink-0 ${fileIcon(file.name)}`} />
-                  ) : (
-                    <FileCode2 className={`h-4 w-4 shrink-0 ${fileIcon(file.name)}`} />
-                  )}
-                  <span className="truncate font-medium text-[var(--theme-text)]">{file.name}</span>
-                </div>
-              </div>
-              <span className="app-mono shrink-0 text-[0.7rem] text-[var(--theme-text-faint)]">{formatBytes(file.size)}</span>
-            </button>
+              leading={
+                file.name.toLowerCase().endsWith(".md") ? (
+                  <FileText className={cn("h-4 w-4", fileIcon(file.name))} aria-hidden="true" />
+                ) : (
+                  <FileCode2 className={cn("h-4 w-4", fileIcon(file.name))} aria-hidden="true" />
+                )
+              }
+              title={<span className="truncate font-medium text-text">{file.name}</span>}
+              trailing={<span className="mono shrink-0 text-xs text-text-faint">{formatBytes(file.size)}</span>}
+            />
           )
         )}
 
         {!loading && !error && sortedFiles.length === 0 && (
-          <div className="px-4 py-8 text-center text-sm text-[var(--theme-text-faint)]">This directory is empty.</div>
+          <li className="px-4 py-8 text-center text-sm text-text-faint">This directory is empty.</li>
         )}
-      </div>
+      </List>
 
       {viewingFile && (
         <FileViewer

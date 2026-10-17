@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { startAuthentication } from "@simplewebauthn/browser";
-import { Spinner } from "@/components/Spinner";
-import { csrfFetch } from "@/lib/csrf-client";
 import { KeyRound, ArrowRight } from "lucide-react";
+import { Spinner } from "@/components/Spinner";
+import { Input } from "@/components/ui/Input";
+import { csrfFetch } from "@/lib/csrf-client";
 
 export function LoginForm({ githubOAuthEnabled = false }: { githubOAuthEnabled?: boolean }) {
   const router = useRouter();
@@ -13,7 +14,14 @@ export function LoginForm({ githubOAuthEnabled = false }: { githubOAuthEnabled?:
   const [loading, setLoading] = useState(false);
   const [webauthnLoading, setWebauthnLoading] = useState(false);
   const [webauthnError, setWebauthnError] = useState("");
-  const [webauthnAvailable] = useState(() => typeof window !== "undefined" && !!window.PublicKeyCredential);
+  // Read after mount: the server has no `window`, so an initializer that
+  // touches it would render different HTML and break hydration.
+  const [webauthnAvailable, setWebauthnAvailable] = useState(false);
+  useEffect(() => {
+    // Mount-only browser capability check — intentionally not derived from props.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setWebauthnAvailable(!!window.PublicKeyCredential);
+  }, []);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -88,70 +96,79 @@ export function LoginForm({ githubOAuthEnabled = false }: { githubOAuthEnabled?:
   const showGitHub = githubOAuthEnabled;
 
   return (
-    <form onSubmit={submit} className="space-y-5">
-      <label className="block text-sm">
-        <span className="text-slate-300 font-medium">Email</span>
-        <input
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          placeholder="you@example.com"
-          className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-white placeholder:text-slate-600 focus:border-cyan-400/50 focus:outline-none"
-        />
-      </label>
-      <label className="block text-sm">
-        <span className="text-slate-300 font-medium">Password</span>
-        <input
-          name="password"
-          type="password"
-          required
-          autoComplete="current-password"
-          placeholder="Enter your password"
-          className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-white placeholder:text-slate-600 focus:border-cyan-400/50 focus:outline-none"
-        />
-      </label>
+    <form onSubmit={submit} className="flex flex-col gap-4">
+      <Input
+        label="Email"
+        name="email"
+        type="email"
+        required
+        autoComplete="email"
+        placeholder="you@example.com"
+      />
+      <Input
+        label="Password"
+        name="password"
+        type="password"
+        required
+        autoComplete="current-password"
+        placeholder="Your password"
+      />
+
       {error && (
-        <p className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</p>
+        <p role="alert" className="rounded-md border border-status-danger/40 bg-status-danger/10 px-3 py-2 text-sm text-status-danger">
+          {error}
+        </p>
       )}
-      <button
-        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-4 py-3.5 font-medium text-slate-950 transition-all hover:bg-cyan-300 disabled:opacity-60"
-        disabled={loading}
-      >
-        {loading ? <><Spinner size="sm" /> Signing in</> : <>Sign in <ArrowRight className="h-4 w-4" /></>}
+
+      <button type="submit" className="btn btn--primary btn--lg w-full" disabled={loading}>
+        {loading ? (
+          <>
+            <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            Signing in
+          </>
+        ) : (
+          <>
+            Sign in
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </>
+        )}
       </button>
 
       {(showGitHub || webauthnAvailable) && (
         <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-white/10" />
-          <span className="text-xs uppercase tracking-[0.2em] text-slate-500">or</span>
-          <div className="h-px flex-1 bg-white/10" />
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-xs text-text-faint">or</span>
+          <div className="h-px flex-1 bg-border" />
         </div>
       )}
 
       {showGitHub && (
-        <a
-          href="/api/auth/github?mode=login"
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-sm font-medium text-white transition-all hover:bg-white/[0.06] hover:border-white/20"
-        >
-          <img src="/assets/github.svg" alt="" className="h-4 w-4" />
+        <a href="/api/auth/github?mode=login" className="btn btn--secondary w-full">
+          <img src="/assets/github.svg" alt="" aria-hidden="true" className="h-4 w-4" />
           Sign in with GitHub
         </a>
       )}
 
       {webauthnAvailable && (
-        <button
-          type="button"
-          onClick={passkeyAuth}
-          disabled={webauthnLoading}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-sm font-medium text-white transition-all hover:bg-white/[0.06] hover:border-white/20 disabled:opacity-60"
-        >
-          {webauthnLoading ? <><Spinner size="sm" /> Authenticating</> : <><KeyRound className="h-4 w-4" /> Sign in with Passkey</>}
+        <button type="button" onClick={passkeyAuth} disabled={webauthnLoading} className="btn btn--secondary w-full">
+          {webauthnLoading ? (
+            <>
+              <Spinner size="sm" />
+              Authenticating
+            </>
+          ) : (
+            <>
+              <KeyRound className="h-4 w-4" aria-hidden="true" />
+              Sign in with passkey
+            </>
+          )}
         </button>
       )}
 
       {webauthnError && (
-        <p className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">{webauthnError}</p>
+        <p role="alert" className="rounded-md border border-status-danger/40 bg-status-danger/10 px-3 py-2 text-sm text-status-danger">
+          {webauthnError}
+        </p>
       )}
     </form>
   );

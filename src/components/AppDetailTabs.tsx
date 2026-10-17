@@ -1,6 +1,16 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ExternalLink, FileCode2, FolderTree, Tag, CircleDot, GitCommit, GitPullRequest, GitBranch, Workflow } from "lucide-react";
+import {
+  CircleDot,
+  ExternalLink,
+  FileCode2,
+  FolderTree,
+  GitBranch,
+  GitCommit,
+  GitPullRequest,
+  Tag,
+  Workflow,
+} from "lucide-react";
 import { FileBrowser } from "@/components/FileBrowser";
 import { IssuesTab } from "@/components/IssuesTab";
 import { LatestReleaseHero } from "@/components/LatestReleaseHero";
@@ -10,6 +20,7 @@ import { CommitsTab } from "@/components/CommitsTab";
 import { PullRequestsTab } from "@/components/PullRequestsTab";
 import { BranchesTab } from "@/components/BranchesTab";
 import { ActionsTab } from "@/components/ActionsTab";
+import { Panel } from "@/components/ui/List";
 
 export type DisplayRelease = {
   id: string;
@@ -63,15 +74,15 @@ export type RepoSnapshotData = {
 
 export type AppTab = "readme" | "files" | "releases" | "issues" | "commits" | "pulls" | "branches" | "actions";
 
-const TAB_DEFS: Array<{ key: AppTab; label: string; icon: ReactNode; showFor: Array<"watched" | "preview"> }> = [
-  { key: "readme", label: "README", icon: <FileCode2 className="h-4 w-4" />, showFor: ["watched", "preview"] },
-  { key: "files", label: "Files", icon: <FolderTree className="h-4 w-4" />, showFor: ["watched", "preview"] },
-  { key: "releases", label: "Releases", icon: <Tag className="h-4 w-4" />, showFor: ["watched", "preview"] },
-  { key: "pulls", label: "Pull Requests", icon: <GitPullRequest className="h-4 w-4" />, showFor: ["watched", "preview"] },
-  { key: "issues", label: "Issues", icon: <CircleDot className="h-4 w-4" />, showFor: ["watched", "preview"] },
-  { key: "branches", label: "Branches", icon: <GitBranch className="h-4 w-4" />, showFor: ["watched", "preview"] },
-  { key: "actions", label: "Actions", icon: <Workflow className="h-4 w-4" />, showFor: ["watched", "preview"] },
-  { key: "commits", label: "Commits", icon: <GitCommit className="h-4 w-4" />, showFor: ["watched", "preview"] },
+const TAB_DEFS: Array<{ key: AppTab; label: string; icon: ReactNode }> = [
+  { key: "readme", label: "Overview", icon: <FileCode2 className="h-3.5 w-3.5" /> },
+  { key: "releases", label: "Releases", icon: <Tag className="h-3.5 w-3.5" /> },
+  { key: "commits", label: "Commits", icon: <GitCommit className="h-3.5 w-3.5" /> },
+  { key: "pulls", label: "Pull requests", icon: <GitPullRequest className="h-3.5 w-3.5" /> },
+  { key: "issues", label: "Issues", icon: <CircleDot className="h-3.5 w-3.5" /> },
+  { key: "branches", label: "Branches", icon: <GitBranch className="h-3.5 w-3.5" /> },
+  { key: "actions", label: "Actions", icon: <Workflow className="h-3.5 w-3.5" /> },
+  { key: "files", label: "Files", icon: <FolderTree className="h-3.5 w-3.5" /> },
 ];
 
 export function AppDetailTabs({
@@ -86,7 +97,6 @@ export function AppDetailTabs({
   updateAvailable,
   storedReleaseCount,
   appId,
-  mode = "watched",
 }: {
   owner: string;
   repo: string;
@@ -103,115 +113,127 @@ export function AppDetailTabs({
 }) {
   const linkBaseUrl = `${snapshot.repo.html_url}/blob/${snapshot.repo.default_branch}/`;
   const imageBaseUrl = `https://raw.githubusercontent.com/${snapshot.repo.full_name}/${snapshot.repo.default_branch}/`;
-  const commitsEndpoint = appId ? `/api/apps/${appId}/commits` : `/api/github/commits?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`;
+  const commitsEndpoint = appId
+    ? `/api/apps/${appId}/commits`
+    : `/api/github/commits?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`;
 
-  const visibleTabs = TAB_DEFS.filter((t) => t.showFor.includes(mode));
-  const safeActive: AppTab = (visibleTabs.some((t) => t.key === activeTab) ? activeTab : visibleTabs[0].key) as AppTab;
+  const safeActive = TAB_DEFS.some((t) => t.key === activeTab) ? activeTab : "readme";
 
   return (
-    <>
-      <div className="app-tabs" role="tablist">
-        {visibleTabs.map((t) => (
-          <Link
-            key={t.key}
-            href={`${tabBaseUrl}?tab=${t.key}`}
-            role="tab"
-            aria-selected={safeActive === t.key}
-            data-active={safeActive === t.key}
-            className="app-tab"
-            scroll={false}
-          >
-            {t.icon}
-            {t.label}
-          </Link>
-        ))}
-      </div>
+    <div className="flex flex-col gap-5">
+      <nav
+        aria-label="Repository sections"
+        className="chip-row border-b border-border pb-0"
+        style={{ borderBottom: "1px solid var(--ui-border)" }}
+      >
+        {TAB_DEFS.map((tab) => {
+          const active = safeActive === tab.key;
+          return (
+            <Link
+              key={tab.key}
+              href={`${tabBaseUrl}?tab=${tab.key}`}
+              scroll={false}
+              aria-current={active ? "page" : undefined}
+              className={`-mb-px inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors ${
+                active
+                  ? "border-accent font-medium text-text"
+                  : "border-transparent text-text-muted hover:border-border-strong hover:text-text"
+              }`}
+            >
+              <span aria-hidden="true" className={active ? "text-accent" : "text-text-faint"}>
+                {tab.icon}
+              </span>
+              {tab.label}
+            </Link>
+          );
+        })}
+      </nav>
 
       {safeActive === "readme" && (
-        <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] mt-5">
-          <div className="app-shell-card overflow-hidden min-w-0">
-            <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-[var(--theme-divider)] flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-base font-semibold tracking-tight text-[var(--theme-text)]">README</h2>
-                <p className="text-[0.78rem] text-[var(--theme-text-muted)] mt-0.5">
-                  Cached from GitHub and refreshed on new release detection.
-                </p>
-              </div>
-            </div>
-            <div className="px-4 py-4 sm:px-6 sm:py-5">
-              <MarkdownContent
-                body={snapshot.readme}
-                emptyMessage="This repository does not expose a README through the GitHub API."
-                linkBaseUrl={linkBaseUrl}
-                imageBaseUrl={imageBaseUrl}
-              />
-            </div>
-          </div>
-          <aside className="space-y-3">
-            <div className="app-shell-card p-5">
-              <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">
-                Project Links
-              </h3>
-              <div className="mt-3 space-y-3">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <Panel
+            title="README"
+            description="Cached from GitHub, refreshed when a new release is detected."
+            flush
+            bodyClassName="px-4 py-4 sm:px-5 sm:py-5"
+          >
+            <MarkdownContent
+              body={snapshot.readme}
+              emptyMessage="This repository does not expose a README through the GitHub API."
+              linkBaseUrl={linkBaseUrl}
+              imageBaseUrl={imageBaseUrl}
+            />
+          </Panel>
+
+          <aside className="flex flex-col gap-4">
+            <Panel title="Links">
+              <div className="flex flex-col gap-2">
                 <a
                   href={snapshot.repo.html_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between gap-2 rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] px-3 py-2.5 text-sm text-[var(--theme-text)] hover:border-[var(--theme-accent-border)] hover:text-[var(--theme-accent)] transition-colors"
+                  className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm text-text transition-colors hover:border-accent/50"
                 >
-                  <span className="truncate app-mono text-[0.82rem]">{snapshot.repo.full_name}</span>
-                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[var(--theme-text-faint)]" />
+                  <span className="mono truncate text-xs">{snapshot.repo.full_name}</span>
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-text-faint" aria-hidden="true" />
                 </a>
                 {snapshot.repo.homepage && (
                   <a
                     href={snapshot.repo.homepage}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-between gap-2 rounded-lg border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] px-3 py-2.5 text-sm text-[var(--theme-text)] hover:border-[var(--theme-accent-border)] hover:text-[var(--theme-accent)] transition-colors"
+                    className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm text-text transition-colors hover:border-accent/50"
                   >
-                    <span className="truncate">{snapshot.repo.homepage}</span>
-                    <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[var(--theme-text-faint)]" />
+                    <span className="truncate text-xs">{snapshot.repo.homepage}</span>
+                    <ExternalLink className="h-3.5 w-3.5 shrink-0 text-text-faint" aria-hidden="true" />
                   </a>
                 )}
               </div>
-            </div>
+            </Panel>
 
-            <div className="app-shell-card p-5">
-              <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">
-                Snapshot
-              </h3>
-              <div className="mt-3 space-y-2.5">
-                <SnapshotRow label="Files cached" value={snapshot.files.length} />
-                <SnapshotRow label="Releases cached" value={snapshot.releases.length} />
-                {storedReleaseCount !== undefined && (
-                  <SnapshotRow label="Stored releases" value={storedReleaseCount} />
-                )}
-                <SnapshotRow label="Fetched" value={new Date(snapshot.cachedAt).toLocaleString()} />
-              </div>
-            </div>
+            <Panel title="Cached snapshot">
+              <dl className="flex flex-col gap-2 text-sm">
+                {[
+                  ["Files", snapshot.files.length],
+                  ["Releases", snapshot.releases.length],
+                  ...(storedReleaseCount !== undefined ? [["Stored releases", storedReleaseCount] as [string, number]] : []),
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between gap-3">
+                    <dt className="text-text-muted">{label}</dt>
+                    <dd className="font-medium tabular-nums text-text">{value}</dd>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-text-muted">Fetched</dt>
+                  <dd className="text-text">{new Date(snapshot.cachedAt).toLocaleString()}</dd>
+                </div>
+              </dl>
+            </Panel>
           </aside>
-        </section>
+        </div>
       )}
 
       {safeActive === "files" && (
-        <section className="app-shell-card overflow-hidden mt-5">
-          <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-[var(--theme-divider)]">
-            <h2 className="text-base font-semibold tracking-tight text-[var(--theme-text)]">Repository Files</h2>
-            <p className="text-[0.78rem] text-[var(--theme-text-muted)] mt-0.5">
-              Browse the repository on <span className="app-mono">{snapshot.repo.default_branch}</span>.
-            </p>
-          </div>
+        <Panel
+          title="Files"
+          description={
+            <>
+              Browsing <span className="mono">{snapshot.repo.default_branch}</span> at the latest cached snapshot.
+            </>
+          }
+          flush
+        >
           <FileBrowser
             owner={owner}
             repo={repo}
             defaultBranch={snapshot.repo.default_branch}
             initialFiles={snapshot.files}
           />
-        </section>
+        </Panel>
       )}
 
       {safeActive === "releases" && (
-        <div className="mt-5 space-y-6">
+        <div className="flex flex-col gap-5">
           <LatestReleaseHero
             latestRelease={
               latestRelease
@@ -229,77 +251,47 @@ export function AppDetailTabs({
             previousTag={previousTag ?? null}
             updateAvailable={updateAvailable ?? false}
           />
-
-          <section>
-            <div className="section-heading">
-              <h2>Release History</h2>
-              <span className="section-heading-meta">{releases.length} release{releases.length === 1 ? "" : "s"}</span>
-            </div>
-            <ReleaseHistory releases={releases} />
-          </section>
+          <ReleaseHistory releases={releases} appId={appId} />
         </div>
       )}
 
       {safeActive === "issues" && (
-        <section className="app-shell-card p-4 sm:p-5 mt-5">
-          <div className="mb-4">
-            <h2 className="text-base font-semibold tracking-tight text-[var(--theme-text)]">Issues</h2>
-            <p className="text-[0.78rem] text-[var(--theme-text-muted)] mt-0.5">Browse open and closed issues from GitHub.</p>
-          </div>
+        <Panel title="Issues" description="Open and closed issues from GitHub." flush bodyClassName="p-4 sm:p-5">
           <IssuesTab owner={owner} repo={repo} appId={appId} />
-        </section>
+        </Panel>
       )}
 
       {safeActive === "commits" && (
-        <section className="mt-5">
-          <div className="section-heading">
-            <h2>Recent Commits</h2>
-            <span className="section-heading-meta">
-              on <span className="app-mono">{snapshot.repo.default_branch}</span>
-            </span>
-          </div>
+        <Panel
+          title="Commits"
+          description={
+            <>
+              Recent commits on <span className="mono">{snapshot.repo.default_branch}</span>.
+            </>
+          }
+          flush
+        >
           <CommitsTab endpoint={commitsEndpoint} defaultBranch={snapshot.repo.default_branch} />
-        </section>
+        </Panel>
       )}
 
       {safeActive === "pulls" && (
-        <section className="app-shell-card p-4 sm:p-5 mt-5">
-          <div className="mb-4">
-            <h2 className="text-base font-semibold tracking-tight text-[var(--theme-text)]">Pull Requests</h2>
-            <p className="text-[0.78rem] text-[var(--theme-text-muted)] mt-0.5">View and manage pull requests on GitHub.</p>
-          </div>
+        <Panel title="Pull requests" description="Open and recently closed pull requests." flush bodyClassName="p-4 sm:p-5">
           <PullRequestsTab owner={owner} repo={repo} />
-        </section>
+        </Panel>
       )}
 
       {safeActive === "branches" && (
-        <section className="app-shell-card p-4 sm:p-5 mt-5">
-          <div className="mb-4">
-            <h2 className="text-base font-semibold tracking-tight text-[var(--theme-text)]">Branches</h2>
-            <p className="text-[0.78rem] text-[var(--theme-text-muted)] mt-0.5">All branches in this repository.</p>
-          </div>
+        <Panel title="Branches" description="Every branch in this repository." flush bodyClassName="p-4 sm:p-5">
           <BranchesTab owner={owner} repo={repo} defaultBranch={snapshot.repo.default_branch} />
-        </section>
+        </Panel>
       )}
 
       {safeActive === "actions" && (
-        <section className="app-shell-card p-4 sm:p-5 mt-5">
-          <div className="mb-4">
-            <h2 className="text-base font-semibold tracking-tight text-[var(--theme-text)]">GitHub Actions</h2>
-            <p className="text-[0.78rem] text-[var(--theme-text-muted)] mt-0.5">Recent workflow runs and their status.</p>
-          </div>
+        <Panel title="Workflow runs" description="Recent GitHub Actions runs and their status." flush bodyClassName="p-4 sm:p-5">
           <ActionsTab owner={owner} repo={repo} />
-        </section>
+        </Panel>
       )}
-    </>
-  );
-}
-
-function SnapshotRow({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="text-[var(--theme-text-muted)]">{label}</span>
-      <span className="text-[var(--theme-text)] font-medium text-right truncate">{value}</span>
     </div>
   );
 }

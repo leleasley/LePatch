@@ -1,47 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getIntegrationSettingValue } from "@/lib/integration-secrets";
-import { createSessionForUser, requestIp, requestUserAgent } from "@/lib/auth";
+import { createMfaSetupToken, createMfaToken, getSession } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { encrypt } from "@/lib/encryption";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { invalidateGithubLinkCache } from "@/lib/github-link-cache";
+import {
+  GITHUB_OAUTH_STATE_COOKIE,
+  LEGACY_GITHUB_OAUTH_STATE_COOKIE,
+  verifyOAuthState,
+} from "@/lib/oauth-state";
 
 export const dynamic = "force-dynamic";
 
+function clearStateCookies(response: NextResponse) {
+  response.cookies.delete(GITHUB_OAUTH_STATE_COOKIE);
+  response.cookies.delete(LEGACY_GITHUB_OAUTH_STATE_COOKIE);
+  return response;
+}
+
+function failureRedirect(toast: string, path = "/login") {
+  const url = new URL(path, env.appUrl);
+  url.searchParams.set("toast", toast);
+  return clearStateCookies(NextResponse.redirect(url));
+}
+
+/** Redirect that carries no toast — used for the MFA hand-off, which is a different page. */
+function stepRedirect(path: string) {
+  return clearStateCookies(NextResponse.redirect(new URL(path, env.appUrl)));
+}
+
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
-  const stateParam = request.nextUrl.searchParams.get("state");
+  const rawState = request.nextUrl.searchParams.get("state");
 
-  if (!code || !stateParam) {
-    return NextResponse.redirect(new URL("/login?toast=github-oauth-failed", env.appUrl));
+  if (!code || !rawState) {
+    return failureRedirect("github-oauth-failed");
   }
 
-  const stateCookie = request.cookies.get("gh_oauth_state")?.value;
-  if (!stateCookie) {
-    return NextResponse.redirect(new URL("/login?toast=github-oauth-failed", env.appUrl));
+  const stateData = verifyOAuthState(rawState);
+  if (!stateData) {
+    return failureRedirect("github-oauth-failed");
   }
 
-  let stateData: { token: string; mode: string; userId: string | null; expiresAt: number };
-  try {
-    stateData = JSON.parse(Buffer.from(stateParam, "base64url").toString());
-  } catch {
-    return NextResponse.redirect(new URL("/login?toast=github-oauth-failed", env.appUrl));
-  }
-
-  if (stateData.token !== stateCookie) {
-    return NextResponse.redirect(new URL("/login?toast=github-oauth-failed", env.appUrl));
-  }
-  if (!stateData.expiresAt || stateData.expiresAt < Date.now()) {
-    return NextResponse.redirect(new URL("/login?toast=github-oauth-failed", env.appUrl));
+  const stateCookie =
+    request.cookies.get(GITHUB_OAUTH_STATE_COOKIE)?.value ||
+    request.cookies.get(LEGACY_GITHUB_OAUTH_STATE_COOKIE)?.value;
+  if (!stateCookie || stateCookie !== stateData.nonce) {
+    return failureRedirect("github-oauth-failed");
   }
 
   const clientId = await getIntegrationSettingValue("github", "oauthClientId");
   const clientSecret = await getIntegrationSettingValue("github", "oauthClientSecret");
 
   if (!clientId || !clientSecret) {
-    return NextResponse.redirect(new URL("/login?toast=github-oauth-failed", env.appUrl));
+    return failureRedirect("github-oauth-failed");
   }
 
   let accessToken: string;
@@ -53,24 +68,20 @@ export async function GET(request: NextRequest) {
         "Content-Type": "application/json",
         "User-Agent": "LePatch",
       },
-      body: JSON.stringify({
-        client_id: clientId,
-        client_secret: clientSecret,
-        code,
-      }),
+      body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code }),
     });
     const tokenData = await tokenResponse.json();
     if (tokenData.error) {
-      logger.error("GitHub OAuth token exchange failed", { error: tokenData.error });
-      return NextResponse.redirect(new URL("/login?toast=github-oauth-failed", env.appUrl));
+      logger.error("GitHub OAuth token exchange failed", { error: String(tokenData.error) });
+      return failureRedirect("github-oauth-failed");
     }
     accessToken = tokenData.access_token;
   } catch (err) {
     logger.error("GitHub OAuth token exchange error", err);
-    return NextResponse.redirect(new URL("/login?toast=github-oauth-failed", env.appUrl));
+    return failureRedirect("github-oauth-failed");
   }
 
-  let githubUser: { id: number; login: string; email: string | null };
+  let githubUser: { id: number; login: string };
   try {
     const userResponse = await fetch("https://api.github.com/user", {
       headers: {
@@ -79,27 +90,21 @@ export async function GET(request: NextRequest) {
         "User-Agent": "LePatch",
       },
     });
-    if (!userResponse.ok) throw new Error("Failed to fetch GitHub user");
+    if (!userResponse.ok) throw new Error(`GitHub user lookup failed with ${userResponse.status}`);
     githubUser = await userResponse.json();
   } catch (err) {
     logger.error("Failed to fetch GitHub user info", err);
-    return NextResponse.redirect(new URL("/login?toast=github-oauth-failed", env.appUrl));
+    return failureRedirect("github-oauth-failed");
   }
-
-  const encryptedToken = encrypt(accessToken);
 
   if (stateData.mode === "login") {
     const existingLink = await prisma.gitHubLink.findUnique({
       where: { githubUserId: githubUser.id },
-      include: { user: { select: { id: true } } },
+      select: { id: true, userId: true },
     });
 
     if (!existingLink) {
-      const cleanupUrl = new URL("/login", env.appUrl);
-      cleanupUrl.searchParams.set("toast", "github-not-linked");
-      const response = NextResponse.redirect(cleanupUrl);
-      response.cookies.set("gh_oauth_state", "", { maxAge: 0, path: "/" });
-      return response;
+      return failureRedirect("github-not-linked");
     }
 
     await prisma.gitHubLink.update({
@@ -107,71 +112,60 @@ export async function GET(request: NextRequest) {
       data: { lastUsedAt: new Date() },
     });
 
-    const res = NextResponse.redirect(new URL("/dashboard?toast=logged-in", env.appUrl));
-
-    await createSessionForUser(
-      existingLink.user.id,
-      res,
-      requestUserAgent(request),
-      requestIp(request)
-    );
-
-    createAuditLog({
-      userId: existingLink.user.id,
-      action: "user.login",
-      target: "github",
-      metadata: { githubUsername: githubUser.login },
-      ipAddress: requestIp(request),
-    }).catch(() => {});res.cookies.set("gh_oauth_state", "", { maxAge: 0, path: "/" });
-    return res;
-  }
-
-  if (stateData.mode === "link" && stateData.userId) {
-    const existingLink = await prisma.gitHubLink.findUnique({
-      where: { githubUserId: githubUser.id },
+    // GitHub is only the first factor here. A password-equivalent login must
+    // still clear MFA (or enrol it) exactly like the password flow does.
+    const user = await prisma.user.findUnique({
+      where: { id: existingLink.userId },
+      select: { totpEnabled: true },
     });
 
-    if (existingLink && existingLink.userId !== stateData.userId) {
-      const cleanupUrl = new URL("/profile/security", env.appUrl);
-      cleanupUrl.searchParams.set("toast", "github-already-linked");
-      const response = NextResponse.redirect(cleanupUrl);
-      response.cookies.set("gh_oauth_state", "", { maxAge: 0, path: "/" });
-      return response;
+    if (!user?.totpEnabled) {
+      const setupToken = await createMfaSetupToken(existingLink.userId);
+      return stepRedirect(`/setup/mfa?token=${setupToken}`);
     }
 
-    await prisma.gitHubLink.upsert({
-      where: { userId: stateData.userId },
-      update: {
-        githubUserId: githubUser.id,
-        githubUsername: githubUser.login,
-        accessToken: encryptedToken,
-        linkedAt: new Date(),
-      },
-      create: {
-        userId: stateData.userId,
-        githubUserId: githubUser.id,
-        githubUsername: githubUser.login,
-        accessToken: encryptedToken,
-      },
-    });
-
-    createAuditLog({
-      userId: stateData.userId,
-      action: "github.connected",
-      target: githubUser.login,
-      metadata: { githubUserId: githubUser.id },
-    }).catch(() => {});invalidateGithubLinkCache(stateData.userId);
-
-    const cleanupUrl = new URL("/profile/security", env.appUrl);
-    cleanupUrl.searchParams.set("toast", "github-connected");
-    const response = NextResponse.redirect(cleanupUrl);
-    response.cookies.set("gh_oauth_state", "", { maxAge: 0, path: "/" });
-    return response;
+    const mfaToken = await createMfaToken(existingLink.userId);
+    return stepRedirect(`/mfa?token=${mfaToken}`);
   }
 
-  const cleanupUrl = new URL("/login", env.appUrl);
-  cleanupUrl.searchParams.set("toast", "github-oauth-failed");
-  const response = NextResponse.redirect(cleanupUrl);
-  response.cookies.set("gh_oauth_state", "", { maxAge: 0, path: "/" });
-  return response;
+  // Link mode: the acting user always comes from the live session.
+  const session = await getSession();
+  if (!session) {
+    return failureRedirect("github-oauth-failed");
+  }
+  const userId = session.userId;
+
+  const existingLink = await prisma.gitHubLink.findUnique({
+    where: { githubUserId: githubUser.id },
+  });
+
+  if (existingLink && existingLink.userId !== userId) {
+    return failureRedirect("github-already-linked", "/profile/security");
+  }
+
+  await prisma.gitHubLink.upsert({
+    where: { userId },
+    update: {
+      githubUserId: githubUser.id,
+      githubUsername: githubUser.login,
+      accessToken: encrypt(accessToken),
+      linkedAt: new Date(),
+    },
+    create: {
+      userId,
+      githubUserId: githubUser.id,
+      githubUsername: githubUser.login,
+      accessToken: encrypt(accessToken),
+    },
+  });
+
+  createAuditLog({
+    userId,
+    action: "github.connected",
+    target: githubUser.login,
+    metadata: { githubUserId: githubUser.id },
+  }).catch(() => {});
+  invalidateGithubLinkCache(userId);
+
+  return failureRedirect("github-connected", "/profile/security");
 }

@@ -1,27 +1,19 @@
 import Link from "next/link";
-import {
-  ExternalLink,
-  Globe,
-  Star,
-  Tag,
-  Code2,
-  GitBranch,
-  GitFork,
-  Eye,
-  ArrowUpRight,
-} from "lucide-react";
+import { notFound } from "next/navigation";
+import { ArrowUpRight, Code2, ExternalLink, Eye, GitBranch, GitFork, Globe, Star } from "lucide-react";
 import { AddRepoButton } from "@/components/AddRepoButton";
 import { AppDetailTabs, type AppTab } from "@/components/AppDetailTabs";
-import { HeroCard } from "@/components/HeroCard";
-import { StatPill } from "@/components/StatPill";
+import { PageHeader, MetaItem } from "@/components/ui/PageHeader";
+import { MetricStrip, StatusDot } from "@/components/ui/List";
 import { requirePageCanBrowseApps } from "@/lib/auth";
 import { canManageApps } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { getRepoSnapshot } from "@/lib/repo-snapshot";
 import { isNotFoundError } from "@/lib/github";
-import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
+
+const TAB_KEYS = ["readme", "files", "releases", "issues", "commits", "pulls", "branches", "actions"];
 
 export async function generateMetadata({ params }: { params: Promise<{ owner: string; repo: string }> }) {
   const { owner, repo } = await params;
@@ -44,8 +36,8 @@ export default async function RepoPreviewPage({
   const [snapshot, watchedApp] = await Promise.all([
     getRepoSnapshot(owner, repo, { userId: user.id }).catch((error) => {
       // Private repo the viewer can't see (or that doesn't exist) → 404 page
-      // instead of a 500. The snapshot layer already retried with the
-      // viewer's own GitHub token before giving up.
+      // instead of a 500. The snapshot layer already retried with the viewer's
+      // own GitHub token before giving up.
       if (isNotFoundError(error)) notFound();
       throw error;
     }),
@@ -58,12 +50,9 @@ export default async function RepoPreviewPage({
   ]);
 
   const repoData = snapshot.repo;
-  const visibleReleases = snapshot.releases;
-  const activeTab: AppTab = (["readme", "files", "releases", "issues", "commits", "pulls", "branches", "actions"] as string[]).includes(tab || "")
-    ? (tab as AppTab)
-    : "readme";
+  const activeTab = (TAB_KEYS.includes(tab ?? "") ? tab : "releases") as AppTab;
 
-  const displayReleases = visibleReleases.map((release) => ({
+  const displayReleases = snapshot.releases.map((release) => ({
     id: `github-${release.id}`,
     tagName: release.tag_name,
     name: release.name,
@@ -76,121 +65,88 @@ export default async function RepoPreviewPage({
     ignored: false,
     notificationSent: false,
   }));
-  const displayLatestRelease = displayReleases[0] || null;
 
   return (
     <>
-      <HeroCard
-        icon={<Code2 className="h-5 w-5" />}
-        kicker="Repository preview"
+      <PageHeader
+        breadcrumb={[{ label: "Find repositories", href: "/apps/search" }, { label: repoFullName }]}
         title={repoData.name}
-        subtitle={repoData.description || "No description available."}
-        badges={
+        description={repoData.description || "No repository description."}
+        meta={
           <>
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] px-2.5 py-1 text-[0.78rem] text-[var(--theme-text-muted)]">
-              <GitFork className="h-3 w-3" />
-              <span className="app-mono">{repoData.full_name}</span>
-            </span>
-            {watchedApp ? (
-              <span className="status-pill status-pill--success" style={{ background: "var(--theme-status-success-bg)", color: "var(--theme-status-success)" }}>
-                <Eye className="h-3 w-3" />
-                Watching · {watchedApp.name}
-              </span>
-            ) : (
-              <span className="status-pill status-pill--neutral">Not watched</span>
-            )}
-            {repoData.language && (
-              <span className="status-pill status-pill--neutral">{repoData.language}</span>
-            )}
-          </>
-        }
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            {watchedApp ? (
-              <Link href={`/apps/${watchedApp.id}`} className="btn btn--primary btn--sm">
-                Open watched app
-                <ArrowUpRight className="h-3.5 w-3.5" />
-              </Link>
-            ) : (
-              <AddRepoButton
-                repoFullName={repoData.full_name}
-                name={repoData.name}
-                initialAdded={false}
-                canAdd={canAdd}
-              />
-            )}
             <a
               href={repoData.html_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn--ghost btn--sm"
+              className="inline-flex items-center gap-1.5 transition-colors hover:text-accent"
             >
-              <ExternalLink className="h-3.5 w-3.5" />
+              <GitFork className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="mono">{repoData.full_name}</span>
+              <ExternalLink className="h-3 w-3" aria-hidden="true" />
+            </a>
+            <MetaItem icon={<Star className="h-3.5 w-3.5" />}>{repoData.stargazers_count.toLocaleString()}</MetaItem>
+            {repoData.language && <MetaItem icon={<Code2 className="h-3.5 w-3.5" />}>{repoData.language}</MetaItem>}
+            <MetaItem icon={<GitBranch className="h-3.5 w-3.5" />}>{repoData.default_branch}</MetaItem>
+          </>
+        }
+        actions={
+          <>
+            {watchedApp ? (
+              <Link href={`/apps/${watchedApp.id}`} className="btn btn--primary btn--sm">
+                Open watched repository
+                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+            ) : (
+              <AddRepoButton repoFullName={repoData.full_name} name={repoData.name} initialAdded={false} canAdd={canAdd} />
+            )}
+            <a href={repoData.html_url} target="_blank" rel="noopener noreferrer" className="btn btn--ghost btn--sm">
               GitHub
             </a>
             {repoData.homepage && (
-              <a
-                href={repoData.homepage}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn--ghost btn--sm"
-              >
-                <Globe className="h-3.5 w-3.5" />
+              <a href={repoData.homepage} target="_blank" rel="noopener noreferrer" className="btn btn--ghost btn--sm">
+                <Globe className="h-3.5 w-3.5" aria-hidden="true" />
                 Homepage
               </a>
             )}
-          </div>
+          </>
         }
       />
 
-      <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        <StatPill icon={<Star className="h-3 w-3" />} label="Stars" value={repoData.stargazers_count.toLocaleString()} />
-        <StatPill icon={<Tag className="h-3 w-3" />} label="Releases" value={visibleReleases.length} />
-        <StatPill icon={<GitBranch className="h-3 w-3" />} label="Branch" value={repoData.default_branch} />
-        <StatPill icon={<Code2 className="h-3 w-3" />} label="Language" value={repoData.language || "—"} />
-      </div>
-
-      {watchedApp && (
-        <section className="mt-5 app-shell-card p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-[0.78rem] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">
-                In your watchlist
-              </h2>
-              <p className="mt-1.5 text-sm text-[var(--theme-text)]">
-                <span className="font-medium">{watchedApp.name}</span>
-                {watchedApp.latestSeenTag && (
-                  <>
-                    {" "}· <span className="app-mono text-[var(--theme-text-muted)]">{watchedApp.latestSeenTag}</span>
-                  </>
-                )}
-                {watchedApp.updateAvailable && (
-                  <span className="ml-1.5 text-[var(--theme-status-pending)]">· update available</span>
-                )}
-              </p>
-            </div>
-            <Link href={`/apps/${watchedApp.id}`} className="btn btn--ghost btn--sm">
-              Open
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        </section>
-      )}
-
-      <div className="mt-5">
-        <AppDetailTabs
-          owner={owner}
-          repo={repo}
-          activeTab={activeTab}
-          tabBaseUrl={`/apps/repo/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`}
-          snapshot={snapshot}
-          releases={displayReleases}
-          latestRelease={displayLatestRelease}
-          previousTag={null}
-          updateAvailable={Boolean(watchedApp?.updateAvailable)}
-          mode="preview"
+      <div className="mb-5">
+        <MetricStrip
+          items={[
+            { label: "Stars", value: repoData.stargazers_count.toLocaleString() },
+            { label: "Releases", value: snapshot.releases.length },
+            { label: "Default branch", value: repoData.default_branch },
+            { label: "Language", value: repoData.language ?? "—" },
+          ]}
         />
       </div>
+
+      <div className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-border bg-panel px-4 py-3">
+        {watchedApp ? (
+          <StatusDot tone="success">
+            <Eye className="h-3 w-3" aria-hidden="true" /> Watching as {watchedApp.name}
+          </StatusDot>
+        ) : (
+          <StatusDot tone="neutral">Not in your watchlist</StatusDot>
+        )}
+        {watchedApp?.latestSeenTag && <StatusDot tone="neutral">Latest seen {watchedApp.latestSeenTag}</StatusDot>}
+        {watchedApp?.updateAvailable && <StatusDot tone="warning" pulse>Update available</StatusDot>}
+      </div>
+
+      <AppDetailTabs
+        owner={owner}
+        repo={repo}
+        activeTab={activeTab}
+        tabBaseUrl={`/apps/repo/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`}
+        snapshot={snapshot}
+        releases={displayReleases}
+        latestRelease={displayReleases[0] ?? null}
+        previousTag={null}
+        updateAvailable={Boolean(watchedApp?.updateAvailable)}
+        mode="preview"
+      />
     </>
   );
 }

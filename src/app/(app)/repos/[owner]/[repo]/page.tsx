@@ -1,29 +1,17 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import {
-  ArrowLeft,
-  ExternalLink,
-  Globe,
-  Star,
-  Tag,
-  Code2,
-  GitBranch,
-  GitFork,
-} from "lucide-react";
+import { Code2, ExternalLink, GitBranch, GitFork, Globe, Star } from "lucide-react";
 import { AppDetailTabs, type AppTab } from "@/components/AppDetailTabs";
-import { HeroCard } from "@/components/HeroCard";
-import { StatPill } from "@/components/StatPill";
+import { PageHeader, MetaItem } from "@/components/ui/PageHeader";
+import { MetricStrip } from "@/components/ui/List";
 import { requirePageSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getUserRepoSnapshot } from "@/lib/user-repo-snapshot";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ owner: string; repo: string }>;
-}) {
+const TAB_KEYS = ["readme", "files", "releases", "issues", "commits", "pulls", "branches", "actions"];
+
+export async function generateMetadata({ params }: { params: Promise<{ owner: string; repo: string }> }) {
   const { owner, repo } = await params;
   return { title: `${owner}/${repo}` };
 }
@@ -43,7 +31,6 @@ export default async function RepoDetailPage({
     where: { userId: session.userId },
     select: { id: true },
   });
-
   if (!link) notFound();
 
   let snapshot;
@@ -54,13 +41,9 @@ export default async function RepoDetailPage({
   }
 
   const repoData = snapshot.repo;
-  const visibleReleases = snapshot.releases;
+  const activeTab = (TAB_KEYS.includes(tab ?? "") ? tab : snapshot.readme ? "releases" : "files") as AppTab;
 
-  const activeTab: AppTab = (["readme", "files", "releases", "issues", "commits", "pulls", "branches", "actions"] as string[]).includes(tab || "")
-    ? (tab as AppTab)
-    : snapshot.readme ? "readme" : "files";
-
-  const displayReleases = visibleReleases.map((release) => ({
+  const displayReleases = snapshot.releases.map((release) => ({
     id: `github-${release.id}`,
     tagName: release.tag_name,
     name: release.name,
@@ -73,81 +56,68 @@ export default async function RepoDetailPage({
     ignored: false,
     notificationSent: false,
   }));
-  const displayLatestRelease = displayReleases[0] || null;
 
   return (
     <>
-      <Link
-        href="/profile/repos"
-        className="mb-5 inline-flex items-center gap-1.5 text-sm text-slate-400 transition-colors hover:text-cyan-300"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to my repositories
-      </Link>
-
-      <HeroCard
-        icon={<Code2 className="h-5 w-5" />}
-        kicker="Your repository"
+      <PageHeader
+        breadcrumb={[{ label: "My repositories", href: "/profile/repos" }, { label: repoData.full_name }]}
         title={repoData.full_name.split("/")[1]}
-        subtitle={repoData.description || "No description available."}
-        badges={
+        description={repoData.description || "No repository description."}
+        meta={
           <>
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--theme-line)] bg-[color-mix(in_srgb,var(--theme-surface-elevated)_50%,transparent)] px-2.5 py-1 text-[0.78rem] text-[var(--theme-text-muted)]">
-              <GitFork className="h-3 w-3" />
-              <span className="app-mono">{repoData.full_name}</span>
-            </span>
-            {repoData.language && (
-              <span className="status-pill status-pill--neutral">{repoData.language}</span>
-            )}
-          </>
-        }
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
             <a
               href={repoData.html_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn--ghost btn--sm"
+              className="inline-flex items-center gap-1.5 transition-colors hover:text-accent"
             >
-              <ExternalLink className="h-3.5 w-3.5" />
+              <GitFork className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="mono">{repoData.full_name}</span>
+              <ExternalLink className="h-3 w-3" aria-hidden="true" />
+            </a>
+            <MetaItem icon={<Star className="h-3.5 w-3.5" />}>{repoData.stargazers_count.toLocaleString()}</MetaItem>
+            {repoData.language && <MetaItem icon={<Code2 className="h-3.5 w-3.5" />}>{repoData.language}</MetaItem>}
+            <MetaItem icon={<GitBranch className="h-3.5 w-3.5" />}>{repoData.default_branch}</MetaItem>
+          </>
+        }
+        actions={
+          <>
+            <a href={repoData.html_url} target="_blank" rel="noopener noreferrer" className="btn btn--ghost btn--sm">
               GitHub
             </a>
             {repoData.homepage && (
-              <a
-                href={repoData.homepage}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn--ghost btn--sm"
-              >
-                <Globe className="h-3.5 w-3.5" />
+              <a href={repoData.homepage} target="_blank" rel="noopener noreferrer" className="btn btn--ghost btn--sm">
+                <Globe className="h-3.5 w-3.5" aria-hidden="true" />
                 Homepage
               </a>
             )}
-          </div>
+          </>
         }
       />
 
-      <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        <StatPill icon={<Star className="h-3 w-3" />} label="Stars" value={repoData.stargazers_count.toLocaleString()} />
-        <StatPill icon={<Tag className="h-3 w-3" />} label="Releases" value={visibleReleases.length} />
-        <StatPill icon={<GitBranch className="h-3 w-3" />} label="Branch" value={repoData.default_branch} />
-        <StatPill icon={<Code2 className="h-3 w-3" />} label="Language" value={repoData.language || "—"} />
-      </div>
-
-      <div className="mt-5">
-        <AppDetailTabs
-          owner={owner}
-          repo={repo}
-          activeTab={activeTab}
-          tabBaseUrl={`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`}
-          snapshot={snapshot}
-          releases={displayReleases}
-          latestRelease={displayLatestRelease}
-          previousTag={null}
-          updateAvailable={false}
-          mode="preview"
+      <div className="mb-5">
+        <MetricStrip
+          items={[
+            { label: "Stars", value: repoData.stargazers_count.toLocaleString() },
+            { label: "Releases", value: snapshot.releases.length },
+            { label: "Default branch", value: repoData.default_branch },
+            { label: "Language", value: repoData.language ?? "—" },
+          ]}
         />
       </div>
+
+      <AppDetailTabs
+        owner={owner}
+        repo={repo}
+        activeTab={activeTab}
+        tabBaseUrl={`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`}
+        snapshot={snapshot}
+        releases={displayReleases}
+        latestRelease={displayReleases[0] ?? null}
+        previousTag={null}
+        updateAvailable={false}
+        mode="preview"
+      />
     </>
   );
 }

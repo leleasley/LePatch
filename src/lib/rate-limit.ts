@@ -1,34 +1,15 @@
-import Redis from "ioredis";
-import { env } from "@/lib/env";
+import { ensureRedisConnected } from "@/lib/redis";
+import { logger } from "@/lib/logger";
 
 const RATE_LIMIT_SCRIPT = `
 local key = KEYS[1]
 local limit = tonumber(ARGV[1])
-local window = tonumber(ARGV[2])
 local current = redis.call("INCR", key)
 if current == 1 then
-  redis.call("PEXPIRE", key, window)
+  redis.call("PEXPIRE", key, limit)
 end
 return current
 `;
-
-let redis: Redis | null = null;
-
-function getRedis(): Redis | null {
-  if (redis) return redis;
-  try {
-    redis = new Redis(env.redisUrl, {
-      maxRetriesPerRequest: null,
-      lazyConnect: true,
-      enableOfflineQueue: false,
-      retryStrategy: () => null,
-    });
-    redis.on("error", () => {});
-    return redis;
-  } catch {
-    return null;
-  }
-}
 
 // In-memory fallback with TTL-based garbage collection
 const memStore = new Map<string, { count: number; resetAt: number }>();
@@ -46,6 +27,7 @@ function startMemGc() {
       gcTimer = null;
     }
   }, 30_000);
+  if (typeof gcTimer.unref === "function") gcTimer.unref();
 }
 
 function memCheck(key: string, max: number, windowMs: number) {
@@ -60,29 +42,44 @@ function memCheck(key: string, max: number, windowMs: number) {
     return { allowed: false, remaining: 0 };
   }
   entry.count += 1;
-  return { allowed: true, remaining: max - entry.count };
+  return { allowed: true, remaining: Math.max(0, max - entry.count) };
 }
+
+export type RateLimitResult = { allowed: boolean; remaining: number };
 
 export function createRateLimiter(options: { windowMs: number; max: number }) {
   const prefix = `rl:${options.windowMs}:${options.max}:`;
-  let scriptSha: string | null = null;
-  let redisAvailable = true;
+  let commandDefined = false;
+  // Backoff window after a Redis failure so a cold Redis does not cost one
+  // connection attempt per request.
+  let disabledUntil = 0;
+  const FAILURE_BACKOFF_MS = 30_000;
 
-  return async (key: string): Promise<{ allowed: boolean; remaining: number }> => {
-    const r = redisAvailable ? getRedis() : null;
-    if (r && r.status === "ready") {
+  return async function rateLimit(key: string): Promise<RateLimitResult> {
+    const memKey = `${prefix}${key}`;
+
+    if (Date.now() >= disabledUntil) {
       try {
-        if (!scriptSha) {
-          scriptSha = r.defineCommand("rlcheck", { lua: RATE_LIMIT_SCRIPT }) as unknown as string;
+        const redis = await ensureRedisConnected();
+        const client = redis as unknown as {
+          lepatchRlCheck?: (key: string, ttlMs: number) => Promise<number>;
+        };
+        if (!commandDefined) {
+          redis.defineCommand("lepatchRlCheck", { numberOfKeys: 1, lua: RATE_LIMIT_SCRIPT });
+          commandDefined = true;
         }
-        const result: number = await (r as any).rlcheck(`${prefix}${key}`, options.max, options.windowMs);
+        if (!client.lepatchRlCheck) throw new Error("rate limit command unavailable");
+        const result = await client.lepatchRlCheck(memKey, options.windowMs);
         const allowed = result <= options.max;
         return { allowed, remaining: allowed ? Math.max(0, options.max - result) : 0 };
-      } catch {
-        redisAvailable = false;
+      } catch (error) {
+        disabledUntil = Date.now() + FAILURE_BACKOFF_MS;
+        logger.warn("Rate limiter falling back to in-memory store", {
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 
-    return memCheck(key, options.max, options.windowMs);
+    return memCheck(memKey, options.max, options.windowMs);
   };
 }

@@ -4,6 +4,8 @@ import { Save, Globe, Clock } from "lucide-react";
 import { useState } from "react";
 import { csrfFetch } from "@/lib/csrf-client";
 import { useToast } from "@/lib/toast";
+import { Panel } from "@/components/ui/List";
+import { Input, Select, Switch } from "@/components/ui/Input";
 
 const intervalPresets = [
   { label: "5 minutes", value: 5 },
@@ -47,6 +49,15 @@ const timezones = [
   "Australia/Perth", "Pacific/Auckland", "Pacific/Honolulu",
 ];
 
+function SaveButton({ saving, onSave }: { saving: boolean; onSave: () => void }) {
+  return (
+    <button type="button" onClick={onSave} disabled={saving} className="btn btn--primary btn--sm">
+      <Save className="h-3.5 w-3.5" aria-hidden="true" />
+      {saving ? "Saving…" : "Save"}
+    </button>
+  );
+}
+
 export function GeneralTab({ initialSettings }: { initialSettings: Record<string, string> }) {
   const { addToast } = useToast();
   const [appUrl, setAppUrl] = useState(initialSettings.appUrl || "");
@@ -75,133 +86,105 @@ export function GeneralTab({ initialSettings }: { initialSettings: Record<string
   }
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl border border-line/50 bg-panel/80 backdrop-blur-sm p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="rounded-lg bg-cyan-500/10 p-2">
-            <Globe className="h-4 w-4 text-cyan-400" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-white">Application</h3>
-            <p className="text-xs text-slate-400">Core application settings</p>
-          </div>
-        </div>
-        <div className="space-y-4">
-          <label className="block text-sm">
-            <span className="text-slate-300">Public App URL</span>
-            <input
-              value={appUrl}
-              onChange={(e) => setAppUrl(e.target.value)}
-              placeholder="https://lepatch.example.com"
-              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="text-slate-300">Default release check interval (minutes)</span>
-            <select
-              value={intervalMode === "custom" ? "custom" : String(checkInterval)}
-              onChange={(e) => {
-                if (e.target.value === "custom") {
-                  setIntervalMode("custom");
-                  if (checkInterval < 1) setCheckInterval(5);
-                  return;
-                }
-                setIntervalMode("preset");
-                setCheckInterval(Number(e.target.value));
-              }}
-              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
-            >
-              {intervalPresets.map((preset) => (
-                <option key={preset.value} value={preset.value}>{preset.label}</option>
-              ))}
-              <option value="custom">Custom time...</option>
-            </select>
-            {intervalMode === "custom" && (
-              <input
-                type="number"
-                min={1}
-                max={10080}
-                value={checkInterval}
-                onChange={(e) => setCheckInterval(Math.min(10080, Math.max(1, parseInt(e.target.value, 10) || 5)))}
-                className="focus-ring mt-2 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
-              />
-            )}
-            <p className="mt-1 text-xs text-slate-500">Saving this updates the global default and all watched apps.</p>
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={includePrereleases}
-              onChange={(e) => setIncludePrereleases(e.target.checked)}
-              className="rounded border-line"
-            />
-            <span className="text-slate-300">Include prereleases in global checks</span>
-          </label>
-        </div>
-      </div>
+    <div className="flex max-w-3xl flex-col gap-5">
+      <Panel
+        title={
+          <span className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-text-faint" aria-hidden="true" />
+            Application
+          </span>
+        }
+        description="Core application settings"
+        actions={<SaveButton saving={saving} onSave={save} />}
+      >
+        <div className="flex flex-col gap-4">
+          <Input
+            label="Public app URL"
+            value={appUrl}
+            onChange={(e) => setAppUrl(e.target.value)}
+            placeholder="https://lepatch.example.com"
+          />
 
-      <div className="rounded-xl border border-line/50 bg-panel/80 backdrop-blur-sm p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="rounded-lg bg-cyan-500/10 p-2">
-            <Clock className="h-4 w-4 text-cyan-400" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-white">User Experience</h3>
-            <p className="text-xs text-slate-400">Session, timezone, and device preferences</p>
-          </div>
-        </div>
-        <div className="space-y-4">
-          <label className="block text-sm">
-            <span className="text-slate-300">Timezone</span>
-            <select
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
-            >
-              {timezones.map((tz) => (
-                <option key={tz} value={tz}>{tz}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm">
-            <span className="text-slate-300">Session duration</span>
-            <select
-              value={String(sessionDuration)}
-              onChange={(e) => setSessionDuration(Number(e.target.value))}
-              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
-            >
-              {sessionDurationPresets.map((preset) => (
-                <option key={preset.value} value={preset.value}>{preset.label}</option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-slate-500">How long a user stays logged in before they must sign in again.</p>
-          </label>
-          <label className="block text-sm">
-            <span className="text-slate-300">Remember device duration</span>
-            <select
-              value={String(trustedDeviceDays)}
-              onChange={(e) => setTrustedDeviceDays(Number(e.target.value))}
-              className="focus-ring mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-white"
-            >
-              {trustedDevicePresets.map((preset) => (
-                <option key={preset.value} value={preset.value}>{preset.label}</option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-slate-500">How long a trusted device skips MFA after &quot;Remember this device&quot; is checked.</p>
-          </label>
-        </div>
-      </div>
+          <Select
+            label="Default release check interval"
+            value={intervalMode === "custom" ? "custom" : String(checkInterval)}
+            hint="Saving this updates the global default and every watched app."
+            onChange={(e) => {
+              if (e.target.value === "custom") {
+                setIntervalMode("custom");
+                if (checkInterval < 1) setCheckInterval(5);
+                return;
+              }
+              setIntervalMode("preset");
+              setCheckInterval(Number(e.target.value));
+            }}
+          >
+            {intervalPresets.map((preset) => (
+              <option key={preset.value} value={preset.value}>{preset.label}</option>
+            ))}
+            <option value="custom">Custom time…</option>
+          </Select>
 
-      <div className="flex items-center gap-3 pt-2">
-        <button
-          onClick={save}
-          disabled={saving}
-          className="focus-ring inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-medium text-slate-950 hover:bg-cyan-400 transition-colors disabled:opacity-50"
-        >
-          <Save className="h-4 w-4" />
-          {saving ? "Saving..." : "Save"}
-        </button>
-      </div>
+          {intervalMode === "custom" && (
+            <Input
+              type="number"
+              label="Custom interval (minutes)"
+              min={1}
+              max={10080}
+              value={checkInterval}
+              onChange={(e) => setCheckInterval(Math.min(10080, Math.max(1, parseInt(e.target.value, 10) || 5)))}
+            />
+          )}
+
+          <Switch
+            checked={includePrereleases}
+            onChange={setIncludePrereleases}
+            label="Include prereleases in global checks"
+            description="Prerelease tags are counted as new releases for every app that does not override this."
+          />
+        </div>
+      </Panel>
+
+      <Panel
+        title={
+          <span className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-text-faint" aria-hidden="true" />
+            User experience
+          </span>
+        }
+        description="Sessions, timezone and trusted devices"
+        actions={<SaveButton saving={saving} onSave={save} />}
+      >
+        <div className="flex flex-col gap-4">
+          <Select label="Timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+            {timezones.map((tz) => (
+              <option key={tz} value={tz}>{tz}</option>
+            ))}
+          </Select>
+
+          <Select
+            label="Session duration"
+            value={String(sessionDuration)}
+            hint="How long a user stays logged in before they must sign in again."
+            onChange={(e) => setSessionDuration(Number(e.target.value))}
+          >
+            {sessionDurationPresets.map((preset) => (
+              <option key={preset.value} value={preset.value}>{preset.label}</option>
+            ))}
+          </Select>
+
+          <Select
+            label="Remember device duration"
+            value={String(trustedDeviceDays)}
+            hint="How long a trusted device skips MFA after “Remember this device” is checked."
+            onChange={(e) => setTrustedDeviceDays(Number(e.target.value))}
+          >
+            {trustedDevicePresets.map((preset) => (
+              <option key={preset.value} value={preset.value}>{preset.label}</option>
+            ))}
+          </Select>
+        </div>
+      </Panel>
     </div>
   );
 }
