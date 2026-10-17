@@ -9,6 +9,13 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- Phone-first bottom navigation, rich mobile release/app cards, light and dark
+  citrus themes, offline feedback, and safe-area-aware action sheets.
+- Account-scoped Redis/SSE live updates for discovered releases and completed
+  checks, with a five-connection cap and reconnect fallback.
+- Installable PWA shell with correctly sized icons, iOS startup images, and
+  useful offline precaching.
+- Optimistic watched-app changes with rollback and SWR pagination.
 - Command palette (`Cmd`/`Ctrl`+`K`) for navigation and quick actions.
 - Dense release table with type and notification badges, relative timestamps,
   filters and keyboard-expandable release notes.
@@ -22,7 +29,7 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   Telegram link tokens.
 - Graceful worker shutdown so restarts do not kill in-flight notifications.
 - Test coverage for release classification, changelog parsing, OAuth state
-  signing, pagination and quiet-hours/digest windows (120 tests).
+  signing, pagination, UI state transitions and quiet-hours/digest windows.
 - CI runs lint, typecheck, tests, a production build and a Docker image build.
 
 ### Changed

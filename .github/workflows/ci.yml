@@ -17,6 +17,10 @@ jobs:
     name: Lint, typecheck, test, build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Prisma's CLI needs a datasource URL to generate its client; this job
+      # never connects to a database.
+      DATABASE_URL: postgresql://lepatch:lepatch@localhost:5432/lepatch
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,6 +32,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
       - run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: "1"

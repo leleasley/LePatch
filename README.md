@@ -7,8 +7,6 @@ shipped, and tells you where it matters — Discord, Telegram, or the dashboard.
 It is a release radar, not a deployment tool: nothing is ever installed or
 deployed on your behalf.
 
-<!-- Replace with a real screenshot after the first tagged release. -->
-
 ```
 Repository → scheduled check → classified release → notification
 ```
@@ -29,12 +27,22 @@ Repository → scheduled check → classified release → notification
 - **Audit log** for every administrative action
 - **Database backups** on a schedule you control
 - **Dark, light and system themes** — both designed from the same token set
+- **Live updates** across open tabs and devices, with offline and reconnect states
+- **Installable PWA** with a real app icon and offline shell
 
-## Screenshots
+## Design preview
 
-| Dashboard | Releases |
+The clickable preview uses a seeded demo workspace so the screens can be reviewed
+without access to a GitHub account or production database. Open
+[`preview/design-direction.html`](preview/design-direction.html) to switch
+between Feed, Watched apps, and Release detail, and between light and dark mode.
+
+| Feed on phone | Feed on desktop |
 | --- | --- |
-| _add screenshot_ | _add screenshot_ |
+| ![LePatch feed on a phone](preview/screenshots/feed-390-light.png) | ![LePatch feed on desktop](preview/screenshots/feed-1440-light.png) |
+
+The [design direction](docs/design-direction.md) includes the dark captures,
+watched-app and release-detail screenshots, tokens, and responsive layout notes.
 
 ## Quick start
 
@@ -110,7 +118,8 @@ See [`.env.example`](.env.example) for the full list.
 - Secrets are encrypted with AES-256-GCM before they touch the database.
 
 See [`AGENTS.md`](AGENTS.md) for the architecture and invariants, and
-[`docs/design-system.md`](docs/design-system.md) for UI conventions.
+[`docs/design-system.md`](docs/design-system.md) for UI conventions. The
+[`roadmap`](docs/roadmap.md) separates worker fixes from future product features.
 
 ## Development
 

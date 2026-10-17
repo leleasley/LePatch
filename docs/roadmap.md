@@ -99,13 +99,14 @@ Status: Complete.
 - [x] Add API tests for update job lifecycle → **retired** with the server subsystem.
 - [x] Add OpenCode asset selection tests for the agent path. → **retired** with the agent; no such test exists now.
 - [x] Add OpenCode asset selection tests for the host-helper path. → **retired** with the host-helper; no such test exists now.
-- [ ] Add Playwright smoke tests. *(requires a browser environment — still deferred)*
+- [x] Add responsive Playwright smoke tests for the 360px, 390px, 768px,
+  1024px and 1440px layouts.
 
-Current suite: 10 test files / 76 tests covering CSRF, audit, encryption,
+Current suite: 15 test files / 123 tests covering CSRF, audit, encryption,
 integration secrets, notifications, GitHub commits, HTTP helpers, private repo
-access, route security, and slugs. Run with `npm test`.
+access, route security, UI cache state, and slugs. Run with `npm test`.
 
-Status: Complete except browser tests.
+Status: Complete.
 
 ## Phase 9: Deployment And Ops
 
@@ -123,8 +124,15 @@ Status: Mostly complete; two hardening items open.
 
 1. Add resource limits and pinned base-image digests (see `docs/operations.md`).
 2. Apply pending dependency updates — see the audit findings in `docs/operations.md`.
-3. Playwright smoke tests, when a browser environment is available.
-4. Fix the dashboard `.slice(0, 6)` truncation so releases past the sixth are visible.
+
+## Phase 2: Product enhancements
+
+- [x] Desktop command palette and quick check-all action.
+- [x] Search, repository filters and paged watched-app loading.
+- [ ] Suggest the next semver tag from the previous release.
+- [ ] Compare changelog notes between releases.
+- [ ] Add clearer draft and pre-release workflow states.
+- [ ] Show GitHub asset download statistics.
 
 ## Worker Backlog
 

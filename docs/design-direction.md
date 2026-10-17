@@ -94,17 +94,18 @@ reconnecting triggers revalidation.
 
 ## Phase 1.5 proposal: server-pushed updates
 
-Use Redis pub/sub already present in the stack. After a worker commits a release
-or finishes a check, publish a small `{ userId, type, appId, releaseId, at }`
-message on a LePatch event channel. An authenticated Node route handler opens an
+Use Redis pub/sub already present in the stack. When a manual check is queued and
+after a worker commits a release or finishes a check, publish a small
+`{ userId, type, appId, releaseId, at }` message on a LePatch event channel. An authenticated Node route handler opens an
 SSE stream, subscribes to Redis, filters messages to that session's user, sends
 named events and a heartbeat, and closes the subscription when the request is
 aborted. A browser `EventSource` listener invalidates the dashboard and watched
 app SWR keys for the affected account. It never carries release-note bodies or
 secrets. Browser reconnect plus the normal focus/reconnect polling recovers
-missed events; Redis pub/sub itself is not a durable event log. Use the existing
-`ioredis` dependency and no new package. Add connection limits and a short
-reconnect/backoff policy before shipping this phase.
+missed events; Redis pub/sub itself is not a durable event log. The stream caps
+each account at five open connections, sends a heartbeat and uses EventSource's
+built-in reconnect with Redis retry backoff. It uses the existing `ioredis`
+dependency and adds no packages.
 
 ## Clickable preview
 

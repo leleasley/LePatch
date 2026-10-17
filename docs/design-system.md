@@ -33,9 +33,9 @@ Do not invent new values — extend the token set in `globals.css` instead.
 
 ### Rules
 
-1. **One accent.** Blue is the only decorative colour. Everything else is
+1. **One accent.** Citrus green is the only decorative colour. Everything else is
    neutral or a semantic status colour.
-2. **Status colours carry meaning.** Green = healthy/sent, amber = pending/
+2. **Status colours carry meaning.** Green = healthy/sent, amber = pending or
    pre-release, red = failure. Never use them decoratively.
 3. **No gradients, glows, glass or blur.** Flat surfaces, hairline borders,
    subtle elevation.
@@ -43,6 +43,10 @@ Do not invent new values — extend the token set in `globals.css` instead.
    weight.
 5. **Both themes are designed.** Check any change in light and dark before
    opening a PR.
+6. **Phone first.** Check the 360–430px layout before tablet and desktop. Keep
+   controls at least 44px tall on touch layouts and leave room for safe areas.
+7. **Keep motion quiet.** Interaction transitions run 150–250ms and respect
+   `prefers-reduced-motion`.
 
 ## Components
 

@@ -12,6 +12,9 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      # The release build generates Prisma Client but never connects to a DB.
+      DATABASE_URL: postgresql://lepatch:lepatch@localhost:5432/lepatch
     steps:
       - uses: actions/checkout@v4
         with:
