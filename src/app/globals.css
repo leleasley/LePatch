@@ -638,12 +638,17 @@
   border-bottom: 0;
 }
 
-.top-sheet {
+/* Top-anchored sheet (mobile nav drawer). Specificity beats
+   .modal-panel-dialog on purpose: the dialog rules would otherwise pin it to
+   the bottom on mobile and offset it with translate(-50%, -50%) on desktop. */
+.modal-panel.top-sheet {
   top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+  bottom: auto;
   left: 0.5rem;
   right: 0.5rem;
   width: auto;
   max-height: calc(100dvh - 1.5rem);
+  transform: none;
   border-radius: var(--radius-lg);
   overflow-y: auto;
   transform-origin: top center;
