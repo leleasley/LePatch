@@ -39,9 +39,6 @@ is ready to be published as an open-source self-hosted project.
 
 ## Phase C — Feature consolidation
 
-- [ ] **Remove catalogue module** (optional, user-approved): drop
-     `CatalogueEntry`/`CatalogueSuggestion`, admin catalogue screens, catalogue
-     stats queue, and migrations; keep watched-app search via GitHub.
 - [ ] Consolidate notifications: single notification center with per-app mute,
      digest, quiet hours.
 - [ ] GitHub App integration (optional): installation flow + webhook delivery

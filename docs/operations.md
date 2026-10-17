@@ -35,7 +35,7 @@ docker compose start lepatch worker
 Application state is stored in the PostgreSQL database and Redis.
 
 - **PostgreSQL** holds all persistent state: users, sessions, trusted devices,
-  passkeys, watched apps, releases, catalogue entries, notification channels and
+  passkeys, watched apps, releases, notification channels and
   events, tracked issues, GitHub links, audit log, and backups.
 - **Redis** holds transient queue state and rate-limit counters. It is
   non-critical — queues are repopulated on demand, though rate-limit counters

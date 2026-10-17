@@ -41,7 +41,6 @@ const actionCategories = [
   { label: "All", value: "" },
   { label: "Apps", value: "app." },
   { label: "Users", value: "user." },
-  { label: "Catalogue", value: "catalogue." },
   { label: "GitHub", value: "github." },
   { label: "Backups", value: "backup." },
   { label: "Admin", value: "admin." },

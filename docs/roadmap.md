@@ -25,7 +25,7 @@ Status: Complete.
 
 - [x] Add explicit API wrappers: user mutation, admin mutation, setup request, webhook request.
 - [x] Keep RBAC to `Administrator`, `Moderator`, `User`, and `Restricted`.
-- [x] Enforce `Restricted` so it can browse app search/catalogue/repo preview flows but cannot manage apps or reach admin pages.
+- [x] Enforce `Restricted` so it can browse repository search and preview flows but cannot manage apps or reach admin pages.
 - [x] Encrypt integration secrets at rest and migrate old plaintext values.
 - [x] Encrypt notification channel secrets at rest.
 - [x] Add rate limits to GitHub-backed user APIs.
@@ -86,12 +86,8 @@ Status: Complete for the current product.
 
 Status: Complete.
 
-## Phase 7: Catalogue And Release Intelligence
+## Phase 7: Release Intelligence
 
-- [x] Improve catalogue categories/filtering.
-- [x] Add verified package mappings. *(tool mappings later dropped; entries are now repo-based)*
-- [x] Add better duplicate suggestion detection.
-- [x] Surface popularity/install/add counts.
 - [x] Classify releases.
 - [x] Improve changelog parsing.
 
@@ -129,6 +125,19 @@ Status: Mostly complete; two hardening items open.
 2. Apply pending dependency updates — see the audit findings in `docs/operations.md`.
 3. Playwright smoke tests, when a browser environment is available.
 4. Fix the dashboard `.slice(0, 6)` truncation so releases past the sixth are visible.
+
+## Worker Backlog
+
+These worker and notification defects were identified during the frontend audit.
+They are intentionally deferred from the UI rebuild:
+
+- Fix digest scheduling so deferred notifications eventually deliver, and make
+  sure the triggering release is included in the digest message.
+- Track issue comments by processed comment IDs or a reliable timestamp so
+  polling neither repeats old comments nor skips new ones.
+- Preserve `updateAvailable` until the user acknowledges the release.
+- Represent filtered or muted notifications as suppressed rather than sent.
+- Preserve existing notification-channel enabled flags during startup seeding.
 
 ## Completed Cleanup
 
