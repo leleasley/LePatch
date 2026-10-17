@@ -65,6 +65,7 @@ export function EditAppModal({
         }),
       });
       if (!res.ok) throw new Error("Failed to update app");
+      window.dispatchEvent(new Event("lepatch:apps-changed"));
       setOpen(false);
       router.refresh();
     } catch {
@@ -170,7 +171,9 @@ export function EditAppModal({
         variant="danger"
         confirmText="REMOVE"
         onConfirm={async () => {
-          await csrfFetch(`/api/apps/${appId}`, { method: "DELETE" });
+          const response = await csrfFetch(`/api/apps/${appId}`, { method: "DELETE" });
+          if (!response.ok) return;
+          window.dispatchEvent(new Event("lepatch:apps-changed"));
           router.push("/apps");
           router.refresh();
         }}

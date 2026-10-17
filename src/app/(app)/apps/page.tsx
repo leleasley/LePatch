@@ -11,10 +11,14 @@ const FILTER_KEYS = new Set(["all", "attention", "updates", "failed", "muted", "
 export default async function AppsPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   const { filter } = await searchParams;
   const userSession = await requirePageCanManageApps();
-  const apps = await prisma.watchedApp.findMany({
-    where: { userId: userSession.id },
-    orderBy: { name: "asc" },
-  });
+  const [apps, total] = await Promise.all([
+    prisma.watchedApp.findMany({
+      where: { userId: userSession.id },
+      orderBy: { name: "asc" },
+      take: 200,
+    }),
+    prisma.watchedApp.count({ where: { userId: userSession.id } }),
+  ]);
 
   const appData = apps.map((app) => ({
     id: app.id,
@@ -36,7 +40,7 @@ export default async function AppsPage({ searchParams }: { searchParams: Promise
       />
       <AppsClient
         initialApps={appData}
-        initialTotal={appData.length}
+        initialTotal={total}
         initialFilter={FILTER_KEYS.has(filter ?? "") ? (filter as "all" | "attention" | "updates" | "failed" | "muted" | "fresh") : "all"}
         watchedApps={appData.map((a) => ({ id: a.id, repoFullName: a.repoFullName }))}
       />

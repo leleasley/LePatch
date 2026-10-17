@@ -35,7 +35,7 @@ export function StatusPage({ code, title, description, note, actions = [], child
   return (
     <AuthShell>
       <div className="flex items-center gap-2.5">
-        <img src="/assets/Logo.png" alt="LePatch" className="h-8 w-8 rounded-md" />
+        <img src="/icons/icon-192.png" alt="LePatch" className="h-8 w-8 rounded-md" />
         <span className="font-mono text-2xs font-semibold uppercase tracking-wide text-text-faint">{code}</span>
       </div>
 

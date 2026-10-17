@@ -19,12 +19,12 @@ export async function GET(request: NextRequest) {
   try {
     const session = await assertApiSession();
     await assertCanManageApps(session.userId);
-    const { page, perPage, skip, take } = parsePagination(request.nextUrl.searchParams, 50, 200);
+    const { page, perPage, skip, take } = parsePagination(request.nextUrl.searchParams, 200, 200);
 
     const [apps, total] = await Promise.all([
       prisma.watchedApp.findMany({
         where: { userId: session.userId },
-        orderBy: { createdAt: "desc" },
+        orderBy: { name: "asc" },
         skip,
         take,
         include: { _count: { select: { releases: true } } },

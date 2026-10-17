@@ -5,6 +5,7 @@ import { getEnabledNotificationChannels } from "@/lib/notifications";
 import { refreshRepoSnapshot } from "@/lib/repo-snapshot";
 import { classifyRelease, parseChangelog } from "@/lib/release-classifier";
 import { GITHUB_TOKEN_EXPIRED_MESSAGE } from "@/lib/github";
+import { publishLiveEvent } from "@/lib/live-events";
 
 export async function checkWatchedApp(watchedAppId: string) {
   const app = await prisma.watchedApp.findUnique({ where: { id: watchedAppId } });
@@ -25,10 +26,12 @@ export async function checkWatchedApp(watchedAppId: string) {
     );
 
     if (relevant.length === 0) {
-      return await prisma.watchedApp.update({
+      const updated = await prisma.watchedApp.update({
         where: { id: app.id },
         data: { lastCheckedAt: new Date(), checkStatus: "no_releases", checkError: null }
       });
+      await publishLiveEvent(app.userId, "check.finished", app.id);
+      return updated;
     }
 
     const previousTag = app.latestSeenTag;
@@ -150,6 +153,8 @@ export async function checkWatchedApp(watchedAppId: string) {
       }
     }
 
+    if (newRows.length > 0) await publishLiveEvent(app.userId, "release.discovered", app.id);
+    await publishLiveEvent(app.userId, "check.finished", app.id);
     return { release: { ...latest, id: String(latest.id) }, previousTag, newTagNames, updateAvailable: isNew && Boolean(app.latestSeenReleaseId) };
   } catch (error) {
     // Surface token expiry plainly so the user knows to reconnect GitHub
@@ -165,6 +170,7 @@ export async function checkWatchedApp(watchedAppId: string) {
         checkError,
       }
     });
+    await publishLiveEvent(app.userId, "check.finished", app.id);
     throw error;
   }
 }

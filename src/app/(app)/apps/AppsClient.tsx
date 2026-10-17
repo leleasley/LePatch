@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   BellOff,
@@ -24,6 +23,7 @@ import { csrfFetch } from "@/lib/csrf-client";
 import { useToast } from "@/lib/toast";
 import { RelativeTime } from "@/components/RelativeTime";
 import { cn } from "@/lib/cn";
+import { removeWatchedApp, updateWatchedApp } from "@/lib/apps-ui-state";
 
 export type WatchedAppRow = {
   id: string;
@@ -73,6 +73,7 @@ function status(app: WatchedAppRow): { tone: StatusTone; label: string } {
 
 export function AppsClient({
   initialApps,
+  initialTotal,
   initialFilter = "all",
   watchedApps = [],
   canAdd = true,
@@ -83,26 +84,39 @@ export function AppsClient({
   watchedApps?: { id: string; repoFullName: string }[];
   canAdd?: boolean;
 }) {
-  const router = useRouter();
   const { addToast } = useToast();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>(initialFilter);
   const [sortBy, setSortBy] = useState<SortKey>("attention");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [checkingIds, setCheckingIds] = useState<Record<string, number>>({});
+  const [clock, setClock] = useState(0);
   const [pendingDelete, setPendingDelete] = useState<WatchedAppRow | null>(null);
-  const { data, error, isLoading } = useApps();
-  const apps: WatchedAppRow[] = (data?.apps as WatchedAppRow[] | undefined) ?? initialApps;
+  const { data, error, isLoading, isValidating, mutate, size, setSize } = useApps({
+    apps: initialApps,
+    total: initialTotal,
+    page: 1,
+    perPage: 200,
+  });
+  const apps: WatchedAppRow[] = (data?.flatMap((page) => page.apps) as WatchedAppRow[] | undefined) ?? initialApps;
+  const total = data?.[0]?.total ?? initialTotal;
+  const hasMore = apps.length < total;
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setClock(Date.now()), 30_000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const counts = useMemo(
     () => ({
-      all: apps.length,
+      all: total,
       attention: apps.filter((app) => attentionScore(app) < 4).length,
       updates: apps.filter((app) => app.updateAvailable).length,
       failed: apps.filter((app) => app.checkStatus === "failed").length,
       muted: apps.filter((app) => !app.notificationsEnabled).length,
       fresh: apps.filter((app) => !isStale(app) && app.checkStatus === "success").length,
     }),
-    [apps]
+    [apps, total]
   );
 
   const visible = useMemo(() => {
@@ -126,20 +140,45 @@ export function AppsClient({
 
   async function check(app: WatchedAppRow) {
     setBusyId(app.id);
+    const started = Date.now();
+    setCheckingIds((current) => ({ ...current, [app.id]: started }));
+    setClock(started);
+    mutate((pages) => updateWatchedApp(pages, app.id, { checkStatus: "checking" }), { revalidate: false });
     try {
       const res = await csrfFetch(`/api/apps/${app.id}/check`, { method: "POST" });
       if (!res.ok) throw new Error();
       addToast(`Checking ${app.name}…`, "success");
-      router.refresh();
+      void mutate();
     } catch {
+      setCheckingIds((current) => { const next = { ...current }; delete next[app.id]; return next; });
+      void mutate();
       addToast(`Could not queue a check for ${app.name}`, "error");
     } finally {
       setBusyId(null);
     }
   }
 
+  useEffect(() => {
+    const onCheckingStarted = (event: Event) => {
+      const detail = (event as CustomEvent<{ appId: string; startedAt: number }>).detail;
+      if (detail) {
+        setCheckingIds((current) => ({ ...current, [detail.appId]: detail.startedAt }));
+        setClock(detail.startedAt);
+      }
+    };
+    const onAppsChanged = () => void mutate();
+    window.addEventListener("lepatch:checking-started", onCheckingStarted);
+    window.addEventListener("lepatch:apps-changed", onAppsChanged);
+    return () => {
+      window.removeEventListener("lepatch:checking-started", onCheckingStarted);
+      window.removeEventListener("lepatch:apps-changed", onAppsChanged);
+    };
+  }, [mutate]);
+
   async function markSeen(app: WatchedAppRow) {
     setBusyId(app.id);
+    const before = data;
+    mutate((pages) => updateWatchedApp(pages, app.id, { updateAvailable: false }), { revalidate: false });
     try {
       const res = await csrfFetch("/api/releases/seen", {
         method: "POST",
@@ -148,8 +187,9 @@ export function AppsClient({
       });
       if (!res.ok) throw new Error();
       addToast(`${app.name} marked as seen`, "success");
-      router.refresh();
+      void mutate();
     } catch {
+      if (before) mutate(before, { revalidate: false });
       addToast("Could not mark as seen", "error");
     } finally {
       setBusyId(null);
@@ -158,6 +198,8 @@ export function AppsClient({
 
   async function toggleMute(app: WatchedAppRow) {
     setBusyId(app.id);
+    const before = data;
+    mutate((pages) => updateWatchedApp(pages, app.id, { notificationsEnabled: !app.notificationsEnabled }), { revalidate: false });
     try {
       const res = await csrfFetch(`/api/apps/${app.id}`, {
         method: "PATCH",
@@ -166,8 +208,9 @@ export function AppsClient({
       });
       if (!res.ok) throw new Error();
       addToast(app.notificationsEnabled ? `Muted ${app.name}` : `Unmuted ${app.name}`, "success");
-      router.refresh();
+      void mutate();
     } catch {
+      if (before) mutate(before, { revalidate: false });
       addToast("Could not update notifications", "error");
     } finally {
       setBusyId(null);
@@ -176,13 +219,16 @@ export function AppsClient({
 
   async function remove(app: WatchedAppRow) {
     setBusyId(app.id);
+    const before = data;
+    mutate((pages) => removeWatchedApp(pages, app.id), { revalidate: false });
     try {
       const res = await csrfFetch(`/api/apps/${app.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       addToast(`Removed ${app.name}`, "success");
       setPendingDelete(null);
-      router.refresh();
+      void mutate();
     } catch {
+      if (before) mutate(before, { revalidate: false });
       addToast("Could not remove this repository", "error");
     } finally {
       setBusyId(null);
@@ -199,6 +245,10 @@ export function AppsClient({
           { label: "Up to date", value: counts.fresh, tone: counts.fresh > 0 ? "success" : undefined },
         ]}
       />
+      <div className="live-strip" aria-live="polite">
+        <span className={cn("live-dot", isValidating && "live-dot--syncing")} />
+        <span>{isValidating ? "Syncing changes" : "Updated just now"}</span>
+      </div>
 
       <Toolbar className="justify-between">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
@@ -265,7 +315,9 @@ export function AppsClient({
             <option value="checked">Recently checked</option>
           </Select>
           {canAdd && (
-            <AddAppButton watchedApps={watchedApps} canAdd={canAdd} />
+            <div className="app-primary-action">
+              <AddAppButton watchedApps={watchedApps} canAdd={canAdd} />
+            </div>
           )}
         </div>
       </Toolbar>
@@ -316,16 +368,19 @@ export function AppsClient({
             <List>
               {visible.map((app) => {
                 const state = status(app);
-                const busy = busyId === app.id;
+                  const busy = busyId === app.id;
+                  const started = checkingIds[app.id];
+                  const lastChecked = timestamp(app.lastCheckedAt) ?? 0;
+                  const checking = started !== undefined && lastChecked <= started && clock - started < 5 * 60 * 1000;
                 return (
                   <ListRow
                     key={app.id}
-                    href={`/apps/${app.id}`}
+                    className="app-list-row"
                     leading={<RowAvatar tone={state.tone}>{app.name.slice(0, 1).toUpperCase()}</RowAvatar>}
                     title={
                       <>
-                        <span className="truncate text-sm font-medium text-text">{app.name}</span>
-                        <StatusDot tone={state.tone}>{state.label}</StatusDot>
+                        <Link href={`/apps/${app.id}`} className="truncate text-sm font-semibold text-text hover:text-accent">{app.name}</Link>
+                        <StatusDot tone={checking ? "warning" : state.tone}>{checking ? "Checking now" : state.label}</StatusDot>
                       </>
                     }
                     subtitle={app.repoFullName}
@@ -369,7 +424,7 @@ export function AppsClient({
                           title="Check for releases now"
                           aria-label={`Check ${app.name} now`}
                         >
-                          <RefreshCw className={cn("h-4 w-4", busy && "animate-spin")} />
+                          <RefreshCw className={cn("h-4 w-4", checking && "animate-spin")} />
                         </button>
                         <button
                           type="button"
@@ -389,6 +444,13 @@ export function AppsClient({
               })}
             </List>
           </div>
+          {hasMore && (
+            <div className="flex justify-center pt-3">
+              <button type="button" className="btn btn--secondary btn--lg" disabled={isLoading} onClick={() => void setSize(size + 1)}>
+                {isLoading ? "Loading repositories…" : `Load more · ${apps.length} of ${total.toLocaleString()}`}
+              </button>
+            </div>
+          )}
         </>
       )}
 

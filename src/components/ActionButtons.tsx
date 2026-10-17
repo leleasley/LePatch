@@ -5,6 +5,7 @@ import { useState } from "react";
 import { BellOff, Check, RefreshCw, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { csrfFetch } from "@/lib/csrf-client";
+import { useToast } from "@/lib/toast";
 
 async function post(url: string, body?: unknown) {
   const response = await csrfFetch(url, {
@@ -17,6 +18,33 @@ async function post(url: string, body?: unknown) {
 
 export function AppActions({ appId, size = "sm" }: { appId: string; size?: "sm" | "xs" | "icon" }) {
   const router = useRouter();
+  const { addToast } = useToast();
+  const [checking, setChecking] = useState(false);
+  const [seen, setSeen] = useState(false);
+  async function runCheck() {
+    setChecking(true);
+    try {
+      await post(`/api/apps/${appId}/check`);
+      window.dispatchEvent(new Event("lepatch:apps-changed"));
+      router.refresh();
+      addToast("Release check queued", "success");
+    } catch {
+      addToast("Could not queue a release check", "error");
+    } finally {
+      setChecking(false);
+    }
+  }
+  async function markSeen() {
+    try {
+      await post("/api/releases/seen", { watchedAppId: appId });
+      setSeen(true);
+      window.dispatchEvent(new Event("lepatch:apps-changed"));
+      router.refresh();
+      addToast("Latest release marked as seen", "success");
+    } catch {
+      addToast("Could not mark release as seen", "error");
+    }
+  }
 
   if (size === "icon") {
     return (
@@ -26,22 +54,18 @@ export function AppActions({ appId, size = "sm" }: { appId: string; size?: "sm" 
           title="Check for new release"
           aria-label="Check for new release"
           className="icon-button"
-          onClick={async () => {
-            await post(`/api/apps/${appId}/check`);
-            router.refresh();
-          }}
+          disabled={checking}
+          onClick={() => void runCheck()}
         >
-          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+          <RefreshCw className={`h-4 w-4 ${checking ? "animate-spin" : ""}`} aria-hidden="true" />
         </button>
         <button
           type="button"
           title="Mark current release as seen"
           aria-label="Mark current release as seen"
           className="icon-button"
-          onClick={async () => {
-            await post("/api/releases/seen", { watchedAppId: appId });
-            router.refresh();
-          }}
+          disabled={seen}
+          onClick={() => void markSeen()}
         >
           <Check className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -54,24 +78,20 @@ export function AppActions({ appId, size = "sm" }: { appId: string; size?: "sm" 
       <button
         type="button"
         className="btn btn--secondary btn--sm"
-        onClick={async () => {
-          await post(`/api/apps/${appId}/check`);
-          router.refresh();
-        }}
+        disabled={checking}
+        onClick={() => void runCheck()}
       >
-        <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-        Check
+        <RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} aria-hidden="true" />
+        {checking ? "Checking…" : "Check now"}
       </button>
       <button
         type="button"
         className="btn btn--ghost btn--sm"
-        onClick={async () => {
-          await post("/api/releases/seen", { watchedAppId: appId });
-          router.refresh();
-        }}
+        disabled={seen}
+        onClick={() => void markSeen()}
       >
         <Check className="h-3.5 w-3.5" aria-hidden="true" />
-        Mark seen
+        {seen ? "Seen" : "Mark seen"}
       </button>
     </div>
   );
@@ -97,6 +117,7 @@ export function RemoveAppButton({ appId, size = "sm" }: { appId: string; size?: 
         onConfirm={async () => {
           const res = await csrfFetch(`/api/apps/${appId}`, { method: "DELETE" });
           if (!res.ok) return;
+          window.dispatchEvent(new Event("lepatch:apps-changed"));
           router.push("/apps");
           router.refresh();
         }}
@@ -109,6 +130,7 @@ export function RemoveAppButton({ appId, size = "sm" }: { appId: string; size?: 
 export function DisableNotificationsButton({ appId, size = "sm" }: { appId: string; size?: "sm" | "xs" }) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [disabled, setDisabled] = useState(false);
 
   return (
     <>
@@ -118,7 +140,7 @@ export function DisableNotificationsButton({ appId, size = "sm" }: { appId: stri
         onClick={() => setConfirmOpen(true)}
       >
         <BellOff className="h-3.5 w-3.5" aria-hidden="true" />
-        Disable notifications
+        {disabled ? "Notifications muted" : "Disable notifications"}
       </button>
       <ConfirmDialog
         open={confirmOpen}
@@ -126,11 +148,15 @@ export function DisableNotificationsButton({ appId, size = "sm" }: { appId: stri
         message="Are you sure you want to disable notifications for this app?"
         confirmLabel="Disable"
         onConfirm={async () => {
-          await csrfFetch(`/api/apps/${appId}`, {
+          const response = await csrfFetch(`/api/apps/${appId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ notificationsEnabled: false })
           });
+          if (!response.ok) return;
+          setDisabled(true);
+          setConfirmOpen(false);
+          window.dispatchEvent(new Event("lepatch:apps-changed"));
           router.refresh();
         }}
         onCancel={() => setConfirmOpen(false)}

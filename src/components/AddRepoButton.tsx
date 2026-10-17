@@ -17,21 +17,27 @@ export function AddRepoButton({ repoFullName, name, initialAdded = false, appId,
   async function add() {
     setLoading(true);
     setMessage("");
-    const response = await csrfFetch("/api/apps", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ repoFullName, name })
-    });
-    setLoading(false);
-    if (!response.ok) {
-      setMessage((await response.json()).error || "Unable to add");
-      return;
+    try {
+      const response = await csrfFetch("/api/apps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repoFullName, name })
+      });
+      if (!response.ok) {
+        setMessage((await response.json()).error || "Unable to add");
+        return;
+      }
+      const data = await response.json();
+      setWatchedAppId(data.app?.id);
+      setAdded(true);
+      setMessage("");
+      window.dispatchEvent(new Event("lepatch:apps-changed"));
+      router.refresh();
+    } catch {
+      setMessage("Could not add this repository. Check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
-    const data = await response.json();
-    setWatchedAppId(data.app?.id);
-    setAdded(true);
-    setMessage("");
-    router.refresh();
   }
 
   if (added) {

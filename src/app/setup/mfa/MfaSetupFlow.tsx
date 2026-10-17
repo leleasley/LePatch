@@ -99,7 +99,7 @@ export function MfaSetupFlow({ setupToken }: { email: string; setupToken: string
 
   return (
     <div className="w-full">
-      <img src="/assets/Logo.png" alt="LePatch" className="h-9 w-9 rounded-md" />
+      <img src="/icons/icon-192.png" alt="LePatch" className="h-9 w-9 rounded-md" />
       <h1 className="mt-5 text-xl font-semibold tracking-tight text-text">Set up two-factor authentication</h1>
       <p className="mt-1 text-sm text-text-muted">
         MFA is required. Use an authenticator app such as Google Authenticator, Authy, or 1Password.

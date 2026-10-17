@@ -31,7 +31,7 @@ export default async function SessionResetPage(props: {
 
   return (
     <AuthShell>
-      <img src="/assets/Logo.png" alt="LePatch" className="h-9 w-9 rounded-md" />
+      <img src="/icons/icon-192.png" alt="LePatch" className="h-9 w-9 rounded-md" />
       <h1 className="mt-5 text-lg font-semibold tracking-tight text-text">{reason.title}</h1>
       <p className="mt-1.5 text-sm text-text-muted">{reason.message}</p>
       <Link href="/login" className="btn btn--primary btn--lg mt-6 w-full">

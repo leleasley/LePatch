@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState, ErrorState } from "@/components/ui/Card";
 import { useDashboard } from "@/lib/use-swr";
 import { RelativeTime } from "@/components/RelativeTime";
+import { cn } from "@/lib/cn";
 
 type FeedItem = {
   id: string;
@@ -14,7 +15,7 @@ type FeedItem = {
   name: string | null;
   htmlUrl: string;
   prerelease: boolean;
-  publishedAt: Date | null;
+  publishedAt: Date | string | null;
   detectedAt: Date | string;
   changelogSummary: string | null;
   watchedApp: { id: string; name: string; repoFullName: string };
@@ -124,7 +125,7 @@ export function DashboardClient({
 }: {
   initialData: { total: number; updates: number; failed: number; stale: number; recent: FeedItem[] };
 }) {
-  const { data, error } = useDashboard();
+  const { data, error, isValidating } = useDashboard(initialData);
   const d = data ?? initialData;
 
   const groups = useMemo(() => {
@@ -177,6 +178,10 @@ export function DashboardClient({
           )
         }
       />
+      <div className="live-strip mb-4" aria-live="polite">
+        <span className={cn("live-dot", isValidating && "live-dot--syncing")} />
+        <span>{isValidating ? "Syncing releases" : "Updated just now"}</span>
+      </div>
 
       {error && (
         <div className="mb-6">

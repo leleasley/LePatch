@@ -12,7 +12,7 @@ export default async function SetupPage() {
 
   return (
     <AuthShell>
-      <img src="/assets/Logo.png" alt="LePatch" className="h-9 w-9 rounded-md" />
+      <img src="/icons/icon-192.png" alt="LePatch" className="h-9 w-9 rounded-md" />
       <h1 className="mt-5 text-xl font-semibold tracking-tight text-text">Set up LePatch</h1>
       <p className="mt-1 text-sm text-text-muted">Create the first admin account and connect notifications.</p>
 

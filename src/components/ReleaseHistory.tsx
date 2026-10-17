@@ -118,7 +118,7 @@ export function ReleaseHistory({ releases, appId }: { releases: ReleaseRow[]; ap
       {visible.length === 0 ? (
         <p className="px-4 py-8 text-center text-sm text-text-muted">No releases match this filter.</p>
       ) : (
-        <List>
+        <List className="release-list">
           {visible.map((release) => {
             const expanded = expandedId === release.id;
             return (

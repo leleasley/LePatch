@@ -19,7 +19,7 @@ export default async function LoginPage() {
 
   return (
     <AuthShell>
-      <img src="/assets/Logo.png" alt="LePatch" className="h-9 w-9 rounded-md" />
+      <img src="/icons/icon-192.png" alt="LePatch" className="h-9 w-9 rounded-md" />
       <h1 className="mt-5 text-xl font-semibold tracking-tight text-text">Sign in</h1>
       <p className="mt-1 text-sm text-text-muted">Monitor releases and get notified when something ships.</p>
 

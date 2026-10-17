@@ -46,7 +46,7 @@ export function MfaVerifyForm({ token }: { token: string }) {
 
   return (
     <div className="w-full">
-      <img src="/assets/Logo.png" alt="LePatch" className="h-9 w-9 rounded-md" />
+      <img src="/icons/icon-192.png" alt="LePatch" className="h-9 w-9 rounded-md" />
       <h1 className="mt-5 text-xl font-semibold tracking-tight text-text">Confirm it&apos;s you</h1>
       <p className="mt-1 text-sm text-text-muted">Enter the 6-digit code from your authenticator app.</p>
 
