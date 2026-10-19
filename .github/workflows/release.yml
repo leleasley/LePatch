@@ -47,7 +47,7 @@ jobs:
             case "$file" in *.exe) zip "${file%.exe}.zip" "$file" ;; *) tar -czf "${file}.tar.gz" "$file" ;; esac
           done
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             dist/*.tar.gz
