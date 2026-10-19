@@ -5,7 +5,7 @@ RUN npm ci
 COPY ui/ ./
 RUN npm run build
 
-FROM golang:1.26-alpine AS go-builder
+FROM golang:1.27-alpine AS go-builder
 ARG APP_VERSION
 WORKDIR /src
 RUN apk add --no-cache ca-certificates git
