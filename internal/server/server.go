@@ -36,6 +36,7 @@ type Server struct {
 	ceremonies     map[string]webauthnCeremony
 	telegramSender func(context.Context, string, string, string) error
 	startedAt      time.Time
+	githubAPIBase  string
 }
 
 func New(cfg config.Config, db *store.Store, hub *events.Hub, poller *worker.Runner, logger *slog.Logger) *Server {
@@ -46,9 +47,10 @@ func New(cfg config.Config, db *store.Store, hub *events.Hub, poller *worker.Run
 		auth: &auth.SessionAuth{
 			DB: db.DB(), SigningKey: cfg.SessionKey, AppURL: cfg.AppURL.String(), TrustProxy: cfg.TrustProxy,
 		},
-		logger:     logger,
-		ceremonies: make(map[string]webauthnCeremony),
-		startedAt:  time.Now(),
+		logger:        logger,
+		ceremonies:    make(map[string]webauthnCeremony),
+		startedAt:     time.Now(),
+		githubAPIBase: "https://api.github.com",
 		telegramSender: func(ctx context.Context, token, chatID, message string) error {
 			return postExternalJSON(ctx, "https://api.telegram.org/bot"+token+"/sendMessage", map[string]string{"chat_id": chatID, "text": message})
 		},

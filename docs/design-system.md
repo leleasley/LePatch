@@ -44,8 +44,9 @@ reset, the grain and the shared text helpers.
 Repository detail uses the same `RepositoryPage` workspace for watched, own and
 sponsored repositories. Keep its Overview, Releases, Files, Commits, Pull
 requests, Issues, Branches and Actions tabs consistent. Only an owned
-repository view exposes file commits; server-side ownership and GitHub push
-permission checks remain mandatory.
+repository view exposes the file editor; the server verifies the linked owner
+and the GitHub push permission again on every commit, so the UI check is only
+an affordance.
 
 Issues and notification history stay inside the app: a raised issue opens
 `/issues/{owner}/{repo}/{number}` and a delivery row opens the release page.

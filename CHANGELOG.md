@@ -9,6 +9,10 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- Files in a repository you own can be edited in LePatch. The editor shows a
+  live added and removed line count, `Cmd` or `Ctrl` plus `S` opens the commit
+  dialog, and the dialog sets a commit message before writing. The commit goes
+  to the default branch through the GitHub Contents API.
 - Raised issues open inside LePatch. The issue page shows the state, author,
   labels, description and the whole comment thread, with GitHub kept as a
   secondary link.
@@ -110,8 +114,7 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   now render through a portal on the body, the animation no longer leaves a
   transform, fields are 16px on a phone, the sheet keeps its Save and Cancel
   bar stuck to the bottom, and opening a dialog focuses the first field rather
-  than the close button.
-- The watched repository card stretched its settings, refresh and delete
+  than the close button.- The watched repository card stretched its settings, refresh and delete
   buttons into a vertical column because the header rule matched the action
   cluster as well as the title block.
 - The release poller used the shared installation GitHub token for every

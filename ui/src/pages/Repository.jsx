@@ -5,8 +5,10 @@ import {
   CircleDot,
   FileCode2,
   FileClock,
+  FilePen,
   FileText,
   GitBranch,
+  GitCommitHorizontal,
   GitPullRequest,
   LoaderCircle,
   MessageSquare,
@@ -16,10 +18,14 @@ import {
   Workflow,
 } from 'lucide-react';
 import { api } from '../lib/api.js';
+import { diffStats, hasChanges } from '../lib/diff.js';
 import { elapsed } from '../lib/format.js';
 import { useToast } from '../lib/toast.jsx';
 import { EmptyState, LoadingLine, RepoIcon } from '../components/ui.jsx';
+import { Modal } from '../components/Modal.jsx';
 import { MarkdownView } from '../components/Markdown.jsx';
+
+const MAX_EDIT_BYTES = 900_000;
 const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'releases', label: 'Releases' },
@@ -52,6 +58,46 @@ export function RepositoryPage({ app, releases, loading, onBack, onOpenRelease, 
   const [issueForm, setIssueForm] = useState({ title: '', body: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  // File editing is only offered for a repository owned by the linked GitHub
+  // account. The server verifies the owner and the push permission again.
+  const [githubUsername, setGithubUsername] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [commitOpen, setCommitOpen] = useState(false);
+  const [commitMessage, setCommitMessage] = useState('');
+  const [committing, setCommitting] = useState(false);
+
+  const canEdit =
+    Boolean(ownedMode) &&
+    !readOnly &&
+    Boolean(githubUsername) &&
+    Boolean(app?.repoOwner) &&
+    githubUsername.toLowerCase() === app.repoOwner.toLowerCase();
+
+  const fileChanged = selectedFile ? hasChanges(selectedFile.content, draft) : false;
+  const stats = selectedFile && editing ? diffStats(selectedFile.content, draft) : { added: 0, removed: 0, approximate: false };
+
+  useEffect(() => {
+    if (!ownedMode) return undefined;
+    let active = true;
+    api('/api/account/github')
+      .then(data => {
+        if (active) setGithubUsername(data?.username || '');
+      })
+      .catch(() => {
+        // Without a linked account the edit control simply stays hidden.
+      });
+    return () => {
+      active = false;
+    };
+  }, [ownedMode]);
+
+  useEffect(() => {
+    // Leaving a file discards an in-progress edit.
+    setEditing(false);
+    setDraft('');
+  }, [selectedFile?.path]);
 
   const requestJSON = (path, options = {}) =>
     api(path, {
@@ -260,6 +306,59 @@ export function RepositoryPage({ app, releases, loading, onBack, onOpenRelease, 
     }
   };
 
+  const startEditing = () => {
+    if (!selectedFile) return;
+    setDraft(selectedFile.content || '');
+    setEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setEditing(false);
+    setDraft('');
+    setCommitOpen(false);
+  };
+
+  const openCommit = () => {
+    if (!selectedFile || !fileChanged) return;
+    setCommitMessage(prev => prev || `Update ${selectedFile.name || selectedFile.path}`);
+    setCommitOpen(true);
+  };
+
+  const commitFile = async () => {
+    if (!app || !selectedFile || !commitMessage.trim()) return;
+    setCommitting(true);
+    try {
+      await requestJSON('/api/github/commit-file', {
+        method: 'POST',
+        body: JSON.stringify({
+          owner: app.repoOwner,
+          repo: app.repoName,
+          path: selectedFile.path,
+          content: draft,
+          message: commitMessage.trim(),
+          sha: selectedFile.sha,
+          branch: app.defaultBranch || '',
+        }),
+      });
+      toast.success({
+        title: 'Committed',
+        message: `${selectedFile.path} was saved to ${app.defaultBranch || 'the default branch'}.`,
+      });
+      setCommitOpen(false);
+      setEditing(false);
+      setDraft('');
+      setCommitMessage('');
+      // Reload so the next commit uses the new blob SHA.
+      const params = new URLSearchParams({ owner: app.repoOwner, repo: app.repoName, path: selectedFile.path });
+      if (app.defaultBranch) params.set('ref', app.defaultBranch);
+      setSelectedFile(await requestJSON(`/api/github/file-content?${params}`));
+    } catch (issue) {
+      toast.error(issue.message || 'Could not commit this file.');
+    } finally {
+      setCommitting(false);
+    }
+  };
+
   if (loading && !app) return <LoadingLine>Loading repository…</LoadingLine>;
   if (!app) {
     return (
@@ -415,11 +514,20 @@ export function RepositoryPage({ app, releases, loading, onBack, onOpenRelease, 
           <div className="section-head">
             <div>
               <h2>{selectedFile ? selectedFile.path : 'Repository files'}</h2>
-              <p>{selectedFile ? `Default branch · ${selectedFile.sha?.slice(0, 8) || 'file'}` : 'Browse the source tree'}</p>
+              <p>
+                {selectedFile
+                  ? `${app.defaultBranch || 'default branch'} · ${selectedFile.sha?.slice(0, 8) || 'file'}${editing ? ' · editing' : ''}`
+                  : 'Browse the source tree'}
+              </p>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {selectedFile && canEdit && !editing ? (
+                <button className="btn btn-sm btn-primary" type="button" onClick={startEditing}>
+                  <FilePen size={13} /> Edit file
+                </button>
+              ) : null}
               {selectedFile ? (
-                <button className="btn btn-sm" type="button" onClick={() => setSelectedFile(null)}>
+                <button className="btn btn-sm" type="button" onClick={() => { cancelEditing(); setSelectedFile(null); }}>
                   Back to files
                 </button>
               ) : filePath ? (
@@ -432,6 +540,56 @@ export function RepositoryPage({ app, releases, loading, onBack, onOpenRelease, 
           <div className="card">
             {busy ? (
               <LoadingLine>Loading repository content…</LoadingLine>
+            ) : editing && selectedFile ? (
+              <div className="file-editor">
+                <div className="file-editor-bar">
+                  <span className="file-editor-path">{selectedFile.path}</span>
+                  <span className={`file-editor-diff${fileChanged ? '' : ' is-clean'}`}>
+                    {fileChanged ? (
+                      <>
+                        <b className="diff-add">+{stats.added}</b>
+                        <b className="diff-del">−{stats.removed}</b>
+                        {stats.approximate ? <em>approximate</em> : null}
+                      </>
+                    ) : (
+                      'No changes yet'
+                    )}
+                  </span>
+                </div>
+                <textarea
+                  className="file-editor-input"
+                  value={draft}
+                  onChange={event => setDraft(event.target.value)}
+                  onKeyDown={event => {
+                    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+                      event.preventDefault();
+                      openCommit();
+                    }
+                  }}
+                  spellCheck={false}
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  wrap="off"
+                  aria-label={`Contents of ${selectedFile.path}`}
+                />
+                {draft.length > MAX_EDIT_BYTES ? (
+                  <div className="notice notice-error" style={{ margin: '0 16px 12px' }}>
+                    <TriangleAlert size={15} />
+                    <span>This file is too large to commit. GitHub accepts files under 900 KB.</span>
+                  </div>
+                ) : null}
+                <div className="file-editor-actions">
+                  <span className="field-hint">⌘S commits · the change goes straight to {app.defaultBranch || 'the default branch'}</span>
+                  <div>
+                    <button className="btn" type="button" onClick={cancelEditing} disabled={committing}>
+                      Cancel
+                    </button>
+                    <button className="btn btn-primary" type="button" onClick={openCommit} disabled={!fileChanged || draft.length > MAX_EDIT_BYTES}>
+                      <GitCommitHorizontal size={14} /> Commit changes
+                    </button>
+                  </div>
+                </div>
+              </div>
             ) : selectedFile ? (
               <div className="file-content">{selectedFile.content || 'This file is empty.'}</div>
             ) : files.length ? (
@@ -692,8 +850,7 @@ export function RepositoryPage({ app, releases, loading, onBack, onOpenRelease, 
         </section>
       ) : null}
 
-      {section === 'actions' ? (
-        <section>
+      {section === 'actions' ? (        <section>
           <div className="section-head">
             <div>
               <h2>Workflow runs</h2>
@@ -728,6 +885,60 @@ export function RepositoryPage({ app, releases, loading, onBack, onOpenRelease, 
           </div>
         </section>
       ) : null}
+
+      <Modal
+        open={commitOpen}
+        onClose={() => { if (!committing) setCommitOpen(false); }}
+        title="Commit changes"
+        description={selectedFile ? `${selectedFile.path} → ${app.defaultBranch || 'default branch'}` : ''}
+        labelledBy="commit-dialog-title"
+        footer={
+          <>
+            <button className="btn" type="button" onClick={() => setCommitOpen(false)} disabled={committing}>
+              Cancel
+            </button>
+            <button className="btn btn-primary" type="button" onClick={commitFile} disabled={committing || !commitMessage.trim()}>
+              {committing ? <LoaderCircle size={15} className="spin" /> : <GitCommitHorizontal size={15} />}
+              Commit to {app.defaultBranch || 'repository'}
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'grid', gap: 16, marginTop: 22 }}>
+          <div className="commit-summary">
+            <span className="commit-summary-file">
+              <FileCode2 size={15} />
+              {selectedFile?.path}
+            </span>
+            <span className="commit-summary-diff">
+              <b className="diff-add">+{stats.added}</b>
+              <b className="diff-del">−{stats.removed}</b>
+            </span>
+          </div>
+
+          <label className="field" htmlFor="commit-message">
+            <span>Commit message</span>
+            <textarea
+              id="commit-message"
+              className="textarea"
+              rows={3}
+              value={commitMessage}
+              maxLength={500}
+              onChange={event => setCommitMessage(event.target.value)}
+              placeholder="Describe what changed"
+            />
+            <span className="field-hint">
+              Commits as @{githubUsername} to <code>{app.defaultBranch || 'the default branch'}</code>. Your linked GitHub account
+              needs push access; LePatch checks that on the server before writing.
+            </span>
+          </label>
+
+          <div className="notice notice-accent">
+            <TriangleAlert size={15} />
+            <span>This writes directly to GitHub. A pull request is not created.</span>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

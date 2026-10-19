@@ -50,6 +50,7 @@ func (s *Server) githubRead(w http.ResponseWriter, r *http.Request) {
 		token = s.config.GitHubToken
 	}
 	client := gh.NewClient(s.store.DB(), token, principal.UserID)
+	client.BaseURL = s.githubAPIBase
 	result, err := client.Get(r.Context(), endpoint)
 	if err != nil {
 		if rateLimited, ok := err.(*gh.RateLimitError); ok {
@@ -295,7 +296,7 @@ func (s *Server) commitGitHubFile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "Connect your GitHub account to commit changes")
 		return
 	}
-	result, err := commitGitHubFile(r.Context(), http.DefaultClient, "https://api.github.com", token, linkedLogin, input)
+	result, err := commitGitHubFile(r.Context(), http.DefaultClient, s.githubAPIBase, token, linkedLogin, input)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err.Error())
 		return
@@ -918,6 +919,7 @@ func (s *Server) appCommits(w http.ResponseWriter, r *http.Request) {
 	}
 	token, _ := s.githubToken(r.Context(), principal.UserID)
 	client := gh.NewClient(s.store.DB(), token, principal.UserID)
+	client.BaseURL = s.githubAPIBase
 	query := url.Values{"per_page": {strconv.Itoa(queryInt(r, "perPage", 30, 1, 100))}, "page": {strconv.Itoa(queryInt(r, "page", 1, 1, 1000000))}}
 	result, err := client.Get(r.Context(), "repos/"+url.PathEscape(app.RepoOwner)+"/"+url.PathEscape(app.RepoName)+"/commits?"+query.Encode())
 	if err != nil {
@@ -949,6 +951,7 @@ func (s *Server) appCommitStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	token, _ := s.githubToken(r.Context(), principal.UserID)
 	client := gh.NewClient(s.store.DB(), token, principal.UserID)
+	client.BaseURL = s.githubAPIBase
 	result, err := client.Get(r.Context(), "repos/"+url.PathEscape(app.RepoOwner)+"/"+url.PathEscape(app.RepoName)+"/commits/"+url.PathEscape(sha)+"/status")
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "GitHub commit status is unavailable")
