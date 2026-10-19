@@ -9,6 +9,17 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- Toasts are the single way the interface reports the result of an action:
+  a coloured icon, a title, a message, a dismiss button and a progress bar,
+  stacked above the phone bottom bar. Live events also raise a toast, so a new
+  release, a failed check, a new issue comment or a failed delivery is visible
+  from any page, and a dropped connection reports when it recovers.
+- The repository README now has its own panel with the file name and a GitHub
+  link, a readable measure, larger type on a phone, heading rules, inline
+  badges, scrollable code blocks and tables, and collapsible sections.
+- The watched repository cards are compact and clickable: the icon, name and
+  actions share one row, the release and check time sit in a two column strip,
+  and an Open affordance replaces the full width button.
 - A rebuilt interface on a new design system: deep neutral surfaces with a
   single warm accent, Space Grotesk and DM Mono, a blurred top bar, a side
   navigation rail, a mobile bottom bar and a command palette on `Cmd`/`Ctrl`
@@ -83,6 +94,9 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- The watched repository card stretched its settings, refresh and delete
+  buttons into a vertical column because the header rule matched the action
+  cluster as well as the title block.
 - The release poller used the shared installation GitHub token for every
   watched repository, so private and sponsored repositories answered with a
   404. It now uses the account's own linked GitHub token and falls back to the

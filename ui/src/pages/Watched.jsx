@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, Bell, Check, GitBranch, LoaderCircle, Plus, RefreshCw, Settings2, Trash2, TriangleAlert } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Bell, Check, GitBranch, LoaderCircle, Plus, RefreshCw, Settings2, Trash2, TriangleAlert } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { checkIntervalLabel, elapsed } from '../lib/format.js';
 import { useToast } from '../lib/toast.jsx';
@@ -128,60 +128,76 @@ export function WatchedPage({ apps, onOpen, onCheck, onRemove, onUpdate, checkin
     <>
       <div className="repo-grid">
         {apps.map(app => (
-          <article className="card card-hover repo-card" key={app.id}>
+          <article
+            className={`card card-hover repo-card${app.updateAvailable ? ' has-update' : ''}`}
+            key={app.id}
+            role="link"
+            tabIndex={0}
+            onClick={() => onOpen(app.id)}
+            onKeyDown={event => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onOpen(app.id);
+              }
+            }}
+          >
             <div className="repo-card-head">
-              <RepoIcon name={app.name} iconUrl={app.iconUrl} size="is-lg" />
-              <div>
-                <b>{app.name}</b>
+              <RepoIcon name={app.name} iconUrl={app.iconUrl} size="is-md" />
+              <div className="repo-card-title">
+                <b>
+                  {app.name}
+                  {app.updateAvailable ? <i className="unread-dot" title="New release available" /> : null}
+                </b>
                 <a href={app.githubUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()}>
                   {app.repoFullName} <ArrowUpRight size={11} />
                 </a>
               </div>
-              <div className="row-actions">
-                <button className="row-action" type="button" title="Repository settings" onClick={() => setSettingsApp(app)}>
+              <div className="repo-card-actions" onClick={event => event.stopPropagation()}>
+                <button className="row-action" type="button" title="Repository settings" aria-label={`Settings for ${app.repoFullName}`} onClick={() => setSettingsApp(app)}>
                   <Settings2 size={15} />
                 </button>
-                <button className="row-action" type="button" title="Check for releases now" onClick={() => onCheck(app.id)} disabled={checking === app.id}>
+                <button className="row-action" type="button" title="Check for releases now" aria-label={`Check ${app.repoFullName} now`} onClick={() => onCheck(app.id)} disabled={checking === app.id}>
                   <RefreshCw size={15} className={checking === app.id ? 'spin' : ''} />
                 </button>
-                <button className="row-action is-danger" type="button" title="Stop watching" onClick={() => setRemoveApp(app)}>
+                <button className="row-action is-danger" type="button" title="Stop watching" aria-label={`Stop watching ${app.repoFullName}`} onClick={() => setRemoveApp(app)}>
                   <Trash2 size={15} />
                 </button>
               </div>
             </div>
 
-            <p className="clamp-2">{app.description || 'No description provided for this repository.'}</p>
+            <p className="repo-card-desc clamp-2">{app.description || 'No description provided for this repository.'}</p>
 
-            <div className="repo-card-foot">
-              <dl>
-                <dt>Latest release</dt>
-                <dd>{app.latestSeenTag || 'None yet'}</dd>
-              </dl>
-              <dl style={{ textAlign: 'right' }}>
-                <dt>Last checked</dt>
-                <dd>{elapsed(app.lastCheckedAt)}</dd>
-              </dl>
+            <div className="repo-card-meta">
+              <div>
+                <span>Latest release</span>
+                <b>{app.latestSeenTag || 'None yet'}</b>
+              </div>
+              <div>
+                <span>Last checked</span>
+                <b>{elapsed(app.lastCheckedAt)}</b>
+              </div>
             </div>
 
-            <div className="release-meta" style={{ marginTop: -4 }}>
-              <span className={app.notificationsEnabled === false ? 'pill' : 'pill pill-accent'}>
-                <Bell size={11} /> {app.notificationsEnabled === false ? 'Muted' : 'Notifying'}
+            <div className="repo-card-foot">
+              <div className="repo-card-tags">
+                <span className={app.notificationsEnabled === false ? 'pill' : 'pill pill-accent'}>
+                  <Bell size={11} /> {app.notificationsEnabled === false ? 'Muted' : 'Notifying'}
+                </span>
+                {app.includePrereleases ? <span className="pill">Pre-releases</span> : null}
+                {app.updateAvailable ? <span className="pill pill-accent">Update available</span> : null}
+                {app.checkStatus === 'failed' ? <span className="pill pill-danger">Check failed</span> : null}
+              </div>
+              <span className="repo-card-open">
+                Open <ArrowRight size={14} />
               </span>
-              {app.includePrereleases ? <span className="pill">Pre-releases</span> : null}
-              {app.updateAvailable ? <span className="pill pill-accent">Update available</span> : null}
-              {app.checkStatus === 'failed' ? <span className="pill pill-danger">Check failed</span> : null}
             </div>
 
             {app.checkStatus === 'failed' && app.checkError ? (
-              <div className="notice notice-error" style={{ marginTop: -4 }}>
+              <div className="notice notice-error">
                 <TriangleAlert size={14} />
                 <span>{app.checkError}</span>
               </div>
             ) : null}
-
-            <button className="btn btn-sm" type="button" onClick={() => onOpen(app.id)}>
-              Open repository
-            </button>
           </article>
         ))}
       </div>

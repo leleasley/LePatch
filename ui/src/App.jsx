@@ -137,7 +137,10 @@ export function App() {
   const deleteAcks = useRef(new Map());
   const issueStateRef = useRef(issueState);
   issueStateRef.current = issueState;
+  const appsRef = useRef(apps);
+  appsRef.current = apps;
   const themeTouched = useRef(false);
+  const wasConnected = useRef(undefined);
 
   // The appearance follows the account so it is the same on every device.
   const applyTheme = useCallback(
@@ -424,11 +427,53 @@ export function App() {
     if (authScreen !== 'app') return undefined;
     const source = new EventSource('/api/events');
     const reload = () => refresh();
+    const parse = event => {
+      try {
+        return JSON.parse(event.data);
+      } catch {
+        return {};
+      }
+    };
+    const appName = id => appsRef.current.find(app => app.id === id)?.name || 'A repository';
+
     ['watched-app.added', 'watched-app.updated', 'watched-app.removed', 'release.discovered', 'check.finished', 'state.refresh'].forEach(name => source.addEventListener(name, reload));
     source.addEventListener('raised-issue.updated', () => loadRaisedIssues(issueStateRef.current));
     source.addEventListener('raised-issue.comment', () => loadRaisedIssues(issueStateRef.current));
     source.addEventListener('notification.sent', () => loadNotifications());
     source.addEventListener('notification.failed', () => loadNotifications());
+
+    // Live events also surface as toasts so a change is visible from any page.
+    source.addEventListener('release.discovered', event => {
+      const data = parse(event);
+      toast.info({
+        title: 'New release',
+        message: `${appName(data.appId)} published ${data.latestTag || 'a new release'}.`,
+      });
+    });
+    source.addEventListener('check.finished', event => {
+      const data = parse(event);
+      if (!data.failed) return;
+      toast.error({
+        title: 'Release check failed',
+        message: `${appName(data.appId)} could not be checked. Open the repository to see why.`,
+      });
+    });
+    source.addEventListener('raised-issue.comment', event => {
+      const data = parse(event);
+      const count = Number(data.newComments || 0);
+      if (!count) return;
+      toast.info({
+        title: 'New issue comment',
+        message: `${data.owner}/${data.repo} #${data.issueNumber} has ${count} new ${count === 1 ? 'comment' : 'comments'}.`,
+      });
+    });
+    source.addEventListener('notification.failed', () => {
+      toast.error({
+        title: 'Notification not delivered',
+        message: 'A release alert could not be sent. Retry it from the admin console.',
+      });
+    });
+
     source.addEventListener('watched-app.removed', event => {
       try {
         const id = JSON.parse(event.data).id;
@@ -439,11 +484,19 @@ export function App() {
       }
     });
     source.onopen = () => {
+      if (wasConnected.current === false) {
+        toast.success({ title: 'Live updates restored', message: 'LePatch is receiving release events again.' });
+      }
+      wasConnected.current = true;
       setConnected(true);
       refresh();
     };
-    source.onerror = () => setConnected(false);
+    source.onerror = () => {
+      wasConnected.current = false;
+      setConnected(false);
+    };
     return () => source.close();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authScreen, refresh, loadRaisedIssues, loadNotifications]);
 
   /* --------------------------------------------------------------- actions */

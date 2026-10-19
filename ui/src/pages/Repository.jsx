@@ -5,6 +5,7 @@ import {
   CircleDot,
   FileCode2,
   FileClock,
+  FileText,
   GitBranch,
   GitPullRequest,
   LoaderCircle,
@@ -352,23 +353,30 @@ export function RepositoryPage({ app, releases, loading, onBack, onOpenRelease, 
       ) : null}
 
       {section === 'overview' ? (
-        <section>
-          <div className="section-head">
-            <div>
-              <h2>README</h2>
-              <p>Project documentation straight from GitHub</p>
+        <section className="readme-panel">
+          <div className="readme-head">
+            <div className="readme-head-title">
+              <span className="readme-mark">
+                <FileText size={15} />
+              </span>
+              <div>
+                <b>README</b>
+                <span>{readme?.path || 'Project documentation from GitHub'}</span>
+              </div>
             </div>
-            <a className="btn btn-sm" href={`${app.githubUrl}#readme`} target="_blank" rel="noreferrer">
+            <a className="btn btn-sm" href={readme?.htmlUrl || `${app.githubUrl}#readme`} target="_blank" rel="noreferrer">
               Open on GitHub <ArrowUpRight size={13} />
             </a>
           </div>
-          {readmeBusy ? (
-            <LoadingLine>Loading README…</LoadingLine>
-          ) : readme ? (
-            <MarkdownView source={readme.content || ''} baseURL={readme.downloadUrl || readme.htmlUrl || app.githubUrl} />
-          ) : (
-            <EmptyState icon={FileClock} title="No README found" description="This repository does not publish a README file." />
-          )}
+          <div className="readme-body">
+            {readmeBusy ? (
+              <LoadingLine>Loading README…</LoadingLine>
+            ) : readme ? (
+              <MarkdownView source={readme.content || ''} baseURL={readme.downloadUrl || readme.htmlUrl || app.githubUrl} />
+            ) : (
+              <EmptyState icon={FileText} title="No README found" description="This repository does not publish a README file." />
+            )}
+          </div>
         </section>
       ) : null}
 

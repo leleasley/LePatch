@@ -477,6 +477,15 @@
   font-size: var(--text-2xs);
 }
 
+/* On a narrow screen the strip scrolls sideways; fade the edge so the cut
+   off tab reads as "more to the right" rather than a clipped control. */
+@media (max-width: 1024px) {
+  .tabs {
+    mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent);
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent);
+  }
+}
+
 /* Lists and tables ------------------------------------------------------- */
 
 .list {
@@ -666,10 +675,12 @@
 }
 
 .toast {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 11px;
-  padding: 13px 14px;
+  padding: 13px 13px 14px;
+  overflow: hidden;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   background: var(--bg-raised);
@@ -678,46 +689,118 @@
   font-size: var(--text-sm);
   line-height: 1.45;
   pointer-events: auto;
-  animation: lepatch-fade-up 0.22s var(--ease-out) both;
+  animation: lepatch-toast-in 0.26s var(--ease-out) both;
 }
 
-.toast svg {
+@keyframes lepatch-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.toast-icon {
+  display: grid;
+  place-items: center;
   flex: none;
-  margin-top: 1px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-active);
+  color: var(--fg-muted);
 }
 
-.toast > span {
+.toast-copy {
   flex: 1;
   min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding-top: 2px;
+}
+
+.toast-copy b {
+  color: var(--fg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.toast-copy span {
+  overflow-wrap: anywhere;
 }
 
 .toast button {
   flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-xs);
   color: var(--fg-faint);
 }
 
 .toast button:hover {
   color: var(--fg);
+  background: var(--bg-hover);
+}
+
+.toast-progress {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2px;
+  transform-origin: left;
+  background: currentColor;
+  opacity: 0.5;
+  animation-name: lepatch-toast-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes lepatch-toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
 }
 
 .toast-success {
-  border-color: color-mix(in srgb, var(--success) 40%, transparent);
+  border-color: color-mix(in srgb, var(--success) 42%, transparent);
+  color: var(--success);
 }
 
-.toast-success svg {
+.toast-success .toast-icon {
+  background: var(--success-soft);
   color: var(--success);
 }
 
 .toast-error {
-  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
-}
-
-.toast-error svg {
+  border-color: color-mix(in srgb, var(--danger) 42%, transparent);
   color: var(--danger);
 }
 
-.toast-info svg {
-  color: var(--info);
+.toast-error .toast-icon {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.toast-info {
+  border-color: var(--accent-line);
+}
+
+.toast-info .toast-icon {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-progress {
+    display: none;
+  }
 }
 
 /* Dialogs ---------------------------------------------------------------- */
@@ -804,6 +887,13 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.repo-icon.is-md {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  font-size: var(--text-sm);
 }
 
 .repo-icon.is-lg {

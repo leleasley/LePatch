@@ -9,20 +9,37 @@ const ICONS = {
   info: Info,
 };
 
+// A toast is `{ id, kind, title, message, duration }`. Actions can pass a
+// plain string, which is treated as the message, or an object with a title.
+function normalize(input, kind) {
+  if (typeof input === 'string') return { kind, message: input };
+  return { kind: input.kind || kind, ...input };
+}
+
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const counter = useRef(0);
+  const timers = useRef(new Map());
 
   const dismiss = useCallback(id => {
+    const timer = timers.current.get(id);
+    if (timer) {
+      window.clearTimeout(timer);
+      timers.current.delete(id);
+    }
     setToasts(current => current.filter(toast => toast.id !== id));
   }, []);
 
   const push = useCallback(
-    (message, kind = 'info', duration = 4200) => {
+    input => {
       counter.current += 1;
       const id = counter.current;
-      setToasts(current => [...current.slice(-3), { id, message, kind }]);
-      if (duration) window.setTimeout(() => dismiss(id), duration);
+      const toast = { id, duration: 4600, ...normalize(input, 'info') };
+      // Keep the newest four so a burst of live events cannot bury the page.
+      setToasts(current => [...current.slice(-3), toast]);
+      if (toast.duration > 0) {
+        timers.current.set(id, window.setTimeout(() => dismiss(id), toast.duration));
+      }
       return id;
     },
     [dismiss],
@@ -33,9 +50,9 @@ export function ToastProvider({ children }) {
       toasts,
       dismiss,
       notify: push,
-      success: message => push(message, 'success'),
-      error: message => push(message, 'error', 6000),
-      info: message => push(message, 'info'),
+      success: input => push(normalize(input, 'success')),
+      error: input => push({ duration: 7000, ...normalize(input, 'error') }),
+      info: input => push(normalize(input, 'info')),
     }),
     [toasts, dismiss, push],
   );
@@ -48,11 +65,19 @@ export function ToastProvider({ children }) {
           const Icon = ICONS[toast.kind] || Info;
           return (
             <div className={`toast toast-${toast.kind}`} key={toast.id}>
-              <Icon size={16} />
-              <span>{toast.message}</span>
-              <button type="button" onClick={() => dismiss(toast.id)} aria-label="Dismiss">
+              <span className="toast-icon">
+                <Icon size={15} />
+              </span>
+              <div className="toast-copy">
+                {toast.title ? <b>{toast.title}</b> : null}
+                <span>{toast.message}</span>
+              </div>
+              <button type="button" onClick={() => dismiss(toast.id)} aria-label="Dismiss notification">
                 <X size={14} />
               </button>
+              {toast.duration > 0 ? (
+                <span className="toast-progress" style={{ animationDuration: `${toast.duration}ms` }} aria-hidden="true" />
+              ) : null}
             </div>
           );
         })}
