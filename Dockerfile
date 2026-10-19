@@ -16,7 +16,7 @@ COPY --from=ui-builder /src/internal/web/dist ./internal/web/dist
 RUN version="${APP_VERSION:-$(cat VERSION)}" && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w -X lepatch/internal/server.Version=${version}" -o /out/lepatch ./cmd/lepatch
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/lepatch-import ./cmd/lepatch-import
 
-FROM alpine:3.22 AS runner
+FROM alpine:3.24 AS runner
 LABEL org.opencontainers.image.source="https://github.com/leleasley/LePatch"
 RUN apk add --no-cache ca-certificates tzdata && addgroup -S lepatch && adduser -S -G lepatch lepatch
 WORKDIR /app
