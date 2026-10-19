@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, Bell, Check, GitBranch, LoaderCircle, Plus, RefreshCw, Settings2, Trash2 } from 'lucide-react';
+import { ArrowUpRight, Bell, Check, GitBranch, LoaderCircle, Plus, RefreshCw, Settings2, Trash2, TriangleAlert } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { checkIntervalLabel, elapsed } from '../lib/format.js';
 import { useToast } from '../lib/toast.jsx';
@@ -171,6 +171,13 @@ export function WatchedPage({ apps, onOpen, onCheck, onRemove, onUpdate, checkin
               {app.updateAvailable ? <span className="pill pill-accent">Update available</span> : null}
               {app.checkStatus === 'failed' ? <span className="pill pill-danger">Check failed</span> : null}
             </div>
+
+            {app.checkStatus === 'failed' && app.checkError ? (
+              <div className="notice notice-error" style={{ marginTop: -4 }}>
+                <TriangleAlert size={14} />
+                <span>{app.checkError}</span>
+              </div>
+            ) : null}
 
             <button className="btn btn-sm" type="button" onClick={() => onOpen(app.id)}>
               Open repository

@@ -81,6 +81,31 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   live session.
 - MFA enrolment keeps the pending secret server-side.
 
+### Fixed
+
+- The release poller used the shared installation GitHub token for every
+  watched repository, so private and sponsored repositories answered with a
+  404. It now uses the account's own linked GitHub token and falls back to the
+  shared token.
+- A repository GitHub cannot reach now explains why instead of reporting a
+  bare HTTP status, and points at reconnecting GitHub when the connected
+  token is missing the private repository scope.
+- The GitHub sign in flow requested the `read:user` scope only, so the
+  connected account could never read a private repository. It now requests
+  `repo read:user`, which the account linking flow already asked for.
+- The administrator console was unusable on a phone. The section navigation
+  wraps into a grid, the user table becomes a card list, and the user creation
+  form stacks instead of squeezing its fields.
+- The side navigation was rebuilt, the top bar moved back to the right of it,
+  and the phone safe areas are honoured so the dynamic island and the home
+  indicator never cover the controls.
+- The phone bottom navigation sent an administrator to the admin console
+  instead of their profile.
+- Dependabot upgrades: Node 26, Go 1.27 and Alpine 3.24 in the image, and
+  `actions/checkout@v7`, `actions/setup-go@v7`,
+  `docker/setup-buildx-action@v4`, `docker/login-action@v4` and
+  `softprops/action-gh-release@v3` in the workflows.
+
 ### Removed
 
 - The catalogue subsystem (models, queue, worker, admin screens, suggestions).

@@ -880,6 +880,66 @@
   font-size: var(--text-2xs);
 }
 
+/* User creation form ----------------------------------------------------- */
+
+.user-create-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.2fr) 150px auto;
+  gap: 8px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.user-create-form .btn {
+  height: 40px;
+  padding: 0 14px;
+}
+
+/* User cards replace the table on a phone. */
+.user-cards {
+  display: none;
+}
+
+.user-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-inset);
+}
+
+.user-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.user-card-stats {
+  display: flex;
+  gap: 16px;
+  color: var(--fg-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+.user-card-stats b {
+  color: var(--fg);
+  font-size: var(--text-sm);
+}
+
+.user-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-card-foot .select {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Auth screens ------------------------------------------------------------ */
 
 .auth-screen {
@@ -1102,21 +1162,39 @@
 
   .admin-nav {
     position: static;
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 6px;
-    overflow-x: auto;
     padding-bottom: 6px;
-    scrollbar-width: none;
-  }
-
-  .admin-nav::-webkit-scrollbar {
-    display: none;
   }
 
   .admin-nav button {
-    min-height: 36px;
+    min-height: 40px;
     white-space: nowrap;
     border-color: var(--border);
+  }
+
+  .admin-nav button.is-active {
+    border-color: var(--accent-line);
+  }
+
+  /* The user table has too many columns for a narrow screen, so it becomes
+     a card list. */
+  .user-table-wrap {
+    display: none;
+  }
+
+  .user-cards {
+    display: grid;
+    gap: 10px;
+  }
+
+  .user-create-form {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .user-create-form .btn {
+    grid-column: 1 / -1;
   }
 
   .repo-grid {
@@ -1289,6 +1367,15 @@
   .data-table th,
   .data-table td {
     padding: 9px 10px;
+  }
+
+  .user-create-form {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .user-create-form .btn {
+    width: 100%;
   }
 
   .user-table td:first-child {

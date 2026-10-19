@@ -32,6 +32,7 @@ type Result struct {
 	Stale              bool
 	RateLimitRemaining int
 	RateLimitReset     *time.Time
+	Scopes             string
 }
 
 type RateLimitError struct {
@@ -44,6 +45,46 @@ func (e *RateLimitError) Error() string {
 		return fmt.Sprintf("GitHub API rate limit reached; reset at %s", e.ResetAt.UTC().Format(time.RFC3339))
 	}
 	return "GitHub API rate limit reached"
+}
+
+// AccessError reports that GitHub refused to serve a resource. It is almost
+// always a repository that is private, renamed, or not shared with the
+// linked GitHub account, which is common for sponsored repositories.
+type AccessError struct {
+	Status int
+	Scopes string
+}
+
+func (e *AccessError) Error() string {
+	switch e.Status {
+	case http.StatusNotFound:
+		if e.Scopes != "" && !scopeAllowsPrivate(e.Scopes) {
+			return "GitHub returned 404. The connected GitHub account cannot read private repositories, so reconnect GitHub and grant repository access"
+		}
+		return "GitHub returned 404. The repository is private, renamed, or not shared with the connected GitHub account"
+	case http.StatusForbidden:
+		return "GitHub denied access to this repository. Share it with the connected GitHub account and reconnect GitHub"
+	case http.StatusUnauthorized:
+		return "GitHub rejected the connected token. Reconnect GitHub to restore access"
+	}
+	return fmt.Sprintf("GitHub API returned HTTP %d", e.Status)
+}
+
+// scopeAllowsPrivate reports whether the granted OAuth scopes include the
+// private repository scope.
+func scopeAllowsPrivate(scopes string) bool {
+	for _, scope := range strings.Split(scopes, ",") {
+		if strings.EqualFold(strings.TrimSpace(scope), "repo") {
+			return true
+		}
+	}
+	return false
+}
+
+// HasPrivateRepoScope reports whether the token used for a request carries
+// the scope needed to read private repositories.
+func (r Result) HasPrivateRepoScope() bool {
+	return scopeAllowsPrivate(r.Scopes)
 }
 
 func NewClient(db *sql.DB, token, userID string) *Client {
@@ -103,6 +144,7 @@ func (c *Client) Get(ctx context.Context, endpoint string) (Result, error) {
 	resetAt := parseResetAt(response.Header.Get("X-RateLimit-Reset"))
 	remainingHeader := response.Header.Get("X-RateLimit-Remaining")
 	remaining, _ := strconv.Atoi(remainingHeader)
+	scopes := response.Header.Get("X-OAuth-Scopes")
 
 	if response.StatusCode == http.StatusNotModified {
 		if cached.body == nil {
@@ -111,14 +153,14 @@ func (c *Client) Get(ctx context.Context, endpoint string) (Result, error) {
 		etag := firstNonEmpty(response.Header.Get("ETag"), cached.etag)
 		lastModified := firstNonEmpty(response.Header.Get("Last-Modified"), cached.lastModified)
 		c.saveCache(ctx, cacheKey, etag, lastModified, cached.body)
-		return Result{Body: cached.body, ETag: etag, LastModified: lastModified, RateLimitRemaining: remaining, RateLimitReset: resetAt}, nil
+		return Result{Body: cached.body, ETag: etag, LastModified: lastModified, RateLimitRemaining: remaining, RateLimitReset: resetAt, Scopes: scopes}, nil
 	}
 
 	if response.StatusCode == http.StatusOK {
 		body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes+1))
 		if err != nil {
 			if cached.body != nil {
-				return Result{Body: cached.body, ETag: cached.etag, LastModified: cached.lastModified, Stale: true}, nil
+				return Result{Body: cached.body, ETag: cached.etag, LastModified: cached.lastModified, Stale: true, Scopes: scopes}, nil
 			}
 			return Result{}, fmt.Errorf("read GitHub API response")
 		}
@@ -128,17 +170,20 @@ func (c *Client) Get(ctx context.Context, endpoint string) (Result, error) {
 		etag := response.Header.Get("ETag")
 		lastModified := response.Header.Get("Last-Modified")
 		c.saveCache(ctx, cacheKey, etag, lastModified, body)
-		return Result{Body: body, ETag: etag, LastModified: lastModified, RateLimitRemaining: remaining, RateLimitReset: resetAt}, nil
+		return Result{Body: body, ETag: etag, LastModified: lastModified, RateLimitRemaining: remaining, RateLimitReset: resetAt, Scopes: scopes}, nil
 	}
 
 	if isRateLimited(response, remainingHeader) {
 		if cached.body != nil {
-			return Result{Body: cached.body, ETag: cached.etag, LastModified: cached.lastModified, Stale: true, RateLimitRemaining: remaining, RateLimitReset: resetAt}, nil
+			return Result{Body: cached.body, ETag: cached.etag, LastModified: cached.lastModified, Stale: true, RateLimitRemaining: remaining, RateLimitReset: resetAt, Scopes: scopes}, nil
 		}
 		return Result{}, &RateLimitError{Remaining: remaining, ResetAt: resetAt}
 	}
 	if response.StatusCode >= 500 && cached.body != nil {
-		return Result{Body: cached.body, ETag: cached.etag, LastModified: cached.lastModified, Stale: true, RateLimitRemaining: remaining, RateLimitReset: resetAt}, nil
+		return Result{Body: cached.body, ETag: cached.etag, LastModified: cached.lastModified, Stale: true, RateLimitRemaining: remaining, RateLimitReset: resetAt, Scopes: scopes}, nil
+	}
+	if response.StatusCode == http.StatusNotFound || response.StatusCode == http.StatusForbidden || response.StatusCode == http.StatusUnauthorized {
+		return Result{}, &AccessError{Status: response.StatusCode, Scopes: scopes}
 	}
 	return Result{}, fmt.Errorf("GitHub API returned HTTP %d", response.StatusCode)
 }

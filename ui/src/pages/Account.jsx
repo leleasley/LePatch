@@ -292,17 +292,20 @@ export function AccountPage({ user, onUser, onSignOut, theme, onTheme }) {
             <div className="section-head" style={{ marginBottom: 0 }}>
               <div>
                 <h2 style={{ fontSize: 'var(--text-sm)' }}>GitHub connection</h2>
-                <p>Used to list repositories and track the issues you opened.</p>
+                <p>Used to list repositories and track the issues you opened. Private and sponsored repositories need this connection.</p>
               </div>
               <Pill kind={github.connected ? 'success' : ''}>{github.connected ? `Connected as ${github.username}` : 'Not connected'}</Pill>
             </div>
-            {github.connected ? (
-              <div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <a className="btn btn-sm" href="/api/auth/github?mode=link">
+                {github.connected ? 'Reconnect GitHub' : 'Connect GitHub'}
+              </a>
+              {github.connected ? (
                 <button className="btn btn-danger btn-sm" type="button" onClick={unlinkGithub} disabled={busy === 'github'}>
-                  Disconnect GitHub
+                  Disconnect
                 </button>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
           </div>
         </section>
       </div>

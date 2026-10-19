@@ -591,7 +591,7 @@ function UsersPanel() {
       </div>
 
       <div className="card-body">
-        <form className="account-grid" style={{ gap: 10, marginBottom: 20, gridTemplateColumns: '1fr 1fr 1fr 150px auto' }} onSubmit={create}>
+        <form className="user-create-form" onSubmit={create}>
           <input className="input" required placeholder="Name" value={newUser.name} onChange={event => setNewUser(current => ({ ...current, name: event.target.value }))} />
           <input className="input" required type="email" placeholder="Email" value={newUser.email} onChange={event => setNewUser(current => ({ ...current, email: event.target.value }))} />
           <input className="input" required type="password" minLength={10} placeholder="Temporary password" value={newUser.password} onChange={event => setNewUser(current => ({ ...current, password: event.target.value }))} />
@@ -606,7 +606,7 @@ function UsersPanel() {
           </button>
         </form>
 
-        <div style={{ overflowX: 'auto' }}>
+        <div className="user-table-wrap">
           <table className="data-table user-table">
             <thead>
               <tr>
@@ -655,6 +655,43 @@ function UsersPanel() {
             </tbody>
           </table>
         </div>
+
+        <div className="user-cards">
+          {users.map(user => (
+            <article className="user-card" key={user.id}>
+              <div className="user-card-head">
+                <div className="user-cell">
+                  <b>{user.name}</b>
+                  <span>{user.email}</span>
+                </div>
+                <Pill kind={user.mfaEnabled ? 'success' : 'danger'}>{user.mfaEnabled ? 'MFA on' : 'MFA required'}</Pill>
+              </div>
+              <div className="user-card-stats">
+                <span>
+                  <b>{user.watchedApps ?? 0}</b> repos
+                </span>
+                <span>
+                  <b>{user.activeSessions ?? 0}</b> sessions
+                </span>
+              </div>
+              <div className="user-card-foot">
+                <select className="select" value={user.role} onChange={event => changeRole(user, event.target.value)} aria-label={`Role for ${user.email}`}>
+                  <option value="user">User</option>
+                  <option value="moderator">Moderator</option>
+                  <option value="restricted">Restricted</option>
+                  <option value="administrator">Administrator</option>
+                </select>
+                <button className="row-action" type="button" title="Reset password" onClick={() => resetPassword(user)}>
+                  <KeyRound size={14} />
+                </button>
+                <button className="row-action is-danger" type="button" title="Delete user" onClick={() => setRemoveUser(user)}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+
         {!users.length ? <EmptyState icon={Users} title="No users found" description="Create the first account to get started." /> : null}
       </div>
 

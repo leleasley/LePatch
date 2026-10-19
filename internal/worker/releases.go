@@ -17,6 +17,7 @@ import (
 
 	"lepatch/internal/events"
 	gh "lepatch/internal/github"
+	"lepatch/internal/secrets"
 )
 
 type Runner struct {
@@ -232,11 +233,31 @@ func (w *Runner) checkByID(ctx context.Context, id string) {
 	w.recordCheck(nil)
 }
 
+// repositoryToken returns the GitHub token to use for a watched repository.
+// The account's own linked token is preferred because it can reach private and
+// sponsored repositories, which the shared installation token cannot. The
+// installation token stays as the fallback for repositories nobody has
+// connected a GitHub account for.
+func (w *Runner) repositoryToken(ctx context.Context, userID string) string {
+	if userID == "" {
+		return w.token
+	}
+	var encrypted string
+	if err := w.db.QueryRowContext(ctx, `SELECT accessToken FROM "GitHubLink" WHERE userId=?`, userID).Scan(&encrypted); err != nil || encrypted == "" {
+		return w.token
+	}
+	token, err := secrets.DecryptIntegrationValue(w.encryptionKey, encrypted)
+	if err != nil || token == "" {
+		return w.token
+	}
+	return token
+}
+
 func (w *Runner) check(ctx context.Context, a appRow) error {
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	_, _ = w.db.ExecContext(ctx, `UPDATE "WatchedApp" SET checkStatus='checking',checkError=NULL,updatedAt=? WHERE id=?`, now, a.id)
 	_, _ = w.hub.Publish(a.userID, "check.started", map[string]string{"appId": a.id, "startedAt": now})
-	client := gh.NewClient(w.db, w.token, "global")
+	client := gh.NewClient(w.db, w.repositoryToken(ctx, a.userID), a.userID)
 	if !a.iconURL.Valid || a.iconURL.String == "" || !a.defaultBranch.Valid || a.defaultBranch.String == "" {
 		w.hydrateRepository(ctx, a, client)
 	}

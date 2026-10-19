@@ -166,9 +166,12 @@ func (s *Server) githubOAuthStart(w http.ResponseWriter, r *http.Request) {
 		name = "__Host-gh_oauth_state"
 	}
 	http.SetCookie(w, &http.Cookie{Name: name, Value: nonce, Path: "/", MaxAge: 600, Secure: secure, HttpOnly: true, SameSite: http.SameSiteLaxMode})
-	scope := "read:user"
-	if mode == "link" {
-		scope = "repo read:user"
+	// The repository scope is needed to read private repositories, including
+	// the private repositories a sponsor can see. The recovery flow only
+	// needs to identify the account, so it stays on the narrow scope.
+	scope := "repo read:user"
+	if mode == "mfa-recovery" {
+		scope = "read:user"
 	}
 	redirectURI := strings.TrimRight(s.config.AppURL.String(), "/") + "/api/auth/github/callback"
 	query := url.Values{"client_id": {clientID}, "redirect_uri": {redirectURI}, "scope": {scope}, "state": {state}}

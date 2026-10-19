@@ -1,11 +1,11 @@
-FROM node:22-alpine AS ui-builder
+FROM node:26-alpine AS ui-builder
 WORKDIR /src/ui
 COPY ui/package.json ui/package-lock.json ./
 RUN npm ci
 COPY ui/ ./
 RUN npm run build
 
-FROM golang:1.26-alpine AS go-builder
+FROM golang:1.27-alpine AS go-builder
 ARG APP_VERSION
 WORKDIR /src
 RUN apk add --no-cache ca-certificates git
@@ -16,7 +16,7 @@ COPY --from=ui-builder /src/internal/web/dist ./internal/web/dist
 RUN version="${APP_VERSION:-$(cat VERSION)}" && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w -X lepatch/internal/server.Version=${version}" -o /out/lepatch ./cmd/lepatch
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/lepatch-import ./cmd/lepatch-import
 
-FROM alpine:3.22 AS runner
+FROM alpine:3.24 AS runner
 LABEL org.opencontainers.image.source="https://github.com/leleasley/LePatch"
 RUN apk add --no-cache ca-certificates tzdata && addgroup -S lepatch && adduser -S -G lepatch lepatch
 WORKDIR /app
