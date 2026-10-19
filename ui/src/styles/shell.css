@@ -1,5 +1,13 @@
-/* Application shell: top bar, side navigation, page frame and the mobile
-   bottom bar. */
+/* Application shell: side navigation, top bar, page frame and the mobile
+   bottom bar.
+
+   The side navigation owns the top left corner on wide screens and runs the
+   full height of the viewport. The top bar starts to the right of it. On
+   narrow screens the side navigation becomes a slide in drawer and the top
+   bar spans the full width above the bottom bar.
+
+   Both bars respect the phone safe areas so the dynamic island and the home
+   indicator never cover the controls. */
 
 .shell {
   min-height: 100vh;
@@ -9,9 +17,11 @@
 
 .topbar {
   position: fixed;
-  inset: 0 0 auto 0;
+  top: 0;
+  left: var(--sidebar-w);
+  right: 0;
   z-index: 40;
-  height: var(--topbar-h);
+  padding-top: var(--safe-top);
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   backdrop-filter: blur(14px) saturate(140%);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
@@ -22,7 +32,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  height: 100%;
+  height: var(--topbar-h);
   padding: 0 clamp(16px, 3vw, 28px);
 }
 
@@ -56,6 +66,12 @@
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+/* The brand lives in the side navigation on wide screens and moves into the
+   top bar on narrow ones. */
+.topbar-brand {
+  display: none;
 }
 
 .topbar-search {
@@ -187,28 +203,37 @@
 
 .sidebar {
   position: fixed;
-  top: var(--topbar-h);
-  bottom: 0;
-  left: 0;
+  inset: 0 auto 0 0;
   z-index: 30;
   width: var(--sidebar-w);
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 20px 14px 16px;
+  padding: var(--safe-top) 14px 16px;
   border-right: 1px solid var(--border);
   background: var(--bg-raised);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--topbar-h);
+  flex: none;
+  margin: 0 -4px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
 .nav-group {
   display: grid;
   gap: 2px;
+  padding-top: 14px;
 }
 
 .nav-label {
-  padding: 18px 10px 7px;
+  padding: 12px 10px 7px;
   color: var(--fg-faint);
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
@@ -217,8 +242,8 @@
   text-transform: uppercase;
 }
 
-.nav-label:first-child {
-  padding-top: 0;
+.nav-group:first-of-type .nav-label {
+  padding-top: 2px;
 }
 
 .nav-item {
@@ -318,7 +343,7 @@
 /* Page frame ------------------------------------------------------------- */
 
 .main {
-  padding-top: var(--topbar-h);
+  padding-top: calc(var(--topbar-h) + var(--safe-top));
   padding-left: var(--sidebar-w);
   min-height: 100vh;
 }
@@ -327,7 +352,7 @@
   width: 100%;
   max-width: var(--page-max);
   margin: 0 auto;
-  padding: clamp(22px, 3vw, 40px) clamp(16px, 3vw, 32px) 72px;
+  padding: clamp(22px, 3vw, 40px) clamp(16px, 3vw, 32px) 32px;
 }
 
 .page-head {
@@ -533,24 +558,54 @@
 
 /* Responsive ------------------------------------------------------------- */
 
-@media (max-width: 1080px) {
+@media (max-width: 1180px) {
   .topbar-search {
     max-width: 260px;
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   :root {
     --topbar-h: 56px;
   }
 
+  /* The side navigation becomes a drawer. */
   .sidebar {
-    display: none;
+    z-index: 70;
+    width: min(84vw, 300px);
+    transform: translateX(-102%);
+    transition: transform 0.26s var(--ease-out);
+    box-shadow: none;
+  }
+
+  .sidebar.is-open {
+    transform: translateX(0);
+    box-shadow: 18px 0 48px rgba(0, 0, 0, 0.55);
+  }
+
+  .drawer-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 65;
+    display: block;
+    border: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    animation: lepatch-fade-up 0.2s var(--ease-out) both;
+  }
+
+  .topbar {
+    left: 0;
+  }
+
+  .topbar-brand {
+    display: flex;
   }
 
   .main {
     padding-left: 0;
-    padding-bottom: 78px;
+    padding-bottom: calc(var(--bottom-bar-h) + var(--safe-bottom) + 16px);
   }
 
   .topbar-search {
@@ -590,7 +645,7 @@
     grid-auto-flow: column;
     grid-auto-columns: 1fr;
     gap: 2px;
-    padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
+    padding: 7px 8px calc(7px + var(--safe-bottom));
     border-top: 1px solid var(--border);
     background: color-mix(in srgb, var(--bg-raised) 92%, transparent);
     backdrop-filter: blur(16px);
@@ -619,8 +674,78 @@
   }
 }
 
-@media (min-width: 901px) {
+@media (min-width: 1025px) {
   .topbar-search-mobile {
     display: none;
+  }
+}
+
+/* Phone tier -------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .topbar-inner {
+    gap: 6px;
+    padding: 0 10px;
+  }
+
+  .topbar-brand {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .topbar-brand > span:not(.brand-badge) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Comfortable touch targets for the shell controls. */
+  .icon-button,
+  .avatar-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .status-pill {
+    width: 32px;
+    height: 32px;
+  }
+
+  .mobile-bar button {
+    min-height: 52px;
+  }
+
+  .nav-item {
+    min-height: 46px;
+    font-size: var(--text-base);
+  }
+
+  .page {
+    padding: 18px 14px 24px;
+  }
+
+  .page-head {
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .page-title h1 {
+    font-size: var(--text-2xl);
+  }
+
+  .page-title p {
+    font-size: var(--text-sm);
+  }
+
+  .page-actions {
+    width: 100%;
+  }
+
+  .page-actions .btn {
+    flex: 1;
+  }
+
+  .section-head {
+    gap: 10px;
   }
 }

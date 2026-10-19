@@ -37,6 +37,7 @@ const MOBILE_TABS = [
   { id: 'apps', label: 'Apps', icon: Radio },
   { id: 'discover', label: 'Discover', icon: Compass },
   { id: 'notifications', label: 'Alerts', icon: Bell },
+  { id: 'account', label: 'Profile', icon: User },
 ];
 
 export function Shell({
@@ -50,11 +51,11 @@ export function Shell({
   onTheme,
   onOpenPalette,
   onSignOut,
-  onOpenMenu,
   children,
 }) {
   const [accountOpen, setAccountOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const accountRef = useRef(null);
 
   useEffect(() => {
@@ -69,7 +70,37 @@ export function Shell({
     return () => document.removeEventListener('mousedown', onClick);
   }, [accountOpen, themeOpen]);
 
+  // The drawer is a phone only overlay, so it closes whenever the layout
+  // grows back to the side navigation.
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1025px)');
+    const update = () => {
+      if (media.matches) setDrawerOpen(false);
+    };
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    if (!drawerOpen) return undefined;
+    const onKeyDown = event => {
+      if (event.key === 'Escape') setDrawerOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previous;
+    };
+  }, [drawerOpen]);
+
   const isAdmin = user?.role === 'administrator';
+
+  const go = id => {
+    navigate(id);
+    setDrawerOpen(false);
+  };
 
   const navItem = (item, active) => (
     <a
@@ -78,7 +109,7 @@ export function Shell({
       className={`nav-item${active ? ' is-active' : ''}`}
       onClick={event => {
         event.preventDefault();
-        navigate(item.id);
+        go(item.id);
       }}
     >
       <item.icon size={16} />
@@ -89,14 +120,26 @@ export function Shell({
 
   return (
     <div className="shell">
+      {drawerOpen ? <button className="drawer-scrim" aria-label="Close navigation" onClick={() => setDrawerOpen(false)} /> : null}
+
       <header className="topbar">
         <div className="topbar-inner">
+          <button
+            className="icon-button topbar-search-mobile"
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Open navigation"
+            aria-expanded={drawerOpen}
+          >
+            <Menu size={18} />
+          </button>
+
           <a
-            className="brand"
+            className="brand topbar-brand"
             href="#"
             onClick={event => {
               event.preventDefault();
-              navigate('feed');
+              go('feed');
             }}
           >
             <img src="/assets/Logo.png" alt="" />
@@ -145,9 +188,6 @@ export function Shell({
                 </div>
               ) : null}
             </div>
-            <button className="icon-button topbar-search-mobile" type="button" onClick={onOpenMenu} aria-label="Open navigation">
-              <Menu size={17} />
-            </button>
             <div className="account-control" ref={accountRef} style={{ position: 'relative' }}>
               <button
                 className="avatar-button"
@@ -162,12 +202,12 @@ export function Shell({
                 <div className="palette" style={{ position: 'absolute', right: 0, top: 44, width: 230, maxHeight: 'none' }}>
                   <div className="palette-results">
                     <div className="palette-group">{user?.email || 'Signed in'}</div>
-                    <button type="button" className="palette-item" onClick={() => { setAccountOpen(false); navigate('account'); }}>
+                    <button type="button" className="palette-item" onClick={() => { setAccountOpen(false); go('account'); }}>
                       <User size={15} />
                       <span>Your account</span>
                     </button>
                     {isAdmin ? (
-                      <button type="button" className="palette-item" onClick={() => { setAccountOpen(false); navigate('settings'); }}>
+                      <button type="button" className="palette-item" onClick={() => { setAccountOpen(false); go('settings'); }}>
                         <Settings size={15} />
                         <span>Admin console</span>
                       </button>
@@ -188,7 +228,13 @@ export function Shell({
         </div>
       </header>
 
-      <aside className="sidebar">
+      <aside className={drawerOpen ? 'sidebar is-open' : 'sidebar'} aria-label="Main navigation">
+        <div className="sidebar-brand brand">
+          <img src="/assets/Logo.png" alt="" />
+          <span>LePatch</span>
+          <span className="brand-badge">Beta</span>
+        </div>
+
         <div className="nav-group">
           <div className="nav-label">Track</div>
           {PRIMARY.map(item =>
@@ -198,7 +244,7 @@ export function Shell({
         <div className="nav-group">
           <div className="nav-label">Discover</div>
           {DISCOVER.map(item =>
-            navItem(item, item.id === 'discover' ? page === 'discover' && !page.includes('sponsor') : page === item.id),
+            navItem(item, item.id === 'discover' ? page === 'discover' : page === item.id),
           )}
         </div>
         {isAdmin ? (
@@ -230,15 +276,11 @@ export function Shell({
 
       <nav className="mobile-bar" aria-label="Primary">
         {MOBILE_TABS.map(item => (
-          <button key={item.id} type="button" className={page === item.id ? 'is-active' : ''} onClick={() => navigate(item.id)}>
+          <button key={item.id} type="button" className={page === item.id ? 'is-active' : ''} onClick={() => go(item.id)}>
             <item.icon size={19} />
             <span>{item.label}</span>
           </button>
         ))}
-        <button type="button" className={page === 'account' || page === 'settings' ? 'is-active' : ''} onClick={() => navigate(isAdmin ? 'settings' : 'account')}>
-          <User size={19} />
-          <span>Account</span>
-        </button>
       </nav>
     </div>
   );

@@ -1094,7 +1094,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .admin-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
@@ -1148,6 +1148,163 @@
   }
 
   .release-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Phone tier -------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .stat {
+    padding: 12px 13px;
+  }
+
+  .stat-value {
+    font-size: var(--text-lg);
+  }
+
+  .stat-label {
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+  }
+
+  .release-card {
+    gap: 11px;
+    padding: 13px;
+  }
+
+  .release-card .repo-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-2xs);
+  }
+
+  .release-card h3 {
+    font-size: var(--text-sm);
+  }
+
+  .release-card p {
+    font-size: var(--text-xs);
+  }
+
+  .feed-aside {
+    gap: 12px;
+  }
+
+  .watch-row {
+    padding: 10px 12px;
+    gap: 9px;
+  }
+
+  .segmented {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .segmented::-webkit-scrollbar {
+    display: none;
+  }
+
+  .issue-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    padding: 13px 12px;
+  }
+
+  .issue-side {
+    grid-column: 2;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .log-row {
+    padding: 12px;
+  }
+
+  .result-row {
+    padding: 11px 8px;
+    gap: 10px;
+  }
+
+  .repo-hero {
+    padding: 15px;
+    gap: 12px;
+  }
+
+  .repo-hero-copy h2 {
+    font-size: var(--text-lg);
+  }
+
+  .repo-hero .btn {
+    width: 100%;
+  }
+
+  .repo-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .repo-metrics .stat-value {
+    font-size: var(--text-base);
+  }
+
+  .repo-grid {
+    gap: 10px;
+  }
+
+  .repo-card {
+    padding: 14px;
+    gap: 11px;
+  }
+
+  .repo-card p {
+    min-height: 0;
+  }
+
+  .admin-nav button {
+    min-height: 40px;
+    padding: 0 13px;
+  }
+
+  .account-grid {
+    gap: 12px;
+  }
+
+  .chart {
+    height: 108px;
+    gap: 3px;
+  }
+
+  .chart-col small {
+    font-size: 8px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 9px 10px;
+  }
+
+  .user-table td:first-child {
+    min-width: 140px;
+  }
+
+  .auth-card {
+    padding: 24px 20px 18px;
+    border-radius: var(--radius-lg);
+  }
+
+  .auth-card h1 {
+    font-size: var(--text-xl);
+  }
+
+  .backup-code-list {
     grid-template-columns: minmax(0, 1fr);
   }
 }

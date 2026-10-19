@@ -59,7 +59,7 @@ const PAGE_META = {
   'github-repo': { kicker: 'github', title: 'Repository', description: 'A preview of a repository on GitHub.' },
   'sponsor-detail': { kicker: 'sponsored maintainer', title: 'Maintainer', description: 'Repositories available through your active sponsorship.' },
   settings: { kicker: 'workspace', title: 'Admin console', description: 'Everything that shapes how this LePatch installation behaves.' },
-  account: { kicker: 'your account', title: 'Your account', description: 'Profile, sign in methods, notifications and active sessions.' },
+  account: { kicker: 'your account', title: 'Your profile', description: 'Profile, sign in methods, notifications and active sessions.' },
   about: { kicker: 'about', title: 'About LePatch', description: 'Version, updates and the project behind this installation.' },
 };
 
@@ -910,7 +910,6 @@ export function App() {
         theme={theme}
         onTheme={applyTheme}
         onOpenPalette={() => setPaletteOpen(true)}
-        onOpenMenu={() => setPaletteOpen(true)}
         onSignOut={signOut}
       >
         <div className="page-head">

@@ -73,7 +73,14 @@
   /* Shell metrics */
   --sidebar-w: 252px;
   --topbar-h: 62px;
+  --bottom-bar-h: 62px;
   --page-max: 1340px;
+
+  /* Phone safe areas. The top value keeps the dynamic island clear of the
+     top bar and the bottom value keeps the home indicator clear of the
+     bottom bar. Both are zero on a desktop browser. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
