@@ -18,8 +18,8 @@ data/
 *.log
 
 # Go outputs
-lepatch
-lepatch-import
+/lepatch
+/lepatch-import
 
 # Editor and OS files
 .DS_Store
