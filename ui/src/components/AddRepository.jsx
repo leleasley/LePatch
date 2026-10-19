@@ -83,6 +83,7 @@ export function AddRepositoryDialog({ open, onClose, onAdd, existing = [] }) {
             <Search size={16} />
             <input
               id="add-repo-search"
+              className="input"
               autoComplete="off"
               placeholder="owner/repository"
               value={term}

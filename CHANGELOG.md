@@ -9,6 +9,11 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- Raised issues open inside LePatch. The issue page shows the state, author,
+  labels, description and the whole comment thread, with GitHub kept as a
+  secondary link.
+- Notification history rows open the release inside LePatch. The delivery log
+  now carries the repository and release identity so it can navigate in app.
 - Toasts are the single way the interface reports the result of an action:
   a coloured icon, a title, a message, a dismiss button and a progress bar,
   stacked above the phone bottom bar. Live events also raise a toast, so a new
@@ -94,6 +99,14 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- Editing on a phone was unusable. Two causes: the page fade animation kept a
+  transform on the page body, which made it the containing block for the
+  dialog's `position: fixed` overlay and pushed the sheet off screen, and every
+  text field was under 16px, which makes iOS zoom the page on focus. Dialogs
+  now render through a portal on the body, the animation no longer leaves a
+  transform, fields are 16px on a phone, the sheet keeps its Save and Cancel
+  bar stuck to the bottom, and opening a dialog focuses the first field rather
+  than the close button.
 - The watched repository card stretched its settings, refresh and delete
   buttons into a vertical column because the header rule matched the action
   cluster as well as the title block.

@@ -49,15 +49,15 @@ export function AuthPage({ screen, notice, setupInfo, backupCodes, onLogin, onPa
             <form onSubmit={submit} className="auth-form">
               <label className="field">
                 <span>Administrator email</span>
-                <input required autoComplete="email" type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com" />
+                <input className="input" required autoComplete="email" type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com" />
               </label>
               <label className="field">
                 <span>Password</span>
-                <input required minLength={10} autoComplete="new-password" type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="At least 10 characters" />
+                <input className="input" required minLength={10} autoComplete="new-password" type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="At least 10 characters" />
               </label>
               <label className="field">
                 <span>Confirm password</span>
-                <input required minLength={10} autoComplete="new-password" type="password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} placeholder="Enter it again" />
+                <input className="input" required minLength={10} autoComplete="new-password" type="password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} placeholder="Enter it again" />
               </label>
               <button className="btn btn-primary" type="submit" disabled={working}>
                 {working ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} Create administrator
@@ -80,11 +80,11 @@ export function AuthPage({ screen, notice, setupInfo, backupCodes, onLogin, onPa
             <form onSubmit={submit} className="auth-form">
               <label className="field">
                 <span>Email address</span>
-                <input required autoComplete="username" type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com" />
+                <input className="input" required autoComplete="username" type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com" />
               </label>
               <label className="field">
                 <span>Password</span>
-                <input required autoComplete="current-password" type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="Your password" />
+                <input className="input" required autoComplete="current-password" type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="Your password" />
               </label>
               <button className="btn btn-primary" type="submit" disabled={working}>
                 {working ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} Sign in
@@ -119,7 +119,7 @@ export function AuthPage({ screen, notice, setupInfo, backupCodes, onLogin, onPa
             <form onSubmit={submit} className="auth-form">
               <label className="field">
                 <span>Authentication code</span>
-                <input required autoFocus autoComplete="one-time-code" inputMode="numeric" value={code} onChange={event => setCode(event.target.value)} placeholder="000000" />
+                <input className="input" required autoFocus autoComplete="one-time-code" inputMode="numeric" value={code} onChange={event => setCode(event.target.value)} placeholder="000000" />
               </label>
               <button className="btn btn-primary" type="submit" disabled={working}>
                 {working ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} Verify and sign in
@@ -156,7 +156,7 @@ export function AuthPage({ screen, notice, setupInfo, backupCodes, onLogin, onPa
                 <form onSubmit={submit} className="auth-form">
                   <label className="field">
                     <span>Six digit code</span>
-                    <input required autoComplete="one-time-code" inputMode="numeric" value={code} onChange={event => setCode(event.target.value)} placeholder="000000" />
+                    <input className="input" required autoComplete="one-time-code" inputMode="numeric" value={code} onChange={event => setCode(event.target.value)} placeholder="000000" />
                   </label>
                   <button className="btn btn-primary" type="submit" disabled={working}>
                     {working ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} Verify and enable MFA

@@ -1,8 +1,8 @@
-import { Bell, Check, Clock3, RefreshCw, TriangleAlert } from 'lucide-react';
+import { ArrowUpRight, Bell, Check, Clock3, RefreshCw, TriangleAlert } from 'lucide-react';
 import { elapsed } from '../lib/format.js';
 import { EmptyState, Pill } from '../components/ui.jsx';
 
-export function NotificationsPage({ events, notice, onRefresh, loading }) {
+export function NotificationsPage({ events, notice, onRefresh, loading, onOpenRelease }) {
   const failures = events.filter(event => event.status === 'failed').length;
 
   return (
@@ -36,9 +36,15 @@ export function NotificationsPage({ events, notice, onRefresh, loading }) {
               </div>
               <div className="log-main">
                 <span className="issue-repo">{event.repoFullName}</span>
-                <a href={event.htmlUrl} target="_blank" rel="noreferrer">
+                <button
+                  className="log-link"
+                  type="button"
+                  onClick={() => onOpenRelease(event.appId, event.releaseId)}
+                  disabled={!event.appId || !event.releaseId}
+                >
                   {event.appName} {event.tagName}
-                </a>
+                  <ArrowUpRight size={12} />
+                </button>
                 <span className="release-meta">
                   <span>{event.releaseType || 'Release'} update</span>
                 </span>

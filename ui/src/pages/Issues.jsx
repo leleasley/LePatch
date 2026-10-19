@@ -1,4 +1,4 @@
-import { ArrowUpRight, Check, CircleDot, MessageSquare, RefreshCw } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Check, CircleDot, MessageSquare, RefreshCw } from 'lucide-react';
 import { elapsed } from '../lib/format.js';
 import { EmptyState, Pill } from '../components/ui.jsx';
 
@@ -8,7 +8,7 @@ const STATES = [
   { id: 'all', label: 'All' },
 ];
 
-export function IssuesPage({ issues, state, onState, onSeen, onRefresh, loading, notice }) {
+export function IssuesPage({ issues, state, onState, onSeen, onOpen, onRefresh, loading, notice }) {
   const unread = issues.reduce((total, issue) => total + (issue.unreadCommentCount || 0), 0);
   const open = issues.filter(issue => issue.state === 'open').length;
 
@@ -52,9 +52,9 @@ export function IssuesPage({ issues, state, onState, onSeen, onRefresh, loading,
                 <span className="issue-repo">
                   {issue.owner}/{issue.repo} · #{issue.issueNumber}
                 </span>
-                <a className="issue-title" href={issue.htmlUrl} target="_blank" rel="noreferrer">
-                  {issue.title} <ArrowUpRight size={12} />
-                </a>
+                <button className="issue-title" type="button" onClick={() => onOpen(issue)}>
+                  {issue.title} <ArrowRight size={13} />
+                </button>
                 {issue.body ? <p className="clamp-2">{issue.body.replace(/\s+/g, ' ').slice(0, 200)}</p> : null}
                 <div className="issue-meta">
                   <span>
@@ -62,6 +62,9 @@ export function IssuesPage({ issues, state, onState, onSeen, onRefresh, loading,
                   </span>
                   {issue.unreadCommentCount > 0 ? <Pill kind="accent">{issue.unreadCommentCount} new</Pill> : null}
                   <span>Opened {elapsed(issue.createdAt)}</span>
+                  <a className="issue-meta-link" href={issue.htmlUrl} target="_blank" rel="noreferrer" title="Open on GitHub">
+                    GitHub <ArrowUpRight size={11} />
+                  </a>
                 </div>
               </div>
               <div className="issue-side">

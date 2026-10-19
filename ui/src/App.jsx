@@ -14,6 +14,7 @@ import { FeedPage } from './pages/Feed.jsx';
 import { WatchedPage } from './pages/Watched.jsx';
 import { RepositoryPage } from './pages/Repository.jsx';
 import { IssuesPage } from './pages/Issues.jsx';
+import { IssueDetailPage } from './pages/IssueDetail.jsx';
 import { NotificationsPage } from './pages/Notifications.jsx';
 import { DiscoverPage } from './pages/Discover.jsx';
 import { AccountPage } from './pages/Account.jsx';
@@ -37,6 +38,7 @@ const ROUTES = [
 function routeFromPath(pathname) {
   if (/^\/apps\/[^/]+\/releases\//.test(pathname)) return { id: 'release-detail' };
   if (/^\/apps\/[^/]+/.test(pathname)) return { id: 'app-detail' };
+  if (/^\/issues\/[^/]+\/[^/]+\/\d+/.test(pathname)) return { id: 'issue-detail' };
   if (/^\/your-repositories\/[^/]+\/[^/]+/.test(pathname)) return { id: 'owned-repo' };
   if (/^\/your-repositories/.test(pathname)) return { id: 'owned-repos' };
   if (/^\/sponsors\/[^/]+/.test(pathname)) return { id: 'sponsor-detail' };
@@ -51,6 +53,7 @@ const PAGE_META = {
   'app-detail': { kicker: 'repository', title: 'Repository', description: 'Release history, documentation and activity for this repository.' },
   'release-detail': { kicker: 'release notes', title: 'Release', description: 'The full release notes published on GitHub.' },
   issues: { kicker: 'github activity', title: 'Raised issues', description: 'Issues you opened across GitHub, with new comments and state changes.' },
+  'issue-detail': { kicker: 'github issue', title: 'Issue', description: 'The issue, its labels and the full comment thread.' },
   notifications: { kicker: 'delivery log', title: 'Notifications', description: 'Every release alert LePatch has pushed to your channels.' },
   discover: { kicker: 'discover github', title: 'Repository search', description: 'Find a new project to follow and start tracking its releases.' },
   'discover-sponsors': { kicker: 'discover github', title: 'Sponsored maintainers', description: 'Repositories you can reach through the sponsorship you support.' },
@@ -132,6 +135,10 @@ export function App() {
   const [sponsorLogin, setSponsorLogin] = useState(() => {
     const match = location.pathname.match(/^\/sponsors\/([^/]+)/);
     return match ? decodeURIComponent(match[1]) : '';
+  });
+  const [issueRef, setIssueRef] = useState(() => {
+    const match = location.pathname.match(/^\/issues\/([^/]+)\/([^/]+)\/(\d+)/);
+    return match ? { owner: decodeURIComponent(match[1]), repo: decodeURIComponent(match[2]), number: Number(match[3]) } : null;
   });
 
   const deleteAcks = useRef(new Map());
@@ -298,6 +305,15 @@ export function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, []);
 
+  const openIssue = useCallback(issue => {
+    const next = { owner: issue.owner, repo: issue.repo, number: Number(issue.issueNumber) };
+    setIssueRef(next);
+    setPage('issue-detail');
+    const path = `/issues/${encodeURIComponent(next.owner)}/${encodeURIComponent(next.repo)}/${next.number}`;
+    if (location.pathname !== path) history.pushState({}, '', path);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
+
   /* -------------------------------------------------------------- effects */
 
   useEffect(() => {
@@ -353,6 +369,10 @@ export function App() {
         if (sponsorMatch) setSponsorLogin(decodeURIComponent(sponsorMatch[1]));
         const previewMatch = location.pathname.match(/^\/github\/([^/]+)\/([^/]+)/);
         if (previewMatch) setPreviewRepo(`${decodeURIComponent(previewMatch[1])}/${decodeURIComponent(previewMatch[2])}`);
+        const issueMatch = location.pathname.match(/^\/issues\/([^/]+)\/([^/]+)\/(\d+)/);
+        if (issueMatch) {
+          setIssueRef({ owner: decodeURIComponent(issueMatch[1]), repo: decodeURIComponent(issueMatch[2]), number: Number(issueMatch[3]) });
+        }
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -836,7 +856,7 @@ export function App() {
   const meta = PAGE_META[page] || PAGE_META.feed;
   const activeRelease = detailReleases.find(release => release.id === detailReleaseId);
   const title =
-    page === 'owned-repo' ? ownedRepo : page === 'github-repo' ? previewRepo : page === 'sponsor-detail' ? `@${sponsorLogin}` : page === 'app-detail' ? detailApp?.name || detailApp?.repoFullName || 'Repository' : page === 'release-detail' ? activeRelease?.name || activeRelease?.tagName || 'Release' : meta.title;
+    page === 'owned-repo' ? ownedRepo : page === 'github-repo' ? previewRepo : page === 'sponsor-detail' ? `@${sponsorLogin}` : page === 'issue-detail' && issueRef ? `${issueRef.owner}/${issueRef.repo} #${issueRef.number}` : page === 'app-detail' ? detailApp?.name || detailApp?.repoFullName || 'Repository' : page === 'release-detail' ? activeRelease?.name || activeRelease?.tagName || 'Release' : meta.title;
 
   const body = (() => {
     if (page === 'feed') {
@@ -909,10 +929,43 @@ export function App() {
       );
     }
     if (page === 'issues') {
-      return <IssuesPage issues={raisedIssues} state={issueState} onState={setIssueState} onSeen={markIssueSeen} onRefresh={() => loadRaisedIssues()} loading={issueLoading} notice={issueNotice} />;
+      return (
+        <IssuesPage
+          issues={raisedIssues}
+          state={issueState}
+          onState={setIssueState}
+          onSeen={markIssueSeen}
+          onOpen={openIssue}
+          onRefresh={() => loadRaisedIssues()}
+          loading={issueLoading}
+          notice={issueNotice}
+        />
+      );
+    }
+    if (page === 'issue-detail' && issueRef) {
+      const watched = apps.find(app => app.repoOwner?.toLowerCase() === issueRef.owner.toLowerCase() && app.repoName?.toLowerCase() === issueRef.repo.toLowerCase());
+      return (
+        <IssueDetailPage
+          owner={issueRef.owner}
+          repo={issueRef.repo}
+          number={issueRef.number}
+          onBack={() => navigate('issues')}
+          onOpenRepo={watched ? () => openApp(watched.id) : null}
+        />
+      );
     }
     if (page === 'notifications') {
-      return <NotificationsPage events={notificationEvents} notice={notificationNotice} onRefresh={loadNotifications} loading={notificationLoading} />;
+      return (
+        <NotificationsPage
+          events={notificationEvents}
+          notice={notificationNotice}
+          onRefresh={loadNotifications}
+          loading={notificationLoading}
+          onOpenRelease={(appId, releaseId) => {
+            if (appId && releaseId) openApp(appId, releaseId);
+          }}
+        />
+      );
     }
     if (page === 'discover' || page === 'discover-sponsors' || page === 'owned-repos' || page === 'sponsor-detail') {
       const mode = page === 'discover-sponsors' || page === 'sponsor-detail' ? 'sponsors' : page === 'owned-repos' ? 'owned' : 'search';
@@ -982,7 +1035,7 @@ export function App() {
                 </button>
               </>
             ) : null}
-            {page === 'apps' ? (
+            {page === 'apps' && apps.length ? (
               <button className="btn btn-primary" type="button" onClick={() => setAdding(true)}>
                 Watch repository
               </button>

@@ -47,6 +47,16 @@ requests, Issues, Branches and Actions tabs consistent. Only an owned
 repository view exposes file commits; server-side ownership and GitHub push
 permission checks remain mandatory.
 
+Issues and notification history stay inside the app: a raised issue opens
+`/issues/{owner}/{repo}/{number}` and a delivery row opens the release page.
+GitHub remains a secondary link on both.
+
+Dialogs render through a portal on `document.body`. Any ancestor with a
+transform becomes the containing block for `position: fixed`, which would pin a
+dialog to the page instead of the screen, so never move a dialog back inside a
+page. Text fields must stay at 16px on a phone or iOS zooms the page when one
+is focused.
+
 The administrator console is a tabbed panel in `pages/Admin.jsx`: Overview,
 Workspace, Integrations, Users, Delivery queues, Backups and Audit log. Every
 figure it shows comes from the Go API. The Workspace tab edits the settings
