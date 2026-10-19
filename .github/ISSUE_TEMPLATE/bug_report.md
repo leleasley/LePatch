@@ -1,14 +1,10 @@
 ---
 name: Bug report
-about: Report something that is broken
-title: ""
+about: Report something broken in LePatch
 labels: bug
-assignees: ""
 ---
 
-## What happened
-
-<!-- A clear description of the bug. -->
+## What happened?
 
 ## Steps to reproduce
 
@@ -16,27 +12,16 @@ assignees: ""
 2.
 3.
 
-## Expected behaviour
-
-<!-- What you expected instead. -->
+## Expected result
 
 ## Environment
 
-- LePatch version / commit:
-- Deployment: Docker Compose / local dev
-- Theme: dark / light / system
-- Browser and OS:
+- LePatch version or commit:
+- Deployment: Docker Compose / local
+- Theme and screen size:
+- Browser and operating system:
 
 ## Logs
 
-<!--
-docker compose logs --tail=100 lepatch worker
-Strip secrets before pasting. Do not include tokens or webhook URLs.
--->
-
-```
-```
-
-## Additional context
-
-<!-- Screenshots, GitHub API status codes, whether it started after an upgrade. -->
+Paste relevant logs after removing secrets, tokens, cookies, OAuth codes, and
+private repository content.

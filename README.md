@@ -1,157 +1,103 @@
 # LePatch
 
-**Self-hosted GitHub release tracking and notifications.**
+LePatch is a self-hosted GitHub release monitor. Watch repositories, review
+release history and repository activity, track issues, and receive Discord or
+Telegram notifications. Search and sponsored maintainers help you discover
+repositories.
 
-LePatch watches the repositories you care about, classifies what actually
-shipped, and tells you where it matters — Discord, Telegram, or the dashboard.
-It is a release radar, not a deployment tool: nothing is ever installed or
-deployed on your behalf.
+The Go service serves an embedded, mobile-friendly web app. It supports GitHub
+OAuth linking, password and passkey sign-in, MFA, user roles, audit history,
+backups, live updates, and an installable PWA. Your own GitHub repositories
+include an in-app browser for README, releases, files, commits, pull requests,
+issues, branches, and Actions. File commits are checked against the linked
+GitHub account and its repository permissions.
 
-```
-Repository → scheduled check → classified release → notification
-```
+## Run with Docker Compose
 
-## Features
-
-- **Release monitoring** for any public or private repository you have access to
-- **Release classification** into major / minor / patch / pre-release, with
-  changelog parsing into sections
-- **Notifications** to Discord webhooks and a shared Telegram bot
-- **Per-user preferences**: enable/disable, quiet hours, severity filters,
-  digest intervals, and issue-comment alerts
-- **Issue tracking** with mention notifications
-- **Repository browsing**: releases, commits, pull requests, issues, branches,
-  workflow runs and file contents without leaving the app
-- **Access control**: administrator, moderator, user and restricted roles, plus
-  TOTP MFA, WebAuthn passkeys and GitHub OAuth
-- **Audit log** for every administrative action
-- **Database backups** on a schedule you control
-- **Dark, light and system themes** — both designed from the same token set
-- **Live updates** across open tabs and devices, with offline and reconnect states
-- **Installable PWA** with a real app icon and offline shell
-
-## Design preview
-
-The clickable preview uses a seeded demo workspace so the screens can be reviewed
-without access to a GitHub account or production database. Open
-[`preview/design-direction.html`](preview/design-direction.html) to switch
-between Feed, Watched apps, and Release detail, and between light and dark mode.
-
-| Feed on phone | Feed on desktop |
-| --- | --- |
-| ![LePatch feed on a phone](preview/screenshots/feed-390-light.png) | ![LePatch feed on desktop](preview/screenshots/feed-1440-light.png) |
-
-The [design direction](docs/design-direction.md) includes the dark captures,
-watched-app and release-detail screenshots, tokens, and responsive layout notes.
-
-## Quick start
-
-### Docker Compose (recommended)
-
-```bash
-git clone https://github.com/OWNER/lepatch.git
-cd lepatch
+```sh
 cp .env.example .env
 ```
 
-Edit `.env` — at minimum:
+Set `APP_URL`, `SESSION_SECRET`, and `ENCRYPTION_KEY` in `.env`. Keep the same
+session and encryption keys when upgrading or migrating an installation.
+Generate fresh keys with `openssl rand -base64 48` and
+`openssl rand -base64 32` for a new installation.
 
-```env
-APP_URL=https://lepatch.example.com
-SESSION_SECRET=<64+ random characters>
-ENCRYPTION_KEY=<32+ random characters>
-DEFAULT_ADMIN_EMAIL=you@example.com
-DEFAULT_ADMIN_PASSWORD=<a strong password>
-GITHUB_TOKEN=ghp_...        # optional but strongly recommended
+```sh
+docker compose -f docker-compose.yml build lepatch
+docker compose -f docker-compose.yml up -d
 ```
 
-```bash
-docker compose up -d
+The app is available on port 3000 by default. `LEPATCH_PORT` changes the host
+port. SQLite and backups are stored in the persistent `lepatch-sqlite-data`
+volume. On a new database, open the app and create the first administrator.
+
+The **About LePatch** page checks GitHub for published updates. It links to the
+release and shows the Docker pull/restart command; updates are installed when
+you choose to rebuild or pull the image. It never replaces the app or database
+by itself.
+
+## Import an existing installation
+
+The one-time importer copies an existing PostgreSQL database into a new SQLite
+file. It does not modify the source database or overwrite an existing target.
+Read [MIGRATION.md](MIGRATION.md) before importing; it covers the table mapping,
+backup checks, configuration, and rollback procedure.
+
+```sh
+export SOURCE_DATABASE_URL='postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require'
+export TARGET_DATABASE_PATH='./data/lepatch-import.sqlite'
+go run ./cmd/lepatch-import
 ```
 
-Open `APP_URL` and sign in with the admin credentials. The first-run wizard
-walks through GitHub, Telegram and Discord setup.
-
-Generate secrets with:
-
-```bash
-openssl rand -base64 48   # SESSION_SECRET
-openssl rand -base64 32   # ENCRYPTION_KEY
-```
-
-### Local development
-
-```bash
-npm ci
-npx prisma generate
-docker compose up -d postgres redis
-npx prisma migrate deploy
-npm run dev            # app on http://localhost:3000
-npm run worker         # in a second terminal
-```
+Do not put a database URL or credentials in a checked-in file. Do not copy an
+import over an existing SQLite database or volume.
 
 ## Configuration
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `APP_URL` | yes | Public URL. Anchors WebAuthn and OAuth redirects. |
-| `SESSION_SECRET` | yes | Signs session JWTs and the OAuth state. |
-| `ENCRYPTION_KEY` | yes | Encrypts secrets at rest. Changing it requires re-entering secrets. |
-| `DATABASE_URL` | yes | PostgreSQL connection string. |
-| `REDIS_URL` | yes | Redis for queues and rate limits. |
-| `TRUST_PROXY` | no | Set `true` only behind a proxy you control. |
-| `GITHUB_TOKEN` | no | Shared token for release checks. Without it GitHub rate-limits you to 60 requests/hour. |
-| `WEB_AUTHN_EXTRA_ORIGINS` | no | Comma-separated extra origins allowed for passkeys (LAN aliases). |
-| `DEFAULT_ADMIN_EMAIL` / `DEFAULT_ADMIN_PASSWORD` | no | Seeds the first administrator on an empty database only. |
-| `DISCORD_WEBHOOK_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | no | Optional first-run channel defaults. |
+| Variable | Purpose |
+| --- | --- |
+| `APP_URL` | Public origin used for OAuth redirects and secure cookies. |
+| `SESSION_SECRET` | Signs sessions and OAuth state. Keep it stable. |
+| `ENCRYPTION_KEY` | Decrypts integration secrets. Keep it stable. |
+| `GITHUB_TOKEN` | Optional shared token for public GitHub checks. |
+| `TRUST_PROXY` | Enable only behind a trusted reverse proxy. |
+| `PORT` | Container listen port; defaults to `3000`. |
+| `DATA_DIR` | Persistent application data directory. |
+| `DATABASE_PATH` | SQLite file path; defaults inside `DATA_DIR`. |
+| `LEPATCH_PORT` | Host port published by Docker Compose. |
+| `SOURCE_DATABASE_URL` | One-time PostgreSQL importer source. |
+| `TARGET_DATABASE_PATH` | One-time importer destination; must not exist. |
 
-See [`.env.example`](.env.example) for the full list.
+GitHub OAuth client settings are configured in the app's integration settings.
+The OAuth callback is `/api/auth/github/callback`.
 
-## How it works
-
-- The worker schedules release checks on a 60-second tick with per-app jitter so
-  a large watch list does not stampede the GitHub API.
-- Releases are compared by GitHub release ID and tag name — never by sorting
-  version strings.
-- Notification jobs retry with exponential backoff and carry stable job IDs, so
-  a retry cannot deliver the same release twice.
-- Secrets are encrypted with AES-256-GCM before they touch the database.
-
-See [`AGENTS.md`](AGENTS.md) for the architecture and invariants, and
-[`docs/design-system.md`](docs/design-system.md) for UI conventions. The
-[`roadmap`](docs/roadmap.md) separates worker fixes from future product features.
+Telegram release notifications are sent through a Telegram bot token and
+linked chat accounts. Telegram webhooks are only for receiving bot commands
+such as `/link`; configure a public HTTPS `APP_URL`, save a webhook secret in
+admin settings, and choose **Register bot webhook**. A Telegram webhook does
+not send outbound notifications.
 
 ## Development
 
-```bash
-npm run check       # lint + typecheck + tests + production build
-npm test            # vitest
-npm run dev         # dev server
-npm run worker      # background worker
-npm run deps:outdated
+```sh
+npm ci --prefix ui
+npm run build --prefix ui
+go test ./...
+go vet ./...
+set -a; . ./.env; set +a
+go run ./cmd/lepatch
 ```
 
-Database schema changes require a real migration:
+The frontend build writes to `internal/web/dist`, which the Go server embeds.
+The Docker build runs the frontend build automatically. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for review and test expectations.
 
-```bash
-npx prisma migrate dev --name describe_the_change   # development only
-```
-
-Never run `prisma db push` or `prisma migrate dev` against a production
-database; ship the generated migration and apply it with
-`prisma migrate deploy`.
-
-## Tech stack
-
-Next.js (App Router) · React · TypeScript · Tailwind CSS v4 · PostgreSQL ·
-Prisma · Redis · BullMQ
-
-## Contributing
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) and
-[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). Security issues: see
-[`SECURITY.md`](SECURITY.md).
+To prepare a versioned local build, run `scripts/set-version.sh X.Y.Z` and
+then `docker compose build lepatch`. A `vX.Y.Z` tag publishes binaries, a
+GitHub release, and a GHCR image through GitHub Actions. Do not push a version
+tag until the release is ready; pushing `main` alone does not publish one.
 
 ## License
 
-[MIT](LICENSE)
+MIT. See [LICENSE](LICENSE).

@@ -1,39 +1,29 @@
-FROM node:22-bookworm-slim AS base
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates postgresql-client
-
-FROM base AS builder
-WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
-COPY package.json package-lock.json* ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
-COPY . .
-# A build-time connection string is only needed for `prisma generate`; nothing
-# connects to the database here. Never bake real credentials into the image.
-ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
-RUN npx prisma generate
+FROM node:22-alpine AS ui-builder
+WORKDIR /src/ui
+COPY ui/package.json ui/package-lock.json ./
+RUN npm ci
+COPY ui/ ./
 RUN npm run build
-RUN npm prune --omit=dev
 
-FROM base AS runner
+FROM golang:1.26-alpine AS go-builder
+ARG APP_VERSION
+WORKDIR /src
+RUN apk add --no-cache ca-certificates git
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+COPY --from=ui-builder /src/internal/web/dist ./internal/web/dist
+RUN version="${APP_VERSION:-$(cat VERSION)}" && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w -X lepatch/internal/server.Version=${version}" -o /out/lepatch ./cmd/lepatch
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/lepatch-import ./cmd/lepatch-import
+
+FROM alpine:3.22 AS runner
+RUN apk add --no-cache ca-certificates tzdata && addgroup -S lepatch && adduser -S -G lepatch lepatch
 WORKDIR /app
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/src ./src
-
-# Backups are written here at runtime. The container runs as the `node` user, so
-# this is the only path that needs to be writable.
-RUN mkdir -p /app/data/backups && chown -R node:node /app/data /app/.next
-USER node
+COPY --from=go-builder /out/lepatch /usr/local/bin/lepatch
+COPY --from=go-builder /out/lepatch-import /usr/local/bin/lepatch-import
+RUN mkdir -p /app/data && chown -R lepatch:lepatch /app/data
+USER lepatch
+ENV APP_ENV=production PORT=3000 DATA_DIR=/app/data DATABASE_PATH=/app/data/lepatch.sqlite
 EXPOSE 3000
-CMD ["npm", "start"]
+VOLUME ["/app/data"]
+ENTRYPOINT ["/usr/local/bin/lepatch"]

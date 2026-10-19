@@ -1,112 +1,18 @@
-# Design system
+# UI design system
 
-LePatch aims for the restraint of a tool you leave open all day: dense but
-calm, one accent, no decoration. If a visual flourish does not help someone read
-release data faster, it does not ship.
+The active web UI lives in `ui/src/` and is embedded into the Go application
+from `internal/web/dist`. Shared visual tokens are defined near the top of
+`ui/src/style.css`; repository and README-specific styling lives in
+`ui/src/readme.css` and `ui/src/add-repo.css`.
 
-## Tokens
+Use the existing CSS variables for page, panel, border, text, muted text, and
+accent colours. Keep buttons and form controls keyboard-accessible, preserve
+visible focus, and use the existing Lucide icon set. Check phone layouts around
+360–430px as well as desktop layouts. Avoid adding another UI framework or
+component dependency without a clear need.
 
-All colour, radius, type and elevation values live in `src/app/globals.css`.
-Never hardcode a palette class (`text-slate-400`, `bg-cyan-500`) in a component —
-that is what previously made the light theme fail WCAG AA contrast.
-
-| Purpose | Tailwind class |
-| --- | --- |
-| Canvas (page background) | `bg-canvas` |
-| Card / panel | `bg-panel` |
-| Inset surface | `bg-surface` |
-| Raised surface (menus) | `bg-surface-elevated` |
-| Border | `border-border` |
-| Strong border | `border-border-strong` |
-| Hairline divider | `border-divider` |
-| Body text | `text-text` |
-| Secondary text | `text-text-muted` |
-| Tertiary text / metadata | `text-text-faint` |
-| Accent | `text-accent` / `bg-accent` / `border-accent` |
-| Accent on accent | `text-accent-foreground` |
-| Success | `text-status-success` / `bg-status-success/10` |
-| Warning | `text-status-warning` / `bg-status-warning/10` |
-| Danger | `text-status-danger` / `bg-status-danger/10` |
-
-Radii come from `--radius-sm|md|lg|xl`; elevation from `--shadow-xs|sm|md|lg`.
-Do not invent new values — extend the token set in `globals.css` instead.
-
-### Rules
-
-1. **One accent.** Citrus green is the only decorative colour. Everything else is
-   neutral or a semantic status colour.
-2. **Status colours carry meaning.** Green = healthy/sent, amber = pending or
-   pre-release, red = failure. Never use them decoratively.
-3. **No gradients, glows, glass or blur.** Flat surfaces, hairline borders,
-   subtle elevation.
-4. **No emoji in the UI.** Icons come from `lucide-react` at a single stroke
-   weight.
-5. **Both themes are designed.** Check any change in light and dark before
-   opening a PR.
-6. **Phone first.** Check the 360–430px layout before tablet and desktop. Keep
-   controls at least 44px tall on touch layouts and leave room for safe areas.
-7. **Keep motion quiet.** Interaction transitions run 150–250ms and respect
-   `prefers-reduced-motion`.
-
-## Components
-
-`src/components/ui` is the only place shared primitives live:
-
-| File | Exports |
-| --- | --- |
-| `PageHeader.tsx` | `PageHeader`, `MetaItem` |
-| `List.tsx` | `Panel`, `List`, `ListRow`, `ListGroupLabel`, `StatusDot`, `RowAvatar`, `Toolbar`, `MetricStrip` |
-| `Card.tsx` | `Card`, `CardHeader`, `CardTitle`, `CardBody`, `Badge`, `EmptyState`, `ErrorState`, `PermissionDenied`, `Skeleton`, `SkeletonRows` |
-| `Input.tsx` | `Input`, `Textarea`, `Select`, `Field`, `Switch` |
-| `Tabs.tsx` | `Tabs`, `TabPanel`, `Breadcrumbs`, `CommandPalette`, `useCommandPaletteKey` |
-| `RepoSwitcher.tsx` | `RepoSwitcher` |
-| `Button.tsx` | `Button` (prefer the `.btn` classes in existing screens) |
-
-Prefer these over ad-hoc markup. Legacy class-based components (`.btn`, `.chip`,
-`.status-pill`, `.empty-state`) are still supported and map to the same tokens.
-
-### Page structure
-
-Every page follows the same shape:
-
-1. **`PageHeader`** — optional breadcrumb, one title, one line of description, a
-   `meta` row of small facts, and the page's actions. Never a large padded card,
-   never a marketing tagline.
-2. **`MetricStrip`** — a borderless row of label/value pairs when the page has
-   headline numbers. Do not use four identical stat cards.
-3. **`Panel` sections** — grouped content. A `Panel` owns its own header; do not
-   nest cards inside cards.
-4. **`List` / `ListRow`** — for anything that used to be a table. One row per
-   item: leading avatar or icon, primary text, muted metadata, right-aligned
-   status and actions. Tables are a last resort for genuinely tabular data.
-
-### Replacing tables
-
-The brief for this UI was explicitly "better than tables". Concretely:
-
-- Never render a `<table>` for a list of entities (repositories, users,
-  releases, sessions, devices, audit entries). Use `List` rows.
-- Never stack identical padded cards as a list. Use one `Panel` containing rows.
-- Status is a `StatusDot` (coloured dot + words) or a single `Badge` — not a
-  stack of three pills.
-
-
-## Accessibility requirements
-
-- Every interactive element is reachable and operable by keyboard.
-- Every icon-only button has an `aria-label` or visually hidden text.
-- Every form control has a programmatically associated `<label>`; placeholders
-  are not labels.
-- Modals use `ModalShell`: it provides `role="dialog"`, a focus trap, initial
-  focus and focus restore.
-- Async status changes announce themselves (`aria-live` for toasts, `role="alert"`
-  for errors).
-- Decorative icons get `aria-hidden="true"`.
-- Animations must respect `prefers-reduced-motion` (handled globally in
-  `globals.css`).
-
-## Copy
-
-Short, specific, no filler. Say what happened and what the user can do:
-"Check failed" beats "Something went wrong". Never use marketing language in the
-product.
+Repository detail uses the same `RepositoryDetailView` workspace for watched,
+own, and sponsored repositories. Keep its Overview, Releases, Files, Commits,
+Pull requests, Issues, Branches, and Actions tabs consistent. Only an owned
+repository view exposes file commits; server-side ownership and GitHub push
+permission checks remain mandatory.

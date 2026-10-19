@@ -1,0 +1,29 @@
+.readme-markdown{min-width:0;overflow-wrap:anywhere}
+.readme-markdown .readme-table-wrap{max-width:100%;margin:16px 0;overflow-x:auto;border:1px solid var(--line);border-radius:9px}
+.readme-markdown table{min-width:100%;border-collapse:collapse;font-size:13px}
+.readme-markdown th,.readme-markdown td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.readme-markdown th{background:var(--panel);color:var(--text);font-weight:650}
+.readme-markdown tr:last-child td{border-bottom:0}
+.readme-markdown .readme-picture{display:block;max-width:100%;margin:16px auto;text-align:center}
+.readme-markdown .readme-image{display:block;max-width:100%;height:auto;object-fit:contain;margin:16px auto;border-radius:6px}
+.readme-markdown .readme-details{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.readme-markdown .readme-details summary{cursor:pointer;font-weight:600}
+.readme-markdown .readme-badge{display:inline-block;width:auto;max-width:100%;max-height:28px;margin:2px 5px 2px 0;vertical-align:middle;border-radius:3px}
+.readme-markdown p:has(> a > .readme-image:only-child) .readme-image{display:inline-block;width:auto;max-height:72px;margin:4px 8px;vertical-align:middle}
+.repository-file-list,.repository-aux-list{border-top:1px solid var(--line)}
+.repository-file-row,.repository-aux-row{display:flex;align-items:center;gap:13px;min-height:58px;padding:10px 12px;border-bottom:1px solid var(--line2);color:var(--text);text-decoration:none}
+.repository-file-row{width:100%;text-align:left;background:transparent;cursor:pointer}
+.repository-file-row:hover,.repository-aux-row:hover{background:var(--panel)}
+.repository-file-icon,.repository-aux-row>svg:first-child{display:grid;place-items:center;flex:none;color:var(--accent)}
+.repository-file-row b,.repository-aux-row>span{min-width:0;flex:1}
+.repository-file-row>span:nth-last-child(2){color:var(--muted);font-size:12px}
+.repository-aux-row>span{display:grid;gap:5px}
+.repository-aux-row>span b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.repository-aux-row>span small{color:var(--muted);font-size:12px}
+.repository-aux-row>svg:last-child{flex:none;color:var(--muted)}
+.aux-state{flex:none;padding:4px 8px;border:1px solid var(--line);border-radius:20px;color:var(--muted);font-size:11px;font-style:normal;text-transform:capitalize}
+.aux-state.open{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
+.repo-tab-external{display:inline-flex;align-items:center;gap:6px;min-height:44px;color:var(--accent);font-size:13px;text-decoration:none}
+.repository-file-content{max-width:100%;overflow:auto;padding:16px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font:13px/1.6 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:680px){.repository-aux-row{gap:9px;padding:10px 7px}.repository-aux-row>span b{font-size:13px}.repository-aux-row>span small{font-size:11px}.repository-file-row{gap:9px;padding-inline:7px}.repository-file-row>span:nth-last-child(2){font-size:10px}.aux-state{font-size:10px;padding:3px 6px}}
+@media(max-width:680px){.readme-markdown table{font-size:12px}.readme-markdown th,.readme-markdown td{padding:8px}}

@@ -1,29 +1,16 @@
-<!--
-  Thanks for contributing. Keep PRs small and focused where you can.
--->
-
 ## What changed
 
-<!-- A short summary of the change and why it is needed. -->
+<!-- Describe the user-visible result and why it is needed. -->
 
-## Type
+## Validation
 
-- [ ] Bug fix
-- [ ] Feature
-- [ ] Refactor
-- [ ] Documentation
-- [ ] Dependency or tooling
-
-## Checklist
-
-- [ ] `npm run check` passes (lint, typecheck, tests, build)
-- [ ] Database changes use a real migration under `prisma/migrations/`
-      (never `prisma db push` or `prisma migrate dev` against a real database)
-- [ ] Mutating API routes validate CSRF and log admin actions via `createAuditLog`
-- [ ] New UI follows the tokens in `src/app/globals.css` rather than hardcoded
-      colour classes
-- [ ] Screenshots attached for UI changes (light and dark where relevant)
+- [ ] `go test ./...`
+- [ ] `go vet ./...`
+- [ ] `npm run build --prefix ui`
+- [ ] `git diff --check`
+- [ ] UI checked at phone and desktop widths, in relevant themes
+- [ ] State-changing routes keep session, CSRF, scoping, and authorization checks
 
 ## Notes for reviewers
 
-<!-- Anything subtle, risky, or deliberately out of scope. -->
+<!-- Mention data, deployment, or compatibility concerns. -->

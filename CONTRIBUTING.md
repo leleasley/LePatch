@@ -1,69 +1,54 @@
 # Contributing
 
-Thanks for taking the time to contribute. This project is a self-hosted GitHub
-release tracker; the conventions below keep it reviewable and safe to operate.
+LePatch is a Go service with a Vite-built web UI embedded in the binary. Keep
+changes focused on GitHub release monitoring, repository activity, discovery,
+notifications, and account administration.
 
-## Getting set up
+## Local setup
 
-```bash
-npm ci
+```sh
 cp .env.example .env
-docker compose up -d postgres redis
-npx prisma generate
-npx prisma migrate deploy
-npm run dev
-npm run worker   # second terminal
+npm ci --prefix ui
 ```
 
-## Before you open a pull request
+Set the required secrets in `.env`, then run the Go app:
 
-```bash
-npm run check    # lint → typecheck → tests → production build
+```sh
+npm run build --prefix ui
+go run ./cmd/lepatch
 ```
+
+## Before opening a pull request
+
+```sh
+gofmt -w <changed-go-files>
+go test ./...
+go vet ./...
+npm run build --prefix ui
+git diff --check
+```
+
+The production Docker build compiles the UI and embeds it in the Go service.
 
 ## Ground rules
 
-- **Databases**: schema changes need a migration under `prisma/migrations/`.
-  `prisma migrate dev` is for local work only. Never run `prisma db push` or
-  `prisma migrate dev` against a real database, and never write to `User`,
-  `Session`, `PasskeyCredential` or `TelegramLink` rows by hand.
-- **CSRF**: every mutating route validates CSRF (`validateCsrf`) except the
-  documented setup/webhook endpoints. Client mutations use `csrfFetch`.
-- **Auth**: state the required role explicitly in each route handler
-  (`requireAdmin`, `requireModerator`, `assertApiSession`, `assertCanManageApps`)
-  and scope queries by `userId`.
-- **Audit**: administrative mutations call `createAuditLog`. Add new action
-  names to `src/lib/audit-actions.ts` only — that file is the single source of
-  truth.
-- **Logging**: use `@/lib/logger`, never `console.log`. Never log tokens, chat
-  IDs, message bodies, or anything a user typed into a secret field.
-- **Secrets**: read them through `@/lib/integration-secrets` so they stay
-  encrypted at rest.
-- **UI**: use the tokens and primitives in `src/components/ui` rather than
-  hardcoded colour classes. Both themes must be legible, focus states visible,
-  and interactive elements keyboard reachable. See
-  [`docs/design-system.md`](docs/design-system.md).
-- **Dependencies**: justify new runtime dependencies in the pull request. Prefer
-  removing a dependency over adding one.
-
-## Tests
-
-- Pure logic (parsers, classifiers, pagination, time maths) must have unit tests.
-- `tests/route-security.test.ts` enforces CSRF, auth and audit coverage across
-  every mutating route. If you add a route, make it pass rather than adding an
-  exemption.
-- Keep tests deterministic: no network, no database, no reliance on the current
-  time.
-
-## Commit messages
-
-Conventional-commit style prefixes (`feat:`, `fix:`, `refactor:`, `docs:`,
-`chore:`, `test:`, `security:`) with an imperative summary. Explain *why* in the
-body when the change is not obvious.
+- Keep authorization, user scoping, CSRF validation, and GitHub permission
+  checks in Go route handlers. Every state-changing route requires CSRF.
+- Never write directly to a live database. Preserve historical SQL migrations
+  under `prisma/migrations/`; do not use Prisma commands.
+- Use the existing auth, store, logger, GitHub client, and queue helpers. Never
+  log credentials, tokens, cookies, or private user content.
+- Add runtime tests for authorization and API behavior. Keep tests deterministic
+  and independent of the public GitHub API.
+- Keep release identity based on GitHub release IDs and tag names. Do not sort
+  releases by semver.
+- Do not restore retired server-management subsystems.
+- Keep the phone layout usable, preserve keyboard access and visible focus, and
+  check both themes when changing UI. Explain any new runtime dependency in the
+  pull request.
 
 ## Release process
 
-Maintainers tag `vX.Y.Z`, which triggers the release workflow: it runs the full
-check, builds and pushes the image to GHCR, and publishes a GitHub release using
-the matching `CHANGELOG.md` entry. Add your change to the `Unreleased` section
-of the changelog in the same pull request.
+Pushing a `vX.Y.Z` tag runs Go/UI checks, builds binaries, publishes a GitHub
+release, and builds the container image. Keep `CHANGELOG.md` current for
+user-visible releases.
