@@ -12,6 +12,10 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - Raised issues open inside LePatch. The issue page shows the state, author,
   labels, description and the whole comment thread, with GitHub kept as a
   secondary link.
+- Comments can be written from the issue page and close or reopen it, so the
+  thread no longer has to be finished on GitHub. The draft survives a failed
+  post, `Cmd` or `Ctrl` plus `Enter` sends, and commenting marks the raised
+  issue as read.
 - Notification history rows open the release inside LePatch. The delivery log
   now carries the repository and release identity so it can navigate in app.
 - Toasts are the single way the interface reports the result of an action:

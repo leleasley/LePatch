@@ -951,6 +951,15 @@ export function App() {
           number={issueRef.number}
           onBack={() => navigate('issues')}
           onOpenRepo={watched ? () => openApp(watched.id) : null}
+          onCommented={(owner, repo, number) => {
+            const match = raisedIssues.find(
+              issue =>
+                issue.owner.toLowerCase() === owner.toLowerCase() &&
+                issue.repo.toLowerCase() === repo.toLowerCase() &&
+                Number(issue.issueNumber) === Number(number),
+            );
+            if (match?.unreadCommentCount > 0) markIssueSeen(match.id);
+          }}
         />
       );
     }

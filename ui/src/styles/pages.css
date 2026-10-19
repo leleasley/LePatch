@@ -712,6 +712,45 @@
   gap: 12px;
 }
 
+.issue-composer {
+  display: grid;
+  gap: 12px;
+  margin-top: 4px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-inset);
+}
+
+.issue-composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.issue-composer-actions .btn {
+  margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  .issue-composer-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .issue-composer-actions .btn {
+    width: 100%;
+    min-height: 46px;
+    margin-left: 0;
+  }
+
+  .issue-composer-actions .field-hint {
+    text-align: center;
+  }
+}
+
 /* Notifications ----------------------------------------------------------- */
 
 .log-row {
