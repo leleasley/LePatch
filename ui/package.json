@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "check": "node scripts/check-imports.mjs",
+    "build": "npm run check && vite build",
     "dev": "vite --host 127.0.0.1"
   },
   "dependencies": {

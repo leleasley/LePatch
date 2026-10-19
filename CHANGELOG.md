@@ -9,6 +9,31 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- A rebuilt interface on a new design system: deep neutral surfaces with a
+  single warm accent, Space Grotesk and DM Mono, a blurred top bar, a side
+  navigation rail, a mobile bottom bar and a command palette on `Cmd`/`Ctrl`
+  plus `K` for navigation, repositories and actions.
+- Four appearances (`dark`, `midnight`, `oled`, `light`) that follow the
+  account between devices through the new `PATCH /api/account` route.
+- A release feed with working filters for stable, pre-release and unread
+  entries, a list and grid layout, and inline actions to mark a release seen
+  or ignore it.
+- Per repository settings for the display name, check interval, pre-releases
+  and notification delivery.
+- An administrator console with workspace health, an enforced workspace
+  defaults panel, integrations, users, delivery queues with a retry action,
+  backups and the audit log, backed by `GET /api/admin/overview`,
+  `GET`/`PUT /api/admin/settings`, `GET /api/admin/queues` and
+  `POST /api/admin/queues/retry`.
+- Workspace settings that the service enforces: the default check interval,
+  the maximum number of watched repositories, the release feed size, the
+  pre-release default and a maintenance notice.
+- Release feed filtering that can include pre-releases and reports the update
+  flag for each watched repository.
+- Watched repository counts and active session counts on the user list.
+- A build check that fails when a JSX component is used without being
+  imported or declared.
+
 - Phone-first bottom navigation, rich mobile release/app cards, light and dark
   citrus themes, offline feedback, and safe-area-aware action sheets.
 - Account-scoped Redis/SSE live updates for discovered releases and completed
@@ -34,6 +59,15 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Changed
 
+- The interface was rebuilt as a Vite and React app split into `components`,
+  `pages` and `lib` modules with a token driven stylesheet, replacing the
+  single 1080 line file and its minified stylesheet.
+- The type scale was raised across the interface: the previous 8 to 11 pixel
+  body text is now 13 to 16 pixels with 30 pixel page titles.
+- Notification, discovery and repository actions report through a toast
+  system and real dialogs instead of inline banners and `window.confirm`.
+- The release poller reports its running state, queue depth, last schedule and
+  last error so the administrator console can show service health.
 - Rethemed to one neutral palette with a single accent. Dark and light are both
   designed from the same tokens.
 - Themes reduced from ten to three (`dark`, `light`, `system`). Eight of the old

@@ -596,7 +596,7 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "Could not load release feed")
 		return
 	}
-	feedQuery := `SELECT r.id, r.tagName, r.name, r.htmlUrl, r.prerelease, r.publishedAt, r.detectedAt, r.changelogSummary, a.id, a.name, a.repoFullName, a.iconUrl
+	feedQuery := `SELECT r.id, r.tagName, r.name, r.htmlUrl, r.prerelease, r.publishedAt, r.detectedAt, r.changelogSummary, a.id, a.name, a.repoFullName, a.iconUrl, a.updateAvailable
 		FROM "Release" r JOIN "WatchedApp" a ON a.id = r.watchedAppId WHERE a.userId = ?`
 	feedArgs := []any{principal.UserID}
 	if !includePrereleases {
@@ -623,16 +623,17 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 		DetectedAt       string  `json:"detectedAt"`
 		ChangelogSummary *string `json:"changelogSummary"`
 		WatchedApp       struct {
-			ID           string  `json:"id"`
-			Name         string  `json:"name"`
-			RepoFullName string  `json:"repoFullName"`
-			IconURL      *string `json:"iconUrl"`
+			ID              string  `json:"id"`
+			Name            string  `json:"name"`
+			RepoFullName    string  `json:"repoFullName"`
+			IconURL         *string `json:"iconUrl"`
+			UpdateAvailable bool    `json:"updateAvailable"`
 		} `json:"watchedApp"`
 	}
 	recent := make([]feedItem, 0, feedSize)
 	for rows.Next() {
 		var item feedItem
-		if err := rows.Scan(&item.ID, &item.TagName, &item.Name, &item.HTMLURL, &item.Prerelease, &item.PublishedAt, &item.DetectedAt, &item.ChangelogSummary, &item.WatchedApp.ID, &item.WatchedApp.Name, &item.WatchedApp.RepoFullName, &item.WatchedApp.IconURL); err != nil {
+		if err := rows.Scan(&item.ID, &item.TagName, &item.Name, &item.HTMLURL, &item.Prerelease, &item.PublishedAt, &item.DetectedAt, &item.ChangelogSummary, &item.WatchedApp.ID, &item.WatchedApp.Name, &item.WatchedApp.RepoFullName, &item.WatchedApp.IconURL, &item.WatchedApp.UpdateAvailable); err != nil {
 			writeError(w, http.StatusInternalServerError, "Could not read release feed")
 			return
 		}

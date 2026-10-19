@@ -1,1 +1,19 @@
-{"name":"LePatch Release Monitor","short_name":"LePatch","start_url":"/","display":"standalone","background_color":"#111315","theme_color":"#111315","icons":[{"src":"/assets/Logo.png","sizes":"192x192","type":"image/png","purpose":"any maskable"}]}
+{
+  "name": "LePatch Release Monitor",
+  "short_name": "LePatch",
+  "description": "Self-hosted GitHub release monitoring with Discord and Telegram notifications.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#08080a",
+  "theme_color": "#08080a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/assets/Logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
