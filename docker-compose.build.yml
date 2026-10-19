@@ -1,0 +1,9 @@
+services:
+  lepatch:
+    image: lepatch-app:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+      args:
+        APP_VERSION: ${APP_VERSION:-}

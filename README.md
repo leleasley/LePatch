@@ -14,23 +14,42 @@ GitHub account and its repository permissions.
 
 ## Run with Docker Compose
 
+The published image is hosted at `ghcr.io/leleasley/lepatch`. Clone the repo
+for the Compose file and configuration template:
+
 ```sh
+git clone https://github.com/leleasley/LePatch.git
+cd LePatch
 cp .env.example .env
 ```
 
-Set `APP_URL`, `SESSION_SECRET`, and `ENCRYPTION_KEY` in `.env`. Keep the same
-session and encryption keys when upgrading or migrating an installation.
-Generate fresh keys with `openssl rand -base64 48` and
-`openssl rand -base64 32` for a new installation.
+Edit `.env` before starting. Set `APP_URL` to the address you use to open the
+app, and replace the example `SESSION_SECRET` and `ENCRYPTION_KEY` values with
+fresh output from `openssl rand -base64 48` and `openssl rand -base64 32`.
+Keep these keys stable across upgrades or migrations. `LEPATCH_VERSION` defaults
+to `latest`; set it to a release tag such as `v0.1.0` to pin an installation.
 
 ```sh
-docker compose -f docker-compose.yml build lepatch
-docker compose -f docker-compose.yml up -d
+docker compose pull
+docker compose up -d
 ```
 
 The app is available on port 3000 by default. `LEPATCH_PORT` changes the host
 port. SQLite and backups are stored in the persistent `lepatch-sqlite-data`
 volume. On a new database, open the app and create the first administrator.
+
+GHCR images are published when a `vX.Y.Z` release tag is pushed. No image is
+available until the first release. If the package is private, make it public in
+GitHub Packages settings for anonymous pulls, or sign in to GHCR before running
+`docker compose pull`.
+
+To run the current checkout before a GHCR image exists, build from source with
+the local override:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.build.yml build lepatch
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d
+```
 
 The **About LePatch** page checks GitHub for published updates. It links to the
 release and shows the Docker pull/restart command; updates are installed when
@@ -94,9 +113,10 @@ The Docker build runs the frontend build automatically. See
 [CONTRIBUTING.md](CONTRIBUTING.md) for review and test expectations.
 
 To prepare a versioned local build, run `scripts/set-version.sh X.Y.Z` and
-then `docker compose build lepatch`. A `vX.Y.Z` tag publishes binaries, a
-GitHub release, and a GHCR image through GitHub Actions. Do not push a version
-tag until the release is ready; pushing `main` alone does not publish one.
+then build with both Compose files shown above. A `vX.Y.Z` tag publishes
+binaries, a GitHub release, and a GHCR image through GitHub Actions. Do not push
+a version tag until the release is ready; pushing `main` alone does not publish
+one.
 
 ## License
 

@@ -17,6 +17,7 @@ RUN version="${APP_VERSION:-$(cat VERSION)}" && CGO_ENABLED=0 GOOS=linux go buil
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/lepatch-import ./cmd/lepatch-import
 
 FROM alpine:3.22 AS runner
+LABEL org.opencontainers.image.source="https://github.com/leleasley/LePatch"
 RUN apk add --no-cache ca-certificates tzdata && addgroup -S lepatch && adduser -S -G lepatch lepatch
 WORKDIR /app
 COPY --from=go-builder /out/lepatch /usr/local/bin/lepatch

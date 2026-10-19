@@ -39,6 +39,16 @@ docker compose up -d
   a version tag when the release is explicitly ready. Pushing `main` alone
   never publishes a release.
 
+For a normal install, `docker-compose.yml` pulls
+`ghcr.io/leleasley/lepatch:${LEPATCH_VERSION:-latest}`. Set `LEPATCH_VERSION` in
+`.env` to pin a release. GHCR images are published by a version tag; until the
+first release, build the checkout with both files:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.build.yml build lepatch
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d
+```
+
 The service listens on port 3000 by default and persists SQLite data in the
 `lepatch-sqlite-data` volume. Do not remove volumes or run database commands
 against the live app while building or validating changes.
