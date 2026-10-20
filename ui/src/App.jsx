@@ -999,7 +999,16 @@ export function App() {
       );
     }
     if (page === 'owned-repo' || page === 'github-repo') {
-      return <PreviewRepository fullName={page === 'owned-repo' ? ownedRepo : previewRepo} readOnly={page === 'github-repo'} onBack={() => navigate(page === 'owned-repo' ? 'owned-repos' : 'discover')} onWatch={addRepository} />;
+      const fullName = page === 'owned-repo' ? ownedRepo : previewRepo;
+      return (
+        <PreviewRepository
+          fullName={fullName}
+          readOnly={page === 'github-repo'}
+          watched={apps.some(app => app.repoFullName?.toLowerCase() === fullName.toLowerCase())}
+          onBack={() => navigate(page === 'owned-repo' ? 'owned-repos' : 'discover')}
+          onWatch={addRepository}
+        />
+      );
     }
     if (page === 'settings') {
       return currentUser?.role === 'administrator' ? <AdminPage /> : <EmptyState icon={TriangleAlert} title="Administrator access required" description="Only workspace administrators can open the admin console." />;
@@ -1109,7 +1118,7 @@ export function App() {
   );
 }
 
-function PreviewRepository({ fullName, readOnly, onBack, onWatch }) {
+function PreviewRepository({ fullName, readOnly, watched, onBack, onWatch }) {
   const [state, setState] = useState({ app: null, releases: [], loading: true, error: '' });
 
   useEffect(() => {
@@ -1171,6 +1180,7 @@ function PreviewRepository({ fullName, readOnly, onBack, onWatch }) {
       loading={false}
       onBack={onBack}
       onWatch={onWatch}
+      watched={watched}
       ownedMode={!readOnly}
       readOnly={readOnly}
     />

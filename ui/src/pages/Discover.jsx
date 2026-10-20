@@ -118,7 +118,7 @@ export function DiscoverPage({
                             >
                               {watched.has(repo.full_name?.toLowerCase()) ? (
                                 <>
-                                  <Check size={13} /> Watching
+                                  <Check size={13} /> Watched
                                 </>
                               ) : (
                                 <>
@@ -200,7 +200,7 @@ export function DiscoverPage({
                 >
                   {watched.has(repo.full_name?.toLowerCase()) ? (
                     <>
-                      <Check size={13} /> Watching
+                      <Check size={13} /> Watched
                     </>
                   ) : (
                     <>
@@ -263,7 +263,7 @@ function OwnedRepositories({ repos, apps, onOpenRepo, onWatch, loading, error })
                   disabled={watched.has(repo.full_name?.toLowerCase())}
                   onClick={() => onWatch(repo.full_name)}
                 >
-                  {watched.has(repo.full_name?.toLowerCase()) ? 'Watching' : 'Watch'}
+                  {watched.has(repo.full_name?.toLowerCase()) ? 'Watched' : 'Watch'}
                 </button>
               </article>
             ))}

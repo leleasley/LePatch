@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   ArrowDownRight,
   ArrowUpRight,
+  Check,
   CircleDot,
   FileCode2,
   FileClock,
@@ -37,7 +38,7 @@ const TABS = [
   { id: 'actions', label: 'Actions' },
 ];
 
-export function RepositoryPage({ app, releases, loading, onBack, onOpenRelease, onCheck, checking, onWatch, ownedMode, readOnly }) {
+export function RepositoryPage({ app, releases, loading, onBack, onOpenRelease, onCheck, checking, onWatch, watched = false, ownedMode, readOnly }) {
   const toast = useToast();
   const [section, setSection] = useState('overview');
   const [readme, setReadme] = useState(null);
@@ -395,9 +396,15 @@ export function RepositoryPage({ app, releases, loading, onBack, onOpenRelease, 
             {checking ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={15} />} Check now
           </button>
         ) : onWatch ? (
-          <button className="btn btn-primary" type="button" onClick={() => onWatch(app.repoFullName)}>
-            <Plus size={15} /> Watch repository
-          </button>
+          watched ? (
+            <button className="btn repo-check is-watched" type="button" disabled>
+              <Check size={15} /> Watched
+            </button>
+          ) : (
+            <button className="btn btn-primary" type="button" onClick={() => onWatch(app.repoFullName)}>
+              <Plus size={15} /> Watch repository
+            </button>
+          )
         ) : null}
       </div>
 

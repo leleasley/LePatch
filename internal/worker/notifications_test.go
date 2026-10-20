@@ -125,6 +125,34 @@ func TestTelegramMessageStaysWithinTheLimit(t *testing.T) {
 	}
 }
 
+func TestReleaseSummaryReadsTheParagraphNotJustTheTopLine(t *testing.T) {
+	body := strings.Join([]string{
+		"## What's Changed",
+		"",
+		"This release rewrites the indexer and fixes a crash on startup.",
+		"It also adds a new webdav endpoint.",
+		"",
+		"## Full Changelog",
+		"https://github.com/o/r/compare/v1...v2",
+	}, "\n")
+
+	summary, ok := releaseSummary(&body).(string)
+	if !ok {
+		t.Fatalf("expected a summary, got %#v", releaseSummary(&body))
+	}
+	if !strings.Contains(summary, "rewrites the indexer") || !strings.Contains(summary, "webdav endpoint") {
+		t.Fatalf("summary should carry the paragraph, got %q", summary)
+	}
+	if strings.Contains(summary, "What's Changed") || strings.Contains(summary, "Full Changelog") {
+		t.Fatalf("summary kept generated headings: %q", summary)
+	}
+
+	empty := "   \n\n"
+	if releaseSummary(&empty) != nil {
+		t.Fatalf("blank notes should not produce a summary: %#v", releaseSummary(&empty))
+	}
+}
+
 func TestClassifyReleaseRecognisesPrereleaseTags(t *testing.T) {
 	for _, tag := range []string{
 		"v2.0.0-rc.1", "v2.0.0-beta2", "1.0.0-alpha.3",

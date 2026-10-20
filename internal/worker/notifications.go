@@ -253,21 +253,105 @@ func isDigits(text string) bool {
 	return true
 }
 
+// releaseSummary turns release notes into a short readable paragraph for the
+// feed, the release page and notifications. It skips the headings GitHub
+// generates ("What's Changed", "Full Changelog") and joins the first few real
+// lines instead of stopping at the first one.
 func releaseSummary(body *string) any {
 	if body == nil {
 		return nil
 	}
-	text := strings.TrimSpace(strings.ReplaceAll(*body, "\r\n", "\n"))
-	if text == "" {
+	summary := summarizeReleaseText(*body, 280)
+	if summary == "" {
 		return nil
 	}
-	for _, line := range strings.Split(text, "\n") {
-		line = strings.TrimSpace(strings.TrimLeft(line, "#*- "))
-		if line != "" {
-			return truncateText(line, 280)
+	return summary
+}
+
+// summarizeReleaseText is shared by the stored summary and the notification
+// summary so both read the same way.
+func summarizeReleaseText(text string, max int) string {
+	if strings.TrimSpace(text) == "" {
+		return ""
+	}
+
+	text = fencedCodePattern.ReplaceAllString(text, "\n")
+	text = markdownImagePattern.ReplaceAllString(text, " ")
+	text = markdownLinkPattern.ReplaceAllString(text, "$1")
+	text = htmlTagPattern.ReplaceAllString(text, " ")
+	text = markdownNoisePattern.ReplaceAllString(text, "")
+
+	parts := make([]string, 0, 3)
+	length := 0
+	for _, raw := range strings.Split(text, "\n") {
+		// A generated changelog line usually ends in a bare URL. Remember that
+		// so a dangling preposition can be dropped with it.
+		hadURL := bareURLPattern.MatchString(raw)
+
+		line := strings.Join(strings.Fields(strings.TrimSpace(raw)), " ")
+		line = markdownImagePattern.ReplaceAllString(line, " ")
+		line = markdownLinkPattern.ReplaceAllString(line, "$1")
+		line = htmlTagPattern.ReplaceAllString(line, " ")
+		line = bareURLPattern.ReplaceAllString(line, " ")
+		line = markdownNoisePattern.ReplaceAllString(line, "")
+		line = strings.Join(strings.Fields(line), " ")
+		line = strings.TrimLeft(line, "#>-•·.,;: ")
+
+		if hadURL {
+			for _, suffix := range []string{" in", " at", " from", " by", " on", " see", " via", " and"} {
+				line = strings.TrimSpace(strings.TrimSuffix(line, suffix))
+			}
+		}
+
+		if line == "" {
+			// The first paragraph is enough.
+			if len(parts) > 0 {
+				break
+			}
+			continue
+		}
+		if isChangelogNoise(line) || len([]rune(line)) < 4 {
+			continue
+		}
+		if length+len([]rune(line)) > max {
+			break
+		}
+		parts = append(parts, line)
+		length += len([]rune(line)) + 1
+		if len(parts) == 3 {
+			break
 		}
 	}
-	return nil
+
+	if len(parts) == 0 {
+		return ""
+	}
+	return truncateText(strings.Join(parts, " "), max)
+}
+
+// isChangelogNoise reports whether a line is generated boilerplate rather than
+// a description of the release. Only short headings qualify: a real sentence
+// such as "This release rewrites the indexer." must survive.
+func isChangelogNoise(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	if runes := []rune(trimmed); len(runes) > 48 {
+		return false
+	}
+	if strings.HasSuffix(trimmed, ".") || strings.HasSuffix(trimmed, "!") || strings.HasSuffix(trimmed, "?") {
+		return false
+	}
+	lower := strings.ToLower(trimmed)
+	for _, prefix := range []string{
+		"what's changed", "whats changed", "full changelog", "changelog",
+		"contributors", "new contributors", "release notes", "assets",
+		"checksums", "compare changes", "all changes", "changes since",
+		"update by @",
+	} {
+		if strings.HasPrefix(lower, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func (w *Runner) sendNotification(ctx context.Context, job notificationJob) error {
@@ -342,9 +426,8 @@ var (
 	markdownNoisePattern = regexp.MustCompile("[*_`~|]+")
 )
 
-// notificationSummary picks the most useful line for a notification. Release
-// notes are often a long generated list, so the stored summary is preferred
-// and the raw body is only mined for its first real sentence.
+// notificationSummary picks the most useful text for a notification, using the
+// stored summary when there is one.
 func notificationSummary(job notificationJob) string {
 	text := strings.TrimSpace(job.summary)
 	if text == "" {
@@ -353,49 +436,7 @@ func notificationSummary(job notificationJob) string {
 	if text == "" {
 		return ""
 	}
-	text = fencedCodePattern.ReplaceAllString(text, "\n")
-
-	for _, raw := range strings.Split(text, "\n") {
-		// A generated changelog line usually ends in a bare URL. Remember that
-		// so a dangling preposition can be dropped once the URL is gone.
-		hadURL := bareURLPattern.MatchString(raw)
-
-		line := markdownImagePattern.ReplaceAllString(raw, " ")
-		line = markdownLinkPattern.ReplaceAllString(line, "$1")
-		line = htmlTagPattern.ReplaceAllString(line, " ")
-		line = bareURLPattern.ReplaceAllString(line, " ")
-		line = markdownNoisePattern.ReplaceAllString(line, "")
-		line = strings.Join(strings.Fields(line), " ")
-		line = strings.TrimLeft(line, "#>-•·.,;: ")
-
-		if hadURL {
-			for _, suffix := range []string{" in", " at", " from", " by", " on", " see", " via", " and"} {
-				line = strings.TrimSpace(strings.TrimSuffix(line, suffix))
-			}
-		}
-
-		if len([]rune(line)) < 12 {
-			continue
-		}
-		lower := strings.ToLower(line)
-		skip := false
-		for _, prefix := range []string{
-			"what's changed", "whats changed", "full changelog", "changelog",
-			"contributors", "new contributors", "release notes", "assets",
-			"checksums", "compare changes", "all changes", "changes since",
-			"this release", "commits", "merged", "update by @",
-		} {
-			if strings.HasPrefix(lower, prefix) {
-				skip = true
-				break
-			}
-		}
-		if skip {
-			continue
-		}
-		return truncateText(line, 240)
-	}
-	return ""
+	return summarizeReleaseText(text, 240)
 }
 
 // telegramReleaseMessage renders a compact card: a clear title that names the

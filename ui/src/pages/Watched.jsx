@@ -6,7 +6,9 @@ import { useToast } from '../lib/toast.jsx';
 import { EmptyState, RepoIcon } from '../components/ui.jsx';
 import { ConfirmDialog, Modal } from '../components/Modal.jsx';
 
-const INTERVALS = [15, 30, 60, 180, 360, 720, 1440, 4320];
+// The release poller runs every minute, so short intervals are honoured. Five
+// minutes is the floor because GitHub rate limits are shared per account.
+const INTERVALS = [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 4320];
 
 function RepoSettingsDialog({ app, open, onClose, onSaved }) {
   const toast = useToast();
@@ -76,8 +78,11 @@ function RepoSettingsDialog({ app, open, onClose, onSaved }) {
                 Every {checkIntervalLabel(value)}
               </option>
             ))}
+            {!INTERVALS.includes(Number(interval)) ? (
+              <option value={interval}>Every {checkIntervalLabel(Number(interval))}</option>
+            ) : null}
           </select>
-          <span className="field-hint">How often GitHub is checked for a new release.</span>
+          <span className="field-hint">How often GitHub is checked for a new release. Short intervals use more of your GitHub rate limit.</span>
         </label>
         <label className="switch">
           <input type="checkbox" checked={prereleases} onChange={event => setPrereleases(event.target.checked)} />

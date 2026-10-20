@@ -80,9 +80,13 @@ export function toneFor(name = '') {
 export function checkIntervalLabel(minutes) {
   const value = Number(minutes || 0);
   if (value < 60) return `${value} min`;
-  if (value < 1440) return `${Math.round(value / 60)} hours`;
+  if (value < 1440) {
+    const hours = Math.round(value / 60);
+    return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+  }
   const days = value / 1440;
-  return `${Number.isInteger(days) ? days : days.toFixed(1)} days`;
+  const rounded = Number.isInteger(days) ? days : Number(days.toFixed(1));
+  return `${rounded} ${rounded === 1 ? 'day' : 'days'}`;
 }
 
 export function releaseKind(item = {}) {

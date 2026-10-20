@@ -13,6 +13,10 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   live added and removed line count, `Cmd` or `Ctrl` plus `S` opens the commit
   dialog, and the dialog sets a commit message before writing. The commit goes
   to the default branch through the GitHub Contents API.
+- Repository checks can run every 5 or 10 minutes, not only every 15 and up.
+- A repository that is already watched shows a disabled "Watched" button on the
+  repository page, in repository search, in the sponsored maintainers list and
+  in your own repository list.
 - Raised issues open inside LePatch. The issue page shows the state, author,
   labels, description and the whole comment thread, with GitHub kept as a
   secondary link.
@@ -121,6 +125,10 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- Release summaries read only the top line of a release body, which for
+  generated notes was "What's Changed". They now skip generated headings and
+  join the first few real lines of the opening paragraph.
+- Short check intervals read "Every 1 hours" and "Every 1 days".
 - Editing on a phone was unusable. Two causes: the page fade animation kept a
   transform on the page body, which made it the containing block for the
   dialog's `position: fixed` overlay and pushed the sheet off screen, and every
