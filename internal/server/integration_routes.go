@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"lepatch/internal/secrets"
+	"lepatch/internal/worker"
 )
 
 type integrationStatus struct {
@@ -347,7 +348,9 @@ func (s *Server) sendIntegrationTest(ctx context.Context, provider string, value
 		if !validDiscordWebhook(webhook) {
 			return fmt.Errorf("missing or invalid webhook")
 		}
-		return postExternalJSON(ctx, webhook, map[string]string{"content": "Test message from LePatch"})
+		// Send a preview of the real release card so the reader knows what to
+		// expect rather than a plain "test" line.
+		return postExternalJSON(ctx, webhook, worker.PreviewDiscordPayload())
 	}
 	token := values["botToken"]
 	if token == "" {
@@ -360,9 +363,14 @@ func (s *Server) sendIntegrationTest(ctx context.Context, provider string, value
 	if len(recipients) == 0 {
 		return fmt.Errorf("no Telegram recipients")
 	}
+	text, markup := worker.PreviewTelegramMessage()
 	for _, chatID := range recipients {
 		endpoint := "https://api.telegram.org/bot" + token + "/sendMessage"
-		if err := postExternalJSON(ctx, endpoint, map[string]string{"chat_id": chatID, "text": "Test message from LePatch"}); err != nil {
+		payload := map[string]any{"chat_id": chatID, "text": text, "parse_mode": "HTML", "disable_web_page_preview": true}
+		if markup != nil {
+			payload["reply_markup"] = markup
+		}
+		if err := postExternalJSON(ctx, endpoint, payload); err != nil {
 			return err
 		}
 	}

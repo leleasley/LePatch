@@ -46,7 +46,12 @@ export function NotificationsPage({ events, notice, onRefresh, loading, onOpenRe
                   <ArrowUpRight size={12} />
                 </button>
                 <span className="release-meta">
-                  <span>{event.releaseType || 'Release'} update</span>
+                  {event.prerelease ? (
+                    <span className="pill" style={{ fontSize: 'var(--text-2xs)' }}>Pre-release</span>
+                  ) : (
+                    <span>Release</span>
+                  )}
+                  <span>· {event.channelType === 'telegram' ? 'Telegram' : 'Discord'} alert</span>
                 </span>
               </div>
               <Pill kind={event.channelType === 'telegram' ? 'info' : 'violet'}>

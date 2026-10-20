@@ -21,6 +21,7 @@ import (
 type notificationJob struct {
 	id, userID, eventID, channelID, channelType, configJSON   string
 	appName, repoFullName, tag, releaseURL, body, releaseType string
+	summary                                                   string
 	attempts                                                  int
 	prerelease                                                bool
 	createdAt                                                 string
@@ -91,7 +92,7 @@ func (w *Runner) enqueueNotificationEvents(ctx context.Context, releaseID, userI
 }
 
 func (w *Runner) dispatchNotifications(ctx context.Context) {
-	rows, err := w.db.QueryContext(ctx, `SELECT e.id,e.attemptCount,e.createdAt,e.releaseId,c.id,c.type,c.configJson,a.userId,a.name,a.repoFullName,r.tagName,r.htmlUrl,COALESCE(r.body,''),COALESCE(r.releaseType,''),r.prerelease
+	rows, err := w.db.QueryContext(ctx, `SELECT e.id,e.attemptCount,e.createdAt,e.releaseId,c.id,c.type,c.configJson,a.userId,a.name,a.repoFullName,r.tagName,r.htmlUrl,COALESCE(r.body,''),COALESCE(r.releaseType,''),r.prerelease,COALESCE(r.changelogSummary,'')
 		FROM "NotificationEvent" e JOIN "Release" r ON r.id=e.releaseId JOIN "WatchedApp" a ON a.id=r.watchedAppId JOIN "NotificationChannel" c ON c.id=e.channelId
 		WHERE e.status='pending' AND c.enabled=1 AND (e.nextAttemptAt IS NULL OR e.nextAttemptAt<=?) ORDER BY e.createdAt LIMIT 40`, time.Now().UTC().Format(time.RFC3339Nano))
 	if err != nil {
@@ -101,7 +102,7 @@ func (w *Runner) dispatchNotifications(ctx context.Context) {
 	jobs := make([]notificationJob, 0, 40)
 	for rows.Next() {
 		var job notificationJob
-		if err := rows.Scan(&job.id, &job.attempts, &job.createdAt, &job.eventID, &job.channelID, &job.channelType, &job.configJSON, &job.userID, &job.appName, &job.repoFullName, &job.tag, &job.releaseURL, &job.body, &job.releaseType, &job.prerelease); err != nil {
+		if err := rows.Scan(&job.id, &job.attempts, &job.createdAt, &job.eventID, &job.channelID, &job.channelType, &job.configJSON, &job.userID, &job.appName, &job.repoFullName, &job.tag, &job.releaseURL, &job.body, &job.releaseType, &job.prerelease, &job.summary); err != nil {
 			w.logger.Warn("read queued notification event", "error", err.Error())
 			continue
 		}
@@ -216,8 +217,16 @@ func quietHoursDelay(now time.Time, startText, endText, zone string) time.Durati
 }
 
 func classifyRelease(tag string) string {
-	if strings.Contains(strings.ToLower(tag), "-rc") || strings.Contains(strings.ToLower(tag), "-beta") || strings.Contains(strings.ToLower(tag), "-alpha") || strings.Contains(strings.ToLower(tag), "-preview") {
-		return "prerelease"
+	// Split the tag into segments so `v2.0.0-rc.1`, `v2.0.0-beta2` and
+	// `2026.10.18-nightly` are all recognised as pre-releases.
+	for _, token := range strings.FieldsFunc(strings.ToLower(strings.TrimSpace(tag)), func(r rune) bool {
+		return r == '-' || r == '.' || r == '_' || r == '+' || r == ' '
+	}) {
+		for _, marker := range []string{"rc", "beta", "alpha", "preview", "nightly", "canary", "snapshot", "dev", "next", "insiders", "unstable", "edge"} {
+			if token == marker || (strings.HasPrefix(token, marker) && isDigits(token[len(marker):])) {
+				return "prerelease"
+			}
+		}
 	}
 	match := semverTag.FindStringSubmatch(strings.TrimSpace(tag))
 	if len(match) != 4 {
@@ -230,6 +239,18 @@ func classifyRelease(tag string) string {
 		return "minor"
 	}
 	return "patch"
+}
+
+func isDigits(text string) bool {
+	if text == "" {
+		return false
+	}
+	for _, r := range text {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func releaseSummary(body *string) any {
@@ -260,11 +281,7 @@ func (w *Runner) sendNotification(ctx context.Context, job notificationJob) erro
 		if err != nil || parsed.Scheme != "https" || (parsed.Host != "discord.com" && parsed.Host != "discordapp.com") || !strings.HasPrefix(parsed.Path, "/api/webhooks/") {
 			return fmt.Errorf("Discord webhook URL is missing or invalid")
 		}
-		message := fmt.Sprintf("**%s** released **%s**\n[%s](%s)", job.appName, job.tag, job.repoFullName, job.releaseURL)
-		if job.body != "" {
-			message += "\n" + truncateText(strings.TrimSpace(job.body), 800)
-		}
-		return postJSON(ctx, webhook, map[string]any{"content": message})
+		return postJSON(ctx, webhook, discordReleasePayload(job))
 	}
 	if job.channelType == "telegram" {
 		token := config["botToken"]
@@ -294,27 +311,194 @@ func (w *Runner) sendNotification(ctx context.Context, job notificationJob) erro
 	return fmt.Errorf("unsupported notification channel")
 }
 
+// releaseKind returns the human label and the leading emoji for a release.
+// A pre-release is deliberately loud so it never reads like a stable build.
+//
+// Only the stable/pre-release distinction is shown: the stored release type
+// describes the version tier (which component of the tag is non-zero), not the
+// size of the change, so surfacing it as "major" for v1.2.3 would mislead.
+func releaseKind(job notificationJob) (label, icon string, prerelease bool) {
+	if job.prerelease || job.releaseType == "prerelease" || classifyRelease(job.tag) == "prerelease" {
+		return "Pre-release detected", "🧪", true
+	}
+	return "New release detected", "🚀", false
+}
+
+// releaseTypeLabel is the small chip shown next to the version. Only a
+// pre-release carries one.
+func releaseTypeLabel(job notificationJob) string {
+	if _, _, prerelease := releaseKind(job); prerelease {
+		return "pre-release"
+	}
+	return ""
+}
+
+var (
+	fencedCodePattern    = regexp.MustCompile("(?s)```.*?```")
+	markdownImagePattern = regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`)
+	markdownLinkPattern  = regexp.MustCompile(`\[([^\]]+)\]\([^)]*\)`)
+	htmlTagPattern       = regexp.MustCompile(`<[^>]+>`)
+	bareURLPattern       = regexp.MustCompile(`https?://\S+`)
+	markdownNoisePattern = regexp.MustCompile("[*_`~|]+")
+)
+
+// notificationSummary picks the most useful line for a notification. Release
+// notes are often a long generated list, so the stored summary is preferred
+// and the raw body is only mined for its first real sentence.
+func notificationSummary(job notificationJob) string {
+	text := strings.TrimSpace(job.summary)
+	if text == "" {
+		text = strings.TrimSpace(job.body)
+	}
+	if text == "" {
+		return ""
+	}
+	text = fencedCodePattern.ReplaceAllString(text, "\n")
+
+	for _, raw := range strings.Split(text, "\n") {
+		// A generated changelog line usually ends in a bare URL. Remember that
+		// so a dangling preposition can be dropped once the URL is gone.
+		hadURL := bareURLPattern.MatchString(raw)
+
+		line := markdownImagePattern.ReplaceAllString(raw, " ")
+		line = markdownLinkPattern.ReplaceAllString(line, "$1")
+		line = htmlTagPattern.ReplaceAllString(line, " ")
+		line = bareURLPattern.ReplaceAllString(line, " ")
+		line = markdownNoisePattern.ReplaceAllString(line, "")
+		line = strings.Join(strings.Fields(line), " ")
+		line = strings.TrimLeft(line, "#>-•·.,;: ")
+
+		if hadURL {
+			for _, suffix := range []string{" in", " at", " from", " by", " on", " see", " via", " and"} {
+				line = strings.TrimSpace(strings.TrimSuffix(line, suffix))
+			}
+		}
+
+		if len([]rune(line)) < 12 {
+			continue
+		}
+		lower := strings.ToLower(line)
+		skip := false
+		for _, prefix := range []string{
+			"what's changed", "whats changed", "full changelog", "changelog",
+			"contributors", "new contributors", "release notes", "assets",
+			"checksums", "compare changes", "all changes", "changes since",
+			"this release", "commits", "merged", "update by @",
+		} {
+			if strings.HasPrefix(lower, prefix) {
+				skip = true
+				break
+			}
+		}
+		if skip {
+			continue
+		}
+		return truncateText(line, 240)
+	}
+	return ""
+}
+
+// telegramReleaseMessage renders a compact card: a clear title that names the
+// release kind, the project and version, an optional summary block and one
+// button that opens the notes.
 func telegramReleaseMessage(job notificationJob) (string, map[string]any) {
-	headerVisible := fmt.Sprintf("%s released %s\n%s", job.appName, job.tag, job.repoFullName)
-	message := "<b>" + html.EscapeString(job.appName) + "</b> released <b>" + html.EscapeString(job.tag) + "</b>\n<a href=\"" + html.EscapeString(job.releaseURL) + "\">" + html.EscapeString(job.repoFullName) + "</a>"
-	body := strings.TrimSpace(job.body)
-	if body == "" {
-		return message, nil
+	label, icon, prerelease := releaseKind(job)
+	kind := releaseTypeLabel(job)
+
+	var b strings.Builder
+	b.WriteString(icon + " <b>" + label + "</b>\n\n")
+	b.WriteString("<b>" + html.EscapeString(job.appName) + "</b> · <code>" + html.EscapeString(job.tag) + "</code>\n")
+	b.WriteString(html.EscapeString(job.repoFullName))
+	if kind != "" {
+		b.WriteString(" · <i>" + html.EscapeString(kind) + "</i>")
 	}
-	remaining := telegramMessageLimit - len([]rune(headerVisible)) - 1
-	if remaining < 1 {
-		return message, nil
+
+	if prerelease {
+		b.WriteString("\n\n⚠️ <i>This is a pre-release build, not a final release.</i>")
 	}
-	truncated := len([]rune(body)) > remaining
-	message += "\n" + html.EscapeString(truncateText(body, remaining))
-	if !truncated {
-		return message, nil
+
+	if summary := notificationSummary(job); summary != "" {
+		b.WriteString("\n\n<blockquote>" + html.EscapeString(summary) + "</blockquote>")
 	}
-	parsed, err := url.Parse(job.releaseURL)
+
+	markup := telegramReleaseButton(job.releaseURL)
+	if markup == nil {
+		// Without a usable link the reader needs the URL in the text.
+		b.WriteString("\n\n" + html.EscapeString(job.releaseURL))
+	}
+
+	message := b.String()
+	if len([]rune(html.UnescapeString(message))) > telegramMessageLimit {
+		message = truncateText(message, telegramMessageLimit)
+	}
+	return message, markup
+}
+
+func telegramReleaseButton(releaseURL string) map[string]any {
+	parsed, err := url.Parse(releaseURL)
 	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil {
-		return message, nil
+		return nil
 	}
-	return message, map[string]any{"inline_keyboard": [][]map[string]string{{{"text": "View the rest", "url": job.releaseURL}}}}
+	return map[string]any{"inline_keyboard": [][]map[string]string{{{"text": "Open release notes", "url": releaseURL}}}}
+}
+
+// PreviewTelegramMessage renders a sample release alert so the administrator
+// console can show exactly what a real notification looks like.
+func PreviewTelegramMessage() (string, map[string]any) {
+	return telegramReleaseMessage(notificationJob{
+		appName:      "LePatch",
+		repoFullName: "leleasley/LePatch",
+		tag:          "v0.2.0",
+		releaseURL:   "https://github.com/leleasley/LePatch/releases/tag/v0.2.0",
+		summary:      "This is a preview of a release alert. Nothing was actually published.",
+	})
+}
+
+// PreviewDiscordPayload renders the matching Discord card.
+func PreviewDiscordPayload() map[string]any {
+	return discordReleasePayload(notificationJob{
+		appName:      "LePatch",
+		repoFullName: "leleasley/LePatch",
+		tag:          "v0.2.0",
+		releaseURL:   "https://github.com/leleasley/LePatch/releases/tag/v0.2.0",
+		summary:      "This is a preview of a release alert. Nothing was actually published.",
+	})
+}
+
+// discordReleasePayload builds an embed so the message reads like a card
+// rather than a wall of text. Green marks a stable release, amber a
+// pre-release.
+func discordReleasePayload(job notificationJob) map[string]any {
+	label, icon, prerelease := releaseKind(job)
+	kind := releaseTypeLabel(job)
+	colour := 0x22c55e
+	if prerelease {
+		colour = 0xf59e0b
+	}
+
+	fields := []map[string]any{{"name": "Version", "value": "`" + job.tag + "`", "inline": true}}
+	if kind != "" {
+		fields = append(fields, map[string]any{"name": "Type", "value": kind, "inline": true})
+	}
+	fields = append(fields, map[string]any{"name": "Repository", "value": job.repoFullName, "inline": true})
+
+	embed := map[string]any{
+		"title":  icon + " " + label,
+		"url":    job.releaseURL,
+		"color":  colour,
+		"fields": fields,
+		"footer": map[string]any{"text": "LePatch"},
+	}
+	if summary := notificationSummary(job); summary != "" {
+		embed["description"] = summary
+	}
+	if prerelease {
+		embed["author"] = map[string]any{"name": "⚠ Pre-release build"}
+	}
+	return map[string]any{
+		"embeds":           []map[string]any{embed},
+		"allowed_mentions": map[string]any{"parse": []string{}},
+	}
 }
 
 func (w *Runner) notificationConfig(ctx context.Context, job notificationJob) (map[string]string, error) {

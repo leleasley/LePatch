@@ -14,7 +14,7 @@ func (s *Server) notificationHistory(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "Could not load notification history")
 		return
 	}
-	rows, err := s.store.DB().QueryContext(r.Context(), `SELECT e.id,e.status,e.error,e.sentAt,e.createdAt,c.type,r.id,r.tagName,r.htmlUrl,r.releaseType,a.id,a.name,a.repoFullName
+	rows, err := s.store.DB().QueryContext(r.Context(), `SELECT e.id,e.status,e.error,e.sentAt,e.createdAt,c.type,r.id,r.tagName,r.htmlUrl,r.releaseType,r.prerelease,a.id,a.name,a.repoFullName
 		FROM "NotificationEvent" e JOIN "Release" r ON r.id=e.releaseId JOIN "WatchedApp" a ON a.id=r.watchedAppId JOIN "NotificationChannel" c ON c.id=e.channelId
 		WHERE a.userId=? ORDER BY e.createdAt DESC LIMIT ? OFFSET ?`, principal.UserID, perPage, (page-1)*perPage)
 	if err != nil {
@@ -33,6 +33,7 @@ func (s *Server) notificationHistory(w http.ResponseWriter, r *http.Request) {
 		TagName      string  `json:"tagName"`
 		HTMLURL      string  `json:"htmlUrl"`
 		ReleaseType  *string `json:"releaseType"`
+		Prerelease   bool    `json:"prerelease"`
 		AppID        string  `json:"appId"`
 		AppName      string  `json:"appName"`
 		RepoFullName string  `json:"repoFullName"`
@@ -40,7 +41,7 @@ func (s *Server) notificationHistory(w http.ResponseWriter, r *http.Request) {
 	items := make([]item, 0, perPage)
 	for rows.Next() {
 		var value item
-		if err := rows.Scan(&value.ID, &value.Status, &value.Error, &value.SentAt, &value.CreatedAt, &value.ChannelType, &value.ReleaseID, &value.TagName, &value.HTMLURL, &value.ReleaseType, &value.AppID, &value.AppName, &value.RepoFullName); err != nil {
+		if err := rows.Scan(&value.ID, &value.Status, &value.Error, &value.SentAt, &value.CreatedAt, &value.ChannelType, &value.ReleaseID, &value.TagName, &value.HTMLURL, &value.ReleaseType, &value.Prerelease, &value.AppID, &value.AppName, &value.RepoFullName); err != nil {
 			writeError(w, http.StatusInternalServerError, "Could not read notification history")
 			return
 		}

@@ -83,6 +83,20 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Changed
 
+- Telegram and Discord release alerts are compact cards now. A stable release
+  is titled "New release detected"; a pre-release is titled "Pre-release
+  detected", carries a pre-release chip and a warning line, and uses a
+  different icon. The alert shows a short summary instead of the whole
+  changelog and one button opens the notes.
+- Discord alerts are embeds, green for a stable release and amber for a
+  pre-release, instead of a single line of markdown.
+- Release summaries skip generated changelog noise such as "What's Changed",
+  contributor lists and bare compare URLs, and prefer the stored summary.
+- Pre-release detection recognises nightly, rc, beta, alpha, preview, canary,
+  snapshot, dev, next, insiders, unstable and edge tags.
+- The administrator "Send test" button sends a preview of the real release
+  card rather than a plain test line, and the in-app delivery log labels each
+  alert Release or Pre-release.
 - The interface was rebuilt as a Vite and React app split into `components`,
   `pages` and `lib` modules with a token driven stylesheet, replacing the
   single 1080 line file and its minified stylesheet.
