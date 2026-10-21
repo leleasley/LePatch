@@ -290,6 +290,18 @@ export function App() {
     };
     const next = options.path || paths[target] || location.pathname;
     if (location.pathname !== next) history.pushState({}, '', next);
+    // Discovery keeps two different result shapes (repositories and
+    // maintainers) in one list, so switching sections must clear it or the
+    // last payload is rendered by the wrong view.
+    if (target === 'discover') {
+      setDiscoveryMode('search');
+      setDiscoveryResults([]);
+      setDiscoveryError('');
+    } else if (target === 'discover-sponsors') {
+      setDiscoveryMode('sponsored');
+      setDiscoveryResults([]);
+      setDiscoveryError('');
+    }
     setPage(target);
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, []);
@@ -383,6 +395,11 @@ export function App() {
         const route = routeFromPath(location.pathname);
         setAuthScreen('app');
         setPage(route.id);
+        if (route.id === 'discover' || route.id === 'discover-sponsors') {
+          setDiscoveryMode(route.id === 'discover-sponsors' ? 'sponsored' : 'search');
+          setDiscoveryResults([]);
+          setDiscoveryError('');
+        }
         const appMatch = location.pathname.match(/^\/apps\/([^/]+)(?:\/releases\/([^/]+))?/);
         if (appMatch) {
           setDetailAppId(appMatch[1]);
@@ -1120,11 +1137,6 @@ export function App() {
         onNavigate={(target, id) => {
           if (target === 'app-detail' && id) {
             openApp(id);
-            return;
-          }
-          if (target === 'discover') {
-            setDiscoveryMode('search');
-            navigate('discover');
             return;
           }
           navigate(target);

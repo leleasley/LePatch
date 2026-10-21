@@ -133,6 +133,12 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- Switching from Sponsored maintainers to Repository search kept the previous
+  results, so a maintainer was drawn as a repository with no name, a broken
+  icon and zero stars, and the page looked stuck. Moving between the discovery
+  sections now clears the list, and the repository view ignores anything
+  without a full name.
+
 - Release alerts called any tag containing `-nightly`, `-beta` and similar a
   pre-release even when GitHub published it as a normal release, so every
   nightly feed looked as if pre-releases had been switched on. The

@@ -21,6 +21,9 @@ export function DiscoverPage({
 }) {
   const [searching, setSearching] = useState(false);
   const watched = new Set(apps.map(app => app.repoFullName?.toLowerCase()));
+  // The repository view must never render a maintainer payload; only a
+  // repository has a full name.
+  const repositories = mode === 'search' ? results.filter(item => item.full_name) : results;
 
   const submit = async event => {
     event.preventDefault();
@@ -176,9 +179,9 @@ export function DiscoverPage({
           </div>
         ) : null}
 
-        {results.length ? (
+        {repositories.length ? (
           <div className="result-grid">
-            {results.map(repo => (
+            {repositories.map(repo => (
               <article className="result-row" key={repo.id}>
                 <img src={repo.owner?.avatar_url || ''} alt="" width="38" height="38" style={{ borderRadius: 10, objectFit: 'cover' }} loading="lazy" />
                 <div className="result-main">
