@@ -19,12 +19,12 @@ import (
 )
 
 type notificationJob struct {
-	id, userID, eventID, channelID, channelType, configJSON   string
-	appName, repoFullName, tag, releaseURL, body, releaseType string
-	summary                                                   string
-	attempts                                                  int
-	prerelease                                                bool
-	createdAt                                                 string
+	id, userID, releaseID, appID, channelID, channelType, configJSON string
+	appName, repoFullName, tag, releaseURL, body, releaseType        string
+	summary                                                          string
+	attempts                                                         int
+	prerelease                                                       bool
+	createdAt                                                        string
 }
 
 // Older LePatch releases derive channel enablement from IntegrationSetting.
@@ -92,7 +92,7 @@ func (w *Runner) enqueueNotificationEvents(ctx context.Context, releaseID, userI
 }
 
 func (w *Runner) dispatchNotifications(ctx context.Context) {
-	rows, err := w.db.QueryContext(ctx, `SELECT e.id,e.attemptCount,e.createdAt,e.releaseId,c.id,c.type,c.configJson,a.userId,a.name,a.repoFullName,r.tagName,r.htmlUrl,COALESCE(r.body,''),COALESCE(r.releaseType,''),r.prerelease,COALESCE(r.changelogSummary,'')
+	rows, err := w.db.QueryContext(ctx, `SELECT e.id,e.attemptCount,e.createdAt,e.releaseId,a.id,c.id,c.type,c.configJson,a.userId,a.name,a.repoFullName,r.tagName,r.htmlUrl,COALESCE(r.body,''),COALESCE(r.releaseType,''),r.prerelease,COALESCE(r.changelogSummary,'')
 		FROM "NotificationEvent" e JOIN "Release" r ON r.id=e.releaseId JOIN "WatchedApp" a ON a.id=r.watchedAppId JOIN "NotificationChannel" c ON c.id=e.channelId
 		WHERE e.status='pending' AND c.enabled=1 AND (e.nextAttemptAt IS NULL OR e.nextAttemptAt<=?) ORDER BY e.createdAt LIMIT 40`, time.Now().UTC().Format(time.RFC3339Nano))
 	if err != nil {
@@ -102,7 +102,7 @@ func (w *Runner) dispatchNotifications(ctx context.Context) {
 	jobs := make([]notificationJob, 0, 40)
 	for rows.Next() {
 		var job notificationJob
-		if err := rows.Scan(&job.id, &job.attempts, &job.createdAt, &job.eventID, &job.channelID, &job.channelType, &job.configJSON, &job.userID, &job.appName, &job.repoFullName, &job.tag, &job.releaseURL, &job.body, &job.releaseType, &job.prerelease, &job.summary); err != nil {
+		if err := rows.Scan(&job.id, &job.attempts, &job.createdAt, &job.releaseID, &job.appID, &job.channelID, &job.channelType, &job.configJSON, &job.userID, &job.appName, &job.repoFullName, &job.tag, &job.releaseURL, &job.body, &job.releaseType, &job.prerelease, &job.summary); err != nil {
 			w.logger.Warn("read queued notification event", "error", err.Error())
 			continue
 		}
@@ -365,7 +365,7 @@ func (w *Runner) sendNotification(ctx context.Context, job notificationJob) erro
 		if err != nil || parsed.Scheme != "https" || (parsed.Host != "discord.com" && parsed.Host != "discordapp.com") || !strings.HasPrefix(parsed.Path, "/api/webhooks/") {
 			return fmt.Errorf("Discord webhook URL is missing or invalid")
 		}
-		return postJSON(ctx, webhook, discordReleasePayload(job))
+		return postJSON(ctx, webhook, discordReleasePayload(job, w.appURL))
 	}
 	if job.channelType == "telegram" {
 		token := config["botToken"]
@@ -379,7 +379,7 @@ func (w *Runner) sendNotification(ctx context.Context, job notificationJob) erro
 		if len(recipients) == 0 {
 			return fmt.Errorf("Telegram has no linked recipients")
 		}
-		text, replyMarkup := telegramReleaseMessage(job)
+		text, replyMarkup := telegramReleaseMessage(job, w.appURL)
 		for _, recipient := range recipients {
 			endpoint := "https://api.telegram.org/bot" + token + "/sendMessage"
 			payload := map[string]any{"chat_id": recipient, "text": text, "parse_mode": "HTML", "disable_web_page_preview": true}
@@ -396,13 +396,13 @@ func (w *Runner) sendNotification(ctx context.Context, job notificationJob) erro
 }
 
 // releaseKind returns the human label and the leading emoji for a release.
-// A pre-release is deliberately loud so it never reads like a stable build.
 //
-// Only the stable/pre-release distinction is shown: the stored release type
-// describes the version tier (which component of the tag is non-zero), not the
-// size of the change, so surfacing it as "major" for v1.2.3 would mislead.
+// Only GitHub's own pre-release flag is used. Deriving it from the tag would
+// call a project's ordinary `2026.10.21-nightly` build a pre-release even when
+// the author published it as a normal release, which made every nightly feed
+// look like pre-releases had been switched on.
 func releaseKind(job notificationJob) (label, icon string, prerelease bool) {
-	if job.prerelease || job.releaseType == "prerelease" || classifyRelease(job.tag) == "prerelease" {
+	if job.prerelease {
 		return "Pre-release detected", "🧪", true
 	}
 	return "New release detected", "🚀", false
@@ -416,6 +416,148 @@ func releaseTypeLabel(job notificationJob) string {
 	}
 	return ""
 }
+
+// inAppReleaseURL points at the release inside LePatch.
+func inAppReleaseURL(appURL string, job notificationJob) string {
+	if appURL == "" || job.appID == "" || job.releaseID == "" {
+		return ""
+	}
+	return appURL + "/apps/" + url.PathEscape(job.appID) + "/releases/" + url.PathEscape(job.releaseID)
+}
+
+func validReleaseURL(value string) bool {
+	parsed, err := url.Parse(value)
+	return err == nil && parsed.Scheme == "https" && parsed.Host != "" && parsed.User == nil
+}
+
+// telegramNotes trims release notes into readable plain text and reports
+// whether anything had to be cut.
+func telegramNotes(body string, budget int) (string, bool) {
+	if budget < 8 {
+		return "", strings.TrimSpace(body) != ""
+	}
+	text := trimReleaseNotes(body)
+	if text == "" {
+		return "", false
+	}
+	runes := []rune(text)
+	if len(runes) <= budget {
+		return text, false
+	}
+	return strings.TrimSpace(string(runes[:budget-1])) + "…", true
+}
+
+// trimReleaseNotes turns markdown release notes into something that reads well
+// as plain text: images and HTML go, links keep their label, headings lose
+// their hashes and bullets become dots.
+func trimReleaseNotes(text string) string {
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	text = fencedCodePattern.ReplaceAllString(text, "\n")
+	text = markdownImagePattern.ReplaceAllString(text, " ")
+	text = markdownLinkPattern.ReplaceAllString(text, "$1")
+	text = htmlTagPattern.ReplaceAllString(text, " ")
+	text = strings.NewReplacer("**", "", "__", "", "~~", "", "`", "").Replace(text)
+
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		indent := line[:len(line)-len(strings.TrimLeft(line, " \t"))]
+		switch {
+		case strings.HasPrefix(trimmed, "* "), strings.HasPrefix(trimmed, "- "), strings.HasPrefix(trimmed, "+ "):
+			lines[i] = indent + "• " + trimmed[2:]
+		case strings.HasPrefix(trimmed, "#"):
+			lines[i] = indent + strings.TrimSpace(strings.TrimLeft(trimmed, "#"))
+		default:
+			lines[i] = line
+		}
+	}
+	text = strings.Join(lines, "\n")
+
+	for strings.Contains(text, "\n\n\n") {
+		text = strings.ReplaceAll(text, "\n\n\n", "\n\n")
+	}
+	return strings.TrimSpace(text)
+}
+
+// telegramReleaseMessage fills the message with the release notes up to
+// Telegram's limit, then offers the rest inside LePatch.
+func telegramReleaseMessage(job notificationJob, appURL string) (string, map[string]any) {
+	label, icon, prerelease := releaseKind(job)
+	kind := releaseTypeLabel(job)
+
+	var header strings.Builder
+	header.WriteString(icon + " <b>" + label + "</b>\n\n")
+	header.WriteString("<b>" + html.EscapeString(job.appName) + "</b> · <code>" + html.EscapeString(job.tag) + "</code>\n")
+	header.WriteString(html.EscapeString(job.repoFullName))
+	if kind != "" {
+		header.WriteString(" · <i>" + html.EscapeString(kind) + "</i>")
+	}
+	if prerelease {
+		header.WriteString("\n\n⚠️ <i>This is a pre-release build, not a final release.</i>")
+	}
+
+	head := header.String()
+	// Leave room for the truncation marker and a safety margin, because
+	// Telegram counts some characters as more than one unit.
+	budget := telegramMessageLimit - len([]rune(html.UnescapeString(head))) - 64
+	notes, truncated := telegramNotes(job.body, budget)
+
+	if notes != "" {
+		head += "\n\n" + html.EscapeString(notes)
+	} else if summary := notificationSummary(job); summary != "" {
+		head += "\n\n<blockquote>" + html.EscapeString(summary) + "</blockquote>"
+	}
+
+	return head, telegramButtons(job, appURL, truncated)
+}
+
+func telegramButtons(job notificationJob, appURL string, truncated bool) map[string]any {
+	rows := make([][]map[string]string, 0, 2)
+
+	if link := inAppReleaseURL(appURL, job); link != "" {
+		text := "Open in LePatch"
+		if truncated {
+			text = "Read the rest in LePatch"
+		}
+		rows = append(rows, []map[string]string{{"text": text, "url": link}})
+	}
+	if validReleaseURL(job.releaseURL) {
+		rows = append(rows, []map[string]string{{"text": "GitHub", "url": job.releaseURL}})
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+	return map[string]any{"inline_keyboard": rows}
+}
+
+// PreviewTelegramMessage renders a sample release alert so the administrator
+// console can show exactly what a real notification looks like.
+func PreviewTelegramMessage(appURL string) (string, map[string]any) {
+	return telegramReleaseMessage(notificationJob{
+		appID:        "preview-app",
+		releaseID:    "preview-release",
+		appName:      "LePatch",
+		repoFullName: "leleasley/LePatch",
+		tag:          "v0.2.0",
+		releaseURL:   "https://github.com/leleasley/LePatch/releases/tag/v0.2.0",
+		summary:      "This is a preview of a release alert. Nothing was actually published.",
+	}, appURL)
+}
+
+// PreviewDiscordPayload renders the matching Discord card.
+func PreviewDiscordPayload(appURL string) map[string]any {
+	return discordReleasePayload(notificationJob{
+		appID:        "preview-app",
+		releaseID:    "preview-release",
+		appName:      "LePatch",
+		repoFullName: "leleasley/LePatch",
+		tag:          "v0.2.0",
+		releaseURL:   "https://github.com/leleasley/LePatch/releases/tag/v0.2.0",
+		summary:      "This is a preview of a release alert. Nothing was actually published.",
+	}, appURL)
+}
+
+// discordReleasePayload builds an embed so the message reads like a card
 
 var (
 	fencedCodePattern    = regexp.MustCompile("(?s)```.*?```")
@@ -439,77 +581,10 @@ func notificationSummary(job notificationJob) string {
 	return summarizeReleaseText(text, 240)
 }
 
-// telegramReleaseMessage renders a compact card: a clear title that names the
-// release kind, the project and version, an optional summary block and one
-// button that opens the notes.
-func telegramReleaseMessage(job notificationJob) (string, map[string]any) {
-	label, icon, prerelease := releaseKind(job)
-	kind := releaseTypeLabel(job)
-
-	var b strings.Builder
-	b.WriteString(icon + " <b>" + label + "</b>\n\n")
-	b.WriteString("<b>" + html.EscapeString(job.appName) + "</b> · <code>" + html.EscapeString(job.tag) + "</code>\n")
-	b.WriteString(html.EscapeString(job.repoFullName))
-	if kind != "" {
-		b.WriteString(" · <i>" + html.EscapeString(kind) + "</i>")
-	}
-
-	if prerelease {
-		b.WriteString("\n\n⚠️ <i>This is a pre-release build, not a final release.</i>")
-	}
-
-	if summary := notificationSummary(job); summary != "" {
-		b.WriteString("\n\n<blockquote>" + html.EscapeString(summary) + "</blockquote>")
-	}
-
-	markup := telegramReleaseButton(job.releaseURL)
-	if markup == nil {
-		// Without a usable link the reader needs the URL in the text.
-		b.WriteString("\n\n" + html.EscapeString(job.releaseURL))
-	}
-
-	message := b.String()
-	if len([]rune(html.UnescapeString(message))) > telegramMessageLimit {
-		message = truncateText(message, telegramMessageLimit)
-	}
-	return message, markup
-}
-
-func telegramReleaseButton(releaseURL string) map[string]any {
-	parsed, err := url.Parse(releaseURL)
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil {
-		return nil
-	}
-	return map[string]any{"inline_keyboard": [][]map[string]string{{{"text": "Open release notes", "url": releaseURL}}}}
-}
-
-// PreviewTelegramMessage renders a sample release alert so the administrator
-// console can show exactly what a real notification looks like.
-func PreviewTelegramMessage() (string, map[string]any) {
-	return telegramReleaseMessage(notificationJob{
-		appName:      "LePatch",
-		repoFullName: "leleasley/LePatch",
-		tag:          "v0.2.0",
-		releaseURL:   "https://github.com/leleasley/LePatch/releases/tag/v0.2.0",
-		summary:      "This is a preview of a release alert. Nothing was actually published.",
-	})
-}
-
-// PreviewDiscordPayload renders the matching Discord card.
-func PreviewDiscordPayload() map[string]any {
-	return discordReleasePayload(notificationJob{
-		appName:      "LePatch",
-		repoFullName: "leleasley/LePatch",
-		tag:          "v0.2.0",
-		releaseURL:   "https://github.com/leleasley/LePatch/releases/tag/v0.2.0",
-		summary:      "This is a preview of a release alert. Nothing was actually published.",
-	})
-}
-
 // discordReleasePayload builds an embed so the message reads like a card
 // rather than a wall of text. Green marks a stable release, amber a
 // pre-release.
-func discordReleasePayload(job notificationJob) map[string]any {
+func discordReleasePayload(job notificationJob, appURL string) map[string]any {
 	label, icon, prerelease := releaseKind(job)
 	kind := releaseTypeLabel(job)
 	colour := 0x22c55e
@@ -523,9 +598,14 @@ func discordReleasePayload(job notificationJob) map[string]any {
 	}
 	fields = append(fields, map[string]any{"name": "Repository", "value": job.repoFullName, "inline": true})
 
+	embedURL := inAppReleaseURL(appURL, job)
+	if embedURL == "" {
+		embedURL = job.releaseURL
+	}
+
 	embed := map[string]any{
 		"title":  icon + " " + label,
-		"url":    job.releaseURL,
+		"url":    embedURL,
 		"color":  colour,
 		"fields": fields,
 		"footer": map[string]any{"text": "LePatch"},
@@ -660,8 +740,8 @@ func (w *Runner) markNotificationSent(ctx context.Context, job notificationJob, 
 	for _, eventID := range eventIDs {
 		_, _ = w.db.ExecContext(ctx, `UPDATE "NotificationEvent" SET status='sent',sentAt=?,error=NULL,nextAttemptAt=NULL WHERE id=?`, time.Now().UTC().Format(time.RFC3339Nano), eventID)
 	}
-	_, _ = w.db.ExecContext(ctx, `UPDATE "Release" SET notificationSent=1 WHERE id=?`, job.eventID)
-	_, _ = w.db.ExecContext(ctx, `UPDATE "WatchedApp" SET lastNotifiedReleaseId=(SELECT githubReleaseId FROM "Release" WHERE id=?),lastNotifiedTag=(SELECT tagName FROM "Release" WHERE id=?),updatedAt=? WHERE id=(SELECT watchedAppId FROM "Release" WHERE id=?)`, job.eventID, job.eventID, time.Now().UTC().Format(time.RFC3339Nano), job.eventID)
+	_, _ = w.db.ExecContext(ctx, `UPDATE "Release" SET notificationSent=1 WHERE id=?`, job.releaseID)
+	_, _ = w.db.ExecContext(ctx, `UPDATE "WatchedApp" SET lastNotifiedReleaseId=(SELECT githubReleaseId FROM "Release" WHERE id=?),lastNotifiedTag=(SELECT tagName FROM "Release" WHERE id=?),updatedAt=? WHERE id=(SELECT watchedAppId FROM "Release" WHERE id=?)`, job.releaseID, job.releaseID, time.Now().UTC().Format(time.RFC3339Nano), job.releaseID)
 	_, _ = w.hub.Publish(job.userID, "notification.sent", map[string]string{"id": job.id})
 }
 

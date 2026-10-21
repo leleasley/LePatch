@@ -36,6 +36,7 @@ type Runner struct {
 	backupMu      sync.Mutex
 	statusMu      sync.Mutex
 	status        Status
+	appURL        string
 }
 
 // Status describes the live state of the background release poller so the
@@ -151,6 +152,10 @@ func (w *Runner) Start(ctx context.Context) {
 }
 
 func (w *Runner) SetDataDir(path string) { w.dataDir = path }
+
+// SetAppURL records the public address so notifications can link back to the
+// release inside LePatch.
+func (w *Runner) SetAppURL(value string) { w.appURL = strings.TrimRight(value, "/") }
 
 func (w *Runner) Enqueue(ctx context.Context, id string) error {
 	w.pendingMu.Lock()

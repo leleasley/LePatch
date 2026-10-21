@@ -9,6 +9,9 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- The administrator console shows how many repositories include pre-releases
+  and can exclude them from every repository in one step.
+
 - Files in a repository you own can be edited in LePatch. The editor shows a
   live added and removed line count, `Cmd` or `Ctrl` plus `S` opens the commit
   dialog, and the dialog sets a commit message before writing. The commit goes
@@ -90,8 +93,13 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - Telegram and Discord release alerts are compact cards now. A stable release
   is titled "New release detected"; a pre-release is titled "Pre-release
   detected", carries a pre-release chip and a warning line, and uses a
-  different icon. The alert shows a short summary instead of the whole
-  changelog and one button opens the notes.
+  different icon.
+- The alert carries the release notes themselves, tidied into plain text and
+  filled up to Telegram's 4 KB limit. When they do not fit, the button reads
+  "Read the rest in LePatch" and opens that exact release inside the app; a
+  second button opens GitHub.
+- The accent colour is blue across every appearance. The previous amber accent
+  is gone.
 - Discord alerts are embeds, green for a stable release and amber for a
   pre-release, instead of a single line of markdown.
 - Release summaries skip generated changelog noise such as "What's Changed",
@@ -124,6 +132,15 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - MFA enrolment keeps the pending secret server-side.
 
 ### Fixed
+
+- Release alerts called any tag containing `-nightly`, `-beta` and similar a
+  pre-release even when GitHub published it as a normal release, so every
+  nightly feed looked as if pre-releases had been switched on. The
+  pre-release label now uses GitHub's own flag only.
+- The appearance picked on a device was overwritten by the account theme on
+  load, which made the theme picker look broken and forced the previous
+  accent back after signing in. A local choice now wins and is pushed to the
+  account; a device with no choice yet adopts the account theme.
 
 - Release summaries read only the top line of a release body, which for
   generated notes was "What's Changed". They now skip generated headings and

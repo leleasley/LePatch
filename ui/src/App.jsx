@@ -69,6 +69,16 @@ const PAGE_META = {
 export function App() {
   const toast = useToast();
   const [theme, setTheme] = useTheme();
+  // Captured before the theme hook writes its first value, so a first-time
+  // visitor adopts their account theme while a returning visitor keeps the
+  // choice they made on this device.
+  const [localThemeExisted] = useState(() => {
+    try {
+      return localStorage.getItem('lepatch-theme') !== null;
+    } catch {
+      return false;
+    }
+  });
 
   const initialParams = new URLSearchParams(location.search);
   const [authScreen, setAuthScreen] = useState(() => {
@@ -146,6 +156,8 @@ export function App() {
   issueStateRef.current = issueState;
   const appsRef = useRef(apps);
   appsRef.current = apps;
+  const themeRef = useRef(theme);
+  themeRef.current = theme;
   const themeTouched = useRef(false);
   const wasConnected = useRef(undefined);
 
@@ -196,7 +208,20 @@ export function App() {
       const session = await api('/api/auth/session');
       setCurrentUser(session.user || null);
       if (!themeTouched.current && session.user?.theme) {
-        setTheme(session.user.theme);
+        const accountTheme = session.user.theme;
+        if (localThemeExisted) {
+          // This device already has a preference; keep it and push it to the
+          // account so the choice survives a reload.
+          if (accountTheme !== themeRef.current) {
+            api('/api/account', { method: 'PATCH', body: { theme: themeRef.current } })
+              .then(result => setCurrentUser(result.user))
+              .catch(() => {
+                // The local choice still applies when the account cannot be reached.
+              });
+          }
+        } else if (accountTheme !== themeRef.current) {
+          setTheme(accountTheme);
+        }
       }
     } catch (issue) {
       if (issue instanceof ApiError && issue.status === 401) {

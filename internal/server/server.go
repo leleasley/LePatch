@@ -171,6 +171,7 @@ func (s *Server) Handler() http.Handler {
 	r.Put("/api/admin/settings", s.auth.Middleware(s.csrf(http.HandlerFunc(s.updateAdminSettings))).ServeHTTP)
 	r.Get("/api/admin/queues", s.auth.Middleware(http.HandlerFunc(s.adminQueues)).ServeHTTP)
 	r.Post("/api/admin/queues/retry", s.auth.Middleware(s.csrf(http.HandlerFunc(s.retryFailedNotifications))).ServeHTTP)
+	r.Post("/api/admin/pre-releases", s.auth.Middleware(s.csrf(http.HandlerFunc(s.setPreReleasesForAllRepositories))).ServeHTTP)
 	r.Get("/api/workspace", s.auth.Middleware(http.HandlerFunc(s.workspaceNotice)).ServeHTTP)
 	r.Get("/api/admin/backups", s.auth.Middleware(http.HandlerFunc(s.listBackups)).ServeHTTP)
 	r.Get("/api/admin/backup-schedule", s.auth.Middleware(http.HandlerFunc(s.backupSchedule)).ServeHTTP)

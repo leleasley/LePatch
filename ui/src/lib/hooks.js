@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 // Theme handling. The chosen appearance is stored locally for instant paint
 // and pushed to the account so it follows the user to other devices.
 export const THEMES = [
-  { id: 'dark', label: 'Midnight', swatch: '#08080a' },
+  { id: 'dark', label: 'Slate', swatch: '#08080a' },
   { id: 'midnight', label: 'Deep Space', swatch: '#06080e' },
   { id: 'oled', label: 'OLED', swatch: '#000000' },
   { id: 'light', label: 'Paper', swatch: '#f5f5f7' },

@@ -212,3 +212,54 @@ func TestRetryFailedNotificationsRequeuesEvents(t *testing.T) {
 		t.Fatalf("retry as a standard user = %d, want 403", forbidden.Code)
 	}
 }
+
+func TestPreReleaseBulkUpdateRequiresAdministratorAndUpdatesEveryRepository(t *testing.T) {
+	handler, adminToken, userToken, csrf, _ := adminTestServer(t)
+
+	if response := adminWrite(t, handler, http.MethodPost, "/api/admin/pre-releases", userToken, csrf, map[string]any{"enabled": false}); response.Code != http.StatusForbidden {
+		t.Fatalf("pre-release update as a standard user = %d, want 403", response.Code)
+	}
+
+	if response := adminWrite(t, handler, http.MethodPost, "/api/apps", adminToken, csrf, map[string]any{"repoFullName": "owner/one", "includePrereleases": true}); response.Code != http.StatusCreated {
+		t.Fatalf("watch = %d: %s", response.Code, response.Body.String())
+	}
+	if response := adminWrite(t, handler, http.MethodPost, "/api/apps", adminToken, csrf, map[string]any{"repoFullName": "owner/two"}); response.Code != http.StatusCreated {
+		t.Fatalf("watch = %d: %s", response.Code, response.Body.String())
+	}
+
+	update := adminWrite(t, handler, http.MethodPost, "/api/admin/pre-releases", adminToken, csrf, map[string]any{"enabled": false})
+	if update.Code != http.StatusOK {
+		t.Fatalf("pre-release update = %d: %s", update.Code, update.Body.String())
+	}
+
+	list := adminGet(t, handler, "/api/apps", adminToken)
+	var apps struct {
+		Apps []struct {
+			IncludePrereleases bool `json:"includePrereleases"`
+		} `json:"apps"`
+	}
+	if err := json.Unmarshal(list.Body.Bytes(), &apps); err != nil {
+		t.Fatal(err)
+	}
+	if len(apps.Apps) != 2 {
+		t.Fatalf("expected two repositories: %s", list.Body.String())
+	}
+	for _, app := range apps.Apps {
+		if app.IncludePrereleases {
+			t.Fatalf("a repository still includes pre-releases: %s", list.Body.String())
+		}
+	}
+
+	overview := adminGet(t, handler, "/api/admin/overview", adminToken)
+	var stats struct {
+		Repositories struct {
+			Prereleases int `json:"prereleases"`
+		} `json:"repositories"`
+	}
+	if err := json.Unmarshal(overview.Body.Bytes(), &stats); err != nil {
+		t.Fatal(err)
+	}
+	if stats.Repositories.Prereleases != 0 {
+		t.Fatalf("overview still counts pre-release repositories: %s", overview.Body.String())
+	}
+}

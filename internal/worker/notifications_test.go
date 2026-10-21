@@ -10,16 +10,17 @@ import (
 	"lepatch/internal/store"
 )
 
-func TestTelegramReleaseMessageNamesTheKindAndLinksTheNotes(t *testing.T) {
+func TestTelegramReleaseMessageFillsTheNotesAndLinksLePatch(t *testing.T) {
 	job := notificationJob{
+		appID:        "app-1",
+		releaseID:    "release-1",
 		appName:      "paseo",
 		repoFullName: "getpaseo/paseo",
 		tag:          "v0.12.0",
 		releaseURL:   "https://github.com/getpaseo/paseo/releases/tag/v0.12.0",
-		releaseType:  "minor",
-		summary:      "A faster sync engine and a new settings screen.",
+		body:         "## What's Changed\n\nA faster sync engine.\n\n* fix one thing\n* fix another",
 	}
-	message, markup := telegramReleaseMessage(job)
+	message, markup := telegramReleaseMessage(job, "https://lepatch.example")
 
 	if !strings.Contains(message, "New release detected") {
 		t.Fatalf("stable release should be titled clearly: %q", message)
@@ -27,62 +28,79 @@ func TestTelegramReleaseMessageNamesTheKindAndLinksTheNotes(t *testing.T) {
 	if !strings.Contains(message, "🚀") {
 		t.Fatalf("a stable release should carry the release icon: %q", message)
 	}
-	if !strings.Contains(message, "&lt;") && strings.Contains(message, "<script>") {
-		t.Fatalf("message was not escaped: %q", message)
-	}
 	if !strings.Contains(message, "<code>v0.12.0</code>") || !strings.Contains(message, "getpaseo/paseo") {
 		t.Fatalf("message should name the project and version: %q", message)
 	}
-	if !strings.Contains(message, "A faster sync engine") {
-		t.Fatalf("message should include the summary: %q", message)
+	// The notes are carried in the message, with headings and bullets tidied.
+	if !strings.Contains(message, "A faster sync engine.") || !strings.Contains(message, "• fix one thing") {
+		t.Fatalf("message should carry the release notes: %q", message)
 	}
-	if !strings.Contains(message, "<blockquote>") {
-		t.Fatalf("the summary should sit in a blockquote: %q", message)
+	if strings.Contains(message, "## What's Changed") || strings.Contains(message, "* fix one thing") {
+		t.Fatalf("markdown was not tidied: %q", message)
 	}
 
 	keyboard, ok := markup["inline_keyboard"].([][]map[string]string)
-	if !ok || len(keyboard) != 1 || keyboard[0][0]["text"] != "Open release notes" || keyboard[0][0]["url"] != job.releaseURL {
-		t.Fatalf("unexpected release button: %#v", markup)
+	if !ok || len(keyboard) != 2 {
+		t.Fatalf("expected a LePatch and a GitHub button: %#v", markup)
+	}
+	if keyboard[0][0]["text"] != "Open in LePatch" || keyboard[0][0]["url"] != "https://lepatch.example/apps/app-1/releases/release-1" {
+		t.Fatalf("first button should open the release in LePatch: %#v", keyboard[0][0])
+	}
+	if keyboard[1][0]["text"] != "GitHub" || keyboard[1][0]["url"] != job.releaseURL {
+		t.Fatalf("second button should open GitHub: %#v", keyboard[1][0])
 	}
 }
 
-func TestTelegramPrereleaseLooksDifferentFromAStableRelease(t *testing.T) {
-	base := notificationJob{
+func TestTelegramTruncatesLongNotesAndPointsAtLePatch(t *testing.T) {
+	job := notificationJob{
+		appID:        "app-1",
+		releaseID:    "release-1",
 		appName:      "zurg",
 		repoFullName: "debridmediamanager/zurg",
-		tag:          "2026.10.18-nightly",
-		releaseURL:   "https://github.com/debridmediamanager/zurg/releases/tag/2026.10.18-nightly",
-		summary:      "Nightly build.",
+		tag:          "2026.10.21.0448-nightly",
+		releaseURL:   "https://github.com/debridmediamanager/zurg/releases/tag/nightly",
+		body:         strings.Repeat("A long line of release notes.\n", 400),
 	}
-	prerelease := base
-	prerelease.prerelease = true
+	message, markup := telegramReleaseMessage(job, "https://lepatch.example")
 
-	// A tag without a pre-release marker stays stable even when the caller
-	// does not mark it.
-	stable := base
-	stable.tag = "v1.2.3"
-	stable.releaseURL = "https://github.com/debridmediamanager/zurg/releases/tag/v1.2.3"
+	if length := len([]rune(html.UnescapeString(message))); length > telegramMessageLimit {
+		t.Fatalf("visible message length = %d; want at most %d", length, telegramMessageLimit)
+	}
+	if !strings.HasSuffix(strings.TrimSpace(html.UnescapeString(message)), "…") {
+		t.Fatalf("the truncated notes should end with an ellipsis")
+	}
+	keyboard, ok := markup["inline_keyboard"].([][]map[string]string)
+	if !ok || len(keyboard) == 0 || keyboard[0][0]["text"] != "Read the rest in LePatch" {
+		t.Fatalf("truncated notes should point at LePatch: %#v", markup)
+	}
+}
 
-	message, _ := telegramReleaseMessage(prerelease)
-	if !strings.Contains(message, "Pre-release detected") {
-		t.Fatalf("pre-release should say so in the title: %q", message)
+func TestTelegramUsesOnlyGitHubPrereleaseFlag(t *testing.T) {
+	// A project that ships nightlies as ordinary releases must not be
+	// labelled a pre-release, which is what made every nightly feed look like
+	// pre-releases had been switched on.
+	job := notificationJob{
+		appName:      "zurg",
+		repoFullName: "debridmediamanager/zurg",
+		tag:          "2026.10.21.0448-nightly",
+		releaseURL:   "https://github.com/debridmediamanager/zurg/releases/tag/nightly",
+		releaseType:  "prerelease",
 	}
-	if !strings.Contains(message, "🧪") {
-		t.Fatalf("pre-release should carry the pre-release icon: %q", message)
+	message, _ := telegramReleaseMessage(job, "https://lepatch.example")
+	if !strings.Contains(message, "New release detected") {
+		t.Fatalf("a nightly tag without GitHub's flag is a normal release: %q", message)
 	}
-	if !strings.Contains(message, "not a final release") {
-		t.Fatalf("pre-release should warn the reader: %q", message)
-	}
-	if !strings.Contains(message, "<i>pre-release</i>") {
-		t.Fatalf("pre-release should be labelled in the meta line: %q", message)
+	if strings.Contains(message, "not a final release") {
+		t.Fatalf("a normal release should not carry the pre-release warning: %q", message)
 	}
 
-	stableMessage, _ := telegramReleaseMessage(stable)
-	if stableMessage == message {
-		t.Fatal("a pre-release and a stable release should not render identically")
+	job.prerelease = true
+	flagged, _ := telegramReleaseMessage(job, "https://lepatch.example")
+	if !strings.Contains(flagged, "Pre-release detected") {
+		t.Fatalf("a GitHub marked pre-release should say so: %q", flagged)
 	}
-	if strings.Contains(stableMessage, "not a final release") {
-		t.Fatalf("a stable release should not carry the pre-release warning: %q", stableMessage)
+	if !strings.Contains(flagged, "🧪") || !strings.Contains(flagged, "not a final release") {
+		t.Fatalf("pre-release should be visually distinct: %q", flagged)
 	}
 }
 
@@ -119,7 +137,7 @@ func TestTelegramMessageStaysWithinTheLimit(t *testing.T) {
 		releaseURL:   "https://github.com/o/r/releases/tag/v1",
 		summary:      strings.Repeat("界", 5000),
 	}
-	message, _ := telegramReleaseMessage(job)
+	message, _ := telegramReleaseMessage(job, "https://lepatch.example")
 	if length := len([]rune(html.UnescapeString(message))); length > telegramMessageLimit {
 		t.Fatalf("visible message length = %d; want at most %d", length, telegramMessageLimit)
 	}
@@ -178,7 +196,7 @@ func TestDiscordReleasePayloadIsAnEmbed(t *testing.T) {
 		prerelease:   true,
 		summary:      "Release candidate.",
 	}
-	payload := discordReleasePayload(job)
+	payload := discordReleasePayload(job, "https://lepatch.example")
 	embeds, ok := payload["embeds"].([]map[string]any)
 	if !ok || len(embeds) != 1 {
 		t.Fatalf("expected one embed: %#v", payload)
@@ -204,7 +222,7 @@ func TestDiscordReleasePayloadIsAnEmbed(t *testing.T) {
 	job.prerelease = false
 	job.releaseType = "major"
 	job.tag = "v2.0.0"
-	stable := discordReleasePayload(job)["embeds"].([]map[string]any)[0]
+	stable := discordReleasePayload(job, "https://lepatch.example")["embeds"].([]map[string]any)[0]
 	if stable["color"] != 0x22c55e {
 		t.Fatalf("stable embed should be green, got %#v", stable["color"])
 	}

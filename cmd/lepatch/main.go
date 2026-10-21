@@ -36,6 +36,7 @@ func main() {
 	hub := events.NewHub(512)
 	runner := worker.New(db.DB(), hub, cfg.GitHubToken, cfg.EncryptionKey, logger)
 	runner.SetDataDir(cfg.DataDir)
+	runner.SetAppURL(cfg.AppURL.String())
 	stop, stopSignal := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignal()
 	runner.Start(stop)

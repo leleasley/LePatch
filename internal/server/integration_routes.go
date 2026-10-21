@@ -350,7 +350,7 @@ func (s *Server) sendIntegrationTest(ctx context.Context, provider string, value
 		}
 		// Send a preview of the real release card so the reader knows what to
 		// expect rather than a plain "test" line.
-		return postExternalJSON(ctx, webhook, worker.PreviewDiscordPayload())
+		return postExternalJSON(ctx, webhook, worker.PreviewDiscordPayload(s.config.AppURL.String()))
 	}
 	token := values["botToken"]
 	if token == "" {
@@ -363,7 +363,7 @@ func (s *Server) sendIntegrationTest(ctx context.Context, provider string, value
 	if len(recipients) == 0 {
 		return fmt.Errorf("no Telegram recipients")
 	}
-	text, markup := worker.PreviewTelegramMessage()
+	text, markup := worker.PreviewTelegramMessage(s.config.AppURL.String())
 	for _, chatID := range recipients {
 		endpoint := "https://api.telegram.org/bot" + token + "/sendMessage"
 		payload := map[string]any{"chat_id": chatID, "text": text, "parse_mode": "HTML", "disable_web_page_preview": true}

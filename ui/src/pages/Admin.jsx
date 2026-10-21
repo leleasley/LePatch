@@ -218,10 +218,24 @@ function OverviewPanel({ overview, loading, onRefresh }) {
   );
 }
 
-function WorkspacePanel({ settings, onSaved }) {
+function WorkspacePanel({ settings, prereleaseCount, onSaved, onPrereleasesChanged }) {
   const toast = useToast();
   const [form, setForm] = useState(settings);
   const [busy, setBusy] = useState(false);
+  const [fixingPrereleases, setFixingPrereleases] = useState(false);
+
+  const excludePreReleases = async () => {
+    setFixingPrereleases(true);
+    try {
+      const result = await api('/api/admin/pre-releases', { method: 'POST', body: { enabled: false } });
+      toast.success(`Pre-releases turned off for ${result.updated} ${result.updated === 1 ? 'repository' : 'repositories'}.`);
+      onPrereleasesChanged?.(0);
+    } catch (issue) {
+      toast.error(issue.message || 'Could not update pre-release tracking.');
+    } finally {
+      setFixingPrereleases(false);
+    }
+  };
 
   useEffect(() => {
     setForm(settings);
@@ -301,6 +315,19 @@ function WorkspacePanel({ settings, onSaved }) {
             placeholder="Scheduled maintenance tonight at 22:00 UTC."
           />
         </Field>
+
+        {prereleaseCount > 0 ? (
+          <div className="notice notice-accent" style={{ alignItems: 'center' }}>
+            <TriangleAlert size={15} />
+            <span>
+              {prereleaseCount} {prereleaseCount === 1 ? 'repository includes' : 'repositories include'} pre-releases. That is
+              usually set per repository.
+            </span>
+            <button className="btn btn-sm" type="button" onClick={excludePreReleases} disabled={fixingPrereleases}>
+              {fixingPrereleases ? <LoaderCircle size={13} className="spin" /> : null} Exclude all
+            </button>
+          </div>
+        ) : null}
 
         <div>
           <button className="btn btn-primary" type="button" onClick={save} disabled={busy}>
@@ -1069,7 +1096,14 @@ export function AdminPage() {
 
       <div className="admin-panel">
         {tab === 'overview' ? <OverviewPanel overview={overview} loading={loading} onRefresh={load} /> : null}
-        {tab === 'workspace' ? <WorkspacePanel settings={overview?.settings} onSaved={settings => setOverview(current => ({ ...current, settings }))} /> : null}
+        {tab === 'workspace' ? (
+          <WorkspacePanel
+            settings={overview?.settings}
+            prereleaseCount={overview?.repositories?.prereleases ?? 0}
+            onSaved={settings => setOverview(current => ({ ...current, settings }))}
+            onPrereleasesChanged={count => setOverview(current => ({ ...current, repositories: { ...current.repositories, prereleases: count } }))}
+          />
+        ) : null}
         {tab === 'integrations' ? <IntegrationsPanel /> : null}
         {tab === 'users' ? <UsersPanel /> : null}
         {tab === 'queues' ? <QueuesPanel /> : null}

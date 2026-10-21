@@ -131,16 +131,17 @@ func (s *Server) adminOverview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	var users, administrators, watchedApps, releases, ignored, sessions, auditEvents int
+	var users, administrators, watchedApps, prereleaseApps, releases, ignored, sessions, auditEvents int
 	row := s.store.DB().QueryRowContext(ctx, `SELECT
 		(SELECT count(*) FROM "User"),
 		(SELECT count(*) FROM "User" WHERE role='administrator'),
 		(SELECT count(*) FROM "WatchedApp"),
+		(SELECT count(*) FROM "WatchedApp" WHERE includePrereleases=1),
 		(SELECT count(*) FROM "Release"),
 		(SELECT count(*) FROM "Release" WHERE ignored=1),
 		(SELECT count(*) FROM "Session" WHERE expiresAt > ?),
 		(SELECT count(*) FROM "AuditLog")`, time.Now().UTC().Format(time.RFC3339Nano))
-	if err := row.Scan(&users, &administrators, &watchedApps, &releases, &ignored, &sessions, &auditEvents); err != nil {
+	if err := row.Scan(&users, &administrators, &watchedApps, &prereleaseApps, &releases, &ignored, &sessions, &auditEvents); err != nil {
 		writeError(w, http.StatusInternalServerError, "Could not load workspace statistics")
 		return
 	}
@@ -204,7 +205,7 @@ func (s *Server) adminOverview(w http.ResponseWriter, r *http.Request) {
 			"administrator": administrators,
 			"activeSession": sessions,
 		},
-		"repositories": map[string]any{"watched": watchedApps},
+		"repositories": map[string]any{"watched": watchedApps, "prereleases": prereleaseApps},
 		"releases": map[string]any{
 			"total":    releases,
 			"ignored":  ignored,
@@ -392,4 +393,31 @@ func (s *Server) workspaceNotice(w http.ResponseWriter, r *http.Request) {
 // backupDirectory is the directory LePatch writes database snapshots into.
 func (s *Server) backupDirectory() string {
 	return filepath.Join(s.config.DataDir, "backups")
+}
+
+// setPreReleasesForAllRepositories switches pre-release tracking on or off for
+// every watched repository in one step. It is a workspace-wide correction for
+// installations where the default was enabled and then applied to every add.
+func (s *Server) setPreReleasesForAllRepositories(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.adminOnly(w, r)
+	if !ok {
+		return
+	}
+	var input struct {
+		Enabled bool `json:"enabled"`
+	}
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	result, err := s.store.DB().ExecContext(r.Context(),
+		`UPDATE "WatchedApp" SET includePrereleases=?, updatedAt=?`,
+		input.Enabled, time.Now().UTC().Format(time.RFC3339Nano))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Could not update pre-release tracking")
+		return
+	}
+	updated, _ := result.RowsAffected()
+	s.writeAudit(r.Context(), actor.UserID, "admin.prereleases_updated", "repositories", map[string]any{"enabled": input.Enabled, "repositories": updated}, s.clientIP(r))
+	_, _ = s.events.Publish(actor.UserID, "state.refresh", map[string]string{"reason": "prereleases"})
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "updated": updated})
 }
