@@ -13,14 +13,110 @@ import {
   Search,
   TriangleAlert,
 } from 'lucide-react';
-import { elapsed, releaseKind } from '../lib/format.js';
+import { elapsed } from '../lib/format.js';
 import { EmptyState, RepoIcon, Stat } from '../components/ui.jsx';
 
 const FILTERS = [
-  { id: 'all', label: 'All releases' },
-  { id: 'new', label: 'New only' },
+  { id: 'all', label: 'All' },
+  { id: 'new', label: 'New' },
   { id: 'prerelease', label: 'Pre-releases' },
 ];
+
+function startOfDay(value) {
+  const date = new Date(value);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+function dayKey(value) {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+function dayLabel(value) {
+  const date = new Date(value);
+  const days = Math.round((startOfDay(Date.now()) - startOfDay(value)) / 86_400_000);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return date.toLocaleDateString(undefined, { weekday: 'long' });
+  return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+// A release is "new" when it is the newest release of a repository that is
+// waiting on an update and its tag has not been acknowledged yet. The feed is
+// ordered by detection time, which is not the same as release order, so this
+// compares publication dates per repository.
+function newReleaseIds(feed) {
+  const newest = new Map();
+  for (const item of feed) {
+    const watched = item.watchedApp;
+    if (!watched?.id || !watched.updateAvailable) continue;
+    const stamp = new Date(item.publishedAt || item.detectedAt || 0).getTime();
+    const current = newest.get(watched.id);
+    if (!current || stamp > current.stamp) newest.set(watched.id, { item, stamp });
+  }
+  const ids = new Set();
+  for (const { item } of newest.values()) {
+    if (!item.watchedApp.latestSeenTag || item.tagName !== item.watchedApp.latestSeenTag) ids.add(item.id);
+  }
+  return ids;
+}
+
+function groupByDay(items) {
+  const groups = [];
+  for (const item of items) {
+    const key = dayKey(item.detectedAt);
+    const current = groups[groups.length - 1];
+    if (current && current.key === key) {
+      current.items.push(item);
+    } else {
+      groups.push({ key, label: dayLabel(item.detectedAt), items: [item] });
+    }
+  }
+  return groups;
+}
+
+function ReleaseCard({ item, isNew, onOpenApp, onOpenRelease, onMarkSeen, onIgnore }) {
+  const name = item.watchedApp?.name || item.appName || item.repoFullName;
+  const repo = item.repoFullName || item.watchedApp?.repoFullName;
+  return (
+    <article className={`release-card${isNew ? ' is-new' : ''}`}>
+      <RepoIcon name={name} iconUrl={item.watchedApp?.iconUrl} />
+      <div className="release-main">
+        <div className="release-top">
+          <button className="release-project" type="button" onClick={() => onOpenApp(item.watchedApp?.id)}>
+            {name} <span>{repo}</span>
+          </button>
+          <a className="pill pill-accent" href={item.htmlUrl} target="_blank" rel="noreferrer">
+            {item.tagName} <ArrowUpRight size={11} />
+          </a>
+        </div>
+        <h3>
+          <button
+            type="button"
+            onClick={() => onOpenRelease(item.watchedApp?.id, item.id)}
+            style={{ background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', textAlign: 'left' }}
+          >
+            {item.name || `${name} ${item.tagName}`}
+          </button>
+        </h3>
+        <p className="clamp-2">{item.changelogSummary || 'A new release is available for this project.'}</p>
+        <div className="release-meta">
+          {isNew ? <span className="new-badge">New</span> : null}
+          {item.prerelease ? <span className="pill">Pre-release</span> : null}
+          <span>Detected {elapsed(item.detectedAt)}</span>
+        </div>
+        <div className="release-actions">
+          <button type="button" onClick={() => onMarkSeen(item.watchedApp?.id)}>
+            <Check size={13} /> Mark read
+          </button>
+          <button type="button" className="is-danger" onClick={() => onIgnore(item.id)}>
+            <EyeOff size={13} /> Ignore
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 export function FeedPage({
   feed,
@@ -31,39 +127,89 @@ export function FeedPage({
   onCheck,
   onRemove,
   onMarkSeen,
+  onMarkAllSeen,
   onIgnore,
   onWatch,
-  onRefresh,
-  refreshing,
   checking,
 }) {
   const [filter, setFilter] = useState('all');
   const [layout, setLayout] = useState('list');
-  const [query, setQuery] = useState('');
+  const [releaseQuery, setReleaseQuery] = useState('');
+  const [repoQuery, setRepoQuery] = useState('');
+  const [markingAll, setMarkingAll] = useState(false);
+
+  const newIds = useMemo(() => newReleaseIds(feed), [feed]);
 
   const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
+    const needle = releaseQuery.trim().toLowerCase();
     return feed.filter(item => {
       if (filter === 'prerelease' && !item.prerelease) return false;
-      if (filter === 'all' && item.prerelease) return false;
-      if (filter === 'new' && (!item.watchedApp?.updateAvailable || item.prerelease)) return false;
+      if (filter === 'new' && !newIds.has(item.id)) return false;
       if (!needle) return true;
       const haystack = `${item.watchedApp?.name || ''} ${item.repoFullName || ''} ${item.tagName || ''} ${item.name || ''}`.toLowerCase();
       return haystack.includes(needle);
     });
-  }, [feed, filter, query]);
+  }, [feed, filter, releaseQuery, newIds]);
+
+  const groups = useMemo(() => groupByDay(visible), [visible]);
 
   const watched = useMemo(() => {
-    const needle = query.trim().toLowerCase();
+    const needle = repoQuery.trim().toLowerCase();
     if (!needle) return apps;
     return apps.filter(app => `${app.name} ${app.repoFullName}`.toLowerCase().includes(needle));
-  }, [apps, query]);
+  }, [apps, repoQuery]);
+
+  const newReleases = useMemo(() => feed.filter(item => newIds.has(item.id)), [feed, newIds]);
+  const newRepositories = useMemo(() => new Set(newReleases.map(item => item.watchedApp?.id)).size, [newReleases]);
+
+  const markAll = async () => {
+    setMarkingAll(true);
+    try {
+      await onMarkAllSeen();
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  if (!apps.length) {
+    return (
+      <EmptyState
+        icon={Radio}
+        title="Your feed is empty"
+        description="Watch a GitHub repository and LePatch will collect its releases here, check for new ones in the background and notify you when something ships."
+        action={
+          <button className="btn btn-primary" type="button" onClick={onWatch}>
+            <Plus size={15} /> Watch your first repository
+          </button>
+        }
+      />
+    );
+  }
 
   return (
     <>
+      {newReleases.length ? (
+        <div className="feed-banner">
+          <span className="feed-banner-icon">
+            <BellRing size={18} />
+          </span>
+          <div className="feed-banner-copy">
+            <b>
+              {newReleases.length} new {newReleases.length === 1 ? 'release' : 'releases'}
+            </b>
+            <span>
+              across {newRepositories} {newRepositories === 1 ? 'repository' : 'repositories'} since you last checked
+            </span>
+          </div>
+          <button className="btn btn-primary btn-sm" type="button" onClick={markAll} disabled={markingAll}>
+            {markingAll ? <RefreshCw size={13} className="spin" /> : <Check size={13} />} Mark all as read
+          </button>
+        </div>
+      ) : null}
+
       <div className="stat-grid" style={{ marginBottom: 24 }}>
         <Stat label="Watching" value={stats.total ?? apps.length} hint="repositories" icon={Radio} />
-        <Stat label="New releases" value={stats.updates ?? 0} hint="awaiting review" icon={BellRing} />
+        <Stat label="New releases" value={newReleases.length} hint="waiting for you" icon={BellRing} />
         <Stat label="Failed checks" value={stats.failed ?? 0} hint="need attention" icon={TriangleAlert} />
         <Stat label="Stale" value={stats.stale ?? 0} hint="over 24 hours" icon={FileClock} />
       </div>
@@ -74,7 +220,16 @@ export function FeedPage({
             <h2>
               Latest releases <span>{visible.length}</span>
             </h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div className="feed-tools">
+              <label className="feed-search">
+                <Search size={14} />
+                <input
+                  value={releaseQuery}
+                  onChange={event => setReleaseQuery(event.target.value)}
+                  placeholder="Search releases"
+                  aria-label="Search releases"
+                />
+              </label>
               <div className="segmented">
                 {FILTERS.map(item => (
                   <button key={item.id} type="button" className={filter === item.id ? 'is-active' : ''} onClick={() => setFilter(item.id)}>
@@ -93,58 +248,38 @@ export function FeedPage({
             </div>
           </div>
 
-          {visible.length ? (
-            <div className={layout === 'grid' ? 'release-grid' : 'release-list'}>
-              {visible.map(item => {
-                const name = item.watchedApp?.name || item.appName || item.repoFullName;
-                const repo = item.repoFullName || item.watchedApp?.repoFullName;
-                return (
-                  <article className="release-card" key={item.id}>
-                    <RepoIcon name={name} iconUrl={item.watchedApp?.iconUrl} />
-                    <div className="release-main">
-                      <div className="release-top">
-                        <button className="release-project" type="button" onClick={() => onOpenApp(item.watchedApp?.id)}>
-                          {name} <span>{repo}</span>
-                        </button>
-                        <a className="pill pill-accent" href={item.htmlUrl} target="_blank" rel="noreferrer">
-                          {item.tagName} <ArrowUpRight size={11} />
-                        </a>
-                      </div>
-                      <h3>
-                        <button type="button" onClick={() => onOpenRelease(item.watchedApp?.id, item.id)} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', textAlign: 'left' }}>
-                          {item.name || `${name} ${item.tagName}`}
-                        </button>
-                      </h3>
-                      <p className="clamp-2">{item.changelogSummary || 'A new release is available for this project.'}</p>
-                      <div className="release-meta">
-                        <span>{releaseKind(item)}</span>
-                        <span>·</span>
-                        <span>Detected {elapsed(item.detectedAt)}</span>
-                        {item.publishedAt ? (
-                          <>
-                            <span>·</span>
-                            <span>Published {elapsed(item.publishedAt)}</span>
-                          </>
-                        ) : null}
-                      </div>
-                      <div className="release-meta" style={{ marginTop: 2 }}>
-                        <button className="row-action" type="button" onClick={() => onMarkSeen(item.watchedApp?.id)} title="Mark as seen">
-                          <Check size={13} />
-                        </button>
-                        <button className="row-action is-danger" type="button" onClick={() => onIgnore(item.id)} title="Ignore this release">
-                          <EyeOff size={13} />
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+          {groups.length ? (
+            groups.map(group => (
+              <div className="feed-day" key={group.key}>
+                <div className="feed-day-head">
+                  <span>{group.label}</span>
+                  <i />
+                  <small>{group.items.length}</small>
+                </div>
+                <div className={layout === 'grid' ? 'release-grid' : 'release-list'}>
+                  {group.items.map(item => (
+                    <ReleaseCard
+                      key={item.id}
+                      item={item}
+                      isNew={newIds.has(item.id)}
+                      onOpenApp={onOpenApp}
+                      onOpenRelease={onOpenRelease}
+                      onMarkSeen={onMarkSeen}
+                      onIgnore={onIgnore}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))
           ) : (
             <EmptyState
               icon={FileClock}
               title={feed.length ? 'Nothing matches those filters' : 'No releases yet'}
-              description={feed.length ? 'Try a different filter or clear the search box.' : 'When a watched project publishes a release, it will land here automatically.'}
+              description={
+                feed.length
+                  ? 'Try a different filter or clear the search box.'
+                  : 'LePatch is watching your repositories. Releases appear here as soon as they are published.'
+              }
             />
           )}
         </section>
@@ -162,11 +297,27 @@ export function FeedPage({
             </div>
             <label className="input-icon" style={{ display: 'flex', padding: '0 16px 12px' }}>
               <Search size={15} />
-              <input className="input" style={{ paddingLeft: 36 }} value={query} onChange={event => setQuery(event.target.value)} placeholder="Find a repository" aria-label="Find a watched repository" />
+              <input
+                className="input"
+                style={{ paddingLeft: 36 }}
+                value={repoQuery}
+                onChange={event => setRepoQuery(event.target.value)}
+                placeholder="Find a repository"
+                aria-label="Find a watched repository"
+              />
             </label>
             <div className="watch-list">
               {watched.map(app => (
-                <div className="watch-row" key={app.id} onClick={() => onOpenApp(app.id)} onKeyDown={event => { if (event.key === 'Enter') onOpenApp(app.id); }} role="link" tabIndex={0}>
+                <div
+                  className="watch-row"
+                  key={app.id}
+                  onClick={() => onOpenApp(app.id)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter') onOpenApp(app.id);
+                  }}
+                  role="link"
+                  tabIndex={0}
+                >
                   <RepoIcon name={app.name} iconUrl={app.iconUrl} size="is-sm" />
                   <span className="watch-copy">
                     <b>
@@ -206,23 +357,10 @@ export function FeedPage({
               ))}
               {!watched.length ? (
                 <div className="card-body subtle" style={{ fontSize: 'var(--text-xs)' }}>
-                  {apps.length ? 'No repositories match that search.' : 'Nothing on your watch list yet. Add a repository to start tracking releases.'}
+                  No repositories match that search.
                 </div>
               ) : null}
             </div>
-          </div>
-
-          <div className="card card-pad">
-            <div className="sidebar-card-head" style={{ marginBottom: 10 }}>
-              <Radio size={14} />
-              <span>Background checks</span>
-            </div>
-            <p className="subtle" style={{ fontSize: 'var(--text-xs)', lineHeight: 1.6 }}>
-              LePatch polls GitHub in the background so your feed stays current without a page reload.
-            </p>
-            <button className="btn btn-sm" type="button" style={{ marginTop: 12 }} onClick={onRefresh} disabled={refreshing}>
-              <RefreshCw size={13} className={refreshing ? 'spin' : ''} /> Refresh now
-            </button>
           </div>
         </aside>
       </div>

@@ -184,6 +184,7 @@ func (s *Server) Handler() http.Handler {
 	})
 	r.Post("/api/releases/seen", s.auth.Middleware(s.csrf(http.HandlerFunc(s.markReleaseSeen))).ServeHTTP)
 	r.Post("/api/releases/ignore", s.auth.Middleware(s.csrf(http.HandlerFunc(s.ignoreRelease))).ServeHTTP)
+	r.Post("/api/releases/seen-all", s.auth.Middleware(s.csrf(http.HandlerFunc(s.markAllReleasesSeen))).ServeHTTP)
 	r.Get("/api/issues/raised", s.auth.Middleware(http.HandlerFunc(s.raisedIssues)).ServeHTTP)
 	r.Post("/api/issues/raised/{id}/seen", s.auth.Middleware(s.csrf(http.HandlerFunc(s.markRaisedIssueSeen))).ServeHTTP)
 	r.Get("/", s.serveUI)
@@ -457,6 +458,10 @@ func (s *Server) updateApp(w http.ResponseWriter, r *http.Request) {
 				writeError(w, http.StatusBadRequest, "Name must be a non-empty string")
 				return
 			}
+			if len(text) > 80 {
+				writeError(w, http.StatusBadRequest, "Name must be 80 characters or fewer")
+				return
+			}
 			value = text
 		case "checkIntervalMinutes":
 			var number int
@@ -608,7 +613,7 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "Could not load release feed")
 		return
 	}
-	feedQuery := `SELECT r.id, r.tagName, r.name, r.htmlUrl, r.prerelease, r.publishedAt, r.detectedAt, r.changelogSummary, a.id, a.name, a.repoFullName, a.iconUrl, a.updateAvailable
+	feedQuery := `SELECT r.id, r.tagName, r.name, r.htmlUrl, r.prerelease, r.publishedAt, r.detectedAt, r.changelogSummary, a.id, a.name, a.repoFullName, a.iconUrl, a.updateAvailable, a.latestSeenTag
 		FROM "Release" r JOIN "WatchedApp" a ON a.id = r.watchedAppId WHERE a.userId = ?`
 	feedArgs := []any{principal.UserID}
 	if !includePrereleases {
@@ -640,12 +645,13 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 			RepoFullName    string  `json:"repoFullName"`
 			IconURL         *string `json:"iconUrl"`
 			UpdateAvailable bool    `json:"updateAvailable"`
+			LatestSeenTag   *string `json:"latestSeenTag"`
 		} `json:"watchedApp"`
 	}
 	recent := make([]feedItem, 0, feedSize)
 	for rows.Next() {
 		var item feedItem
-		if err := rows.Scan(&item.ID, &item.TagName, &item.Name, &item.HTMLURL, &item.Prerelease, &item.PublishedAt, &item.DetectedAt, &item.ChangelogSummary, &item.WatchedApp.ID, &item.WatchedApp.Name, &item.WatchedApp.RepoFullName, &item.WatchedApp.IconURL, &item.WatchedApp.UpdateAvailable); err != nil {
+		if err := rows.Scan(&item.ID, &item.TagName, &item.Name, &item.HTMLURL, &item.Prerelease, &item.PublishedAt, &item.DetectedAt, &item.ChangelogSummary, &item.WatchedApp.ID, &item.WatchedApp.Name, &item.WatchedApp.RepoFullName, &item.WatchedApp.IconURL, &item.WatchedApp.UpdateAvailable, &item.WatchedApp.LatestSeenTag); err != nil {
 			writeError(w, http.StatusInternalServerError, "Could not read release feed")
 			return
 		}

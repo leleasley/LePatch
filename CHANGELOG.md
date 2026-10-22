@@ -9,6 +9,10 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- The release feed is grouped by day, flags each unseen release with a "New"
+  badge and shows an unread banner that counts new releases across
+  repositories and can mark everything as read in one request.
+
 - The GitHub mark replaces the generic branch icon everywhere GitHub is
   referenced, including the sign in button, the project card and the footer.
 
@@ -97,6 +101,9 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Changed
 
+- The home page searches releases separately from the watched repository list,
+  keeps the release filter and list or grid layout in one toolbar, and labels
+  the release actions "Mark read" and "Ignore" instead of icon only buttons.
 - Telegram and Discord release alerts are compact cards now. A stable release
   is titled "New release detected"; a pre-release is titled "Pre-release
   detected", carries a pre-release chip and a warning line, and uses a
@@ -140,6 +147,16 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- Opening a sponsored maintainer from the sponsors list rendered the list
+  again, so the maintainer's repositories could not be reached. The maintainer
+  now has its own page with their profile and repositories.
+- The "New" filter on the release feed matched every release of a repository
+  that had an update. It now matches only the unseen release itself.
+- Marking a release as seen reduced the unread counter even when that
+  repository had no update available, and ignoring a release could save a stale
+  copy of the feed for the next offline load.
+- Repository display names over 80 characters are rejected instead of being
+  stored, matching the limit the settings dialog enforces.
 - Release alerts are delivered once per provider. A legacy import could leave
   more than one notification channel row for the same provider, which sent
   every release once per row. Extra rows are disabled on start and the queue

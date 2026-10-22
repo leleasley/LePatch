@@ -17,6 +17,7 @@ import { IssuesPage } from './pages/Issues.jsx';
 import { IssueDetailPage } from './pages/IssueDetail.jsx';
 import { NotificationsPage } from './pages/Notifications.jsx';
 import { DiscoverPage } from './pages/Discover.jsx';
+import { SponsorDetailPage } from './pages/SponsorDetail.jsx';
 import { AccountPage } from './pages/Account.jsx';
 import { AdminPage } from './pages/Admin.jsx';
 import { AboutPage } from './pages/About.jsx';
@@ -680,11 +681,14 @@ export function App() {
           writeSnapshot('apps', next);
           return next;
         });
-        setStats(current => {
-          const next = { ...current, updates: Math.max(0, (current.updates || 0) - 1) };
-          writeSnapshot('stats', next);
-          return next;
-        });
+        const wasUpdated = appsRef.current.some(app => app.id === appId && app.updateAvailable);
+        if (wasUpdated) {
+          setStats(current => {
+            const next = { ...current, updates: Math.max(0, (current.updates || 0) - 1) };
+            writeSnapshot('stats', next);
+            return next;
+          });
+        }
         if (result.app) {
           setDetailApp(current => (current && current.id === appId ? result.app : current));
         }
@@ -696,19 +700,41 @@ export function App() {
     [toast],
   );
 
+  const markAllSeen = useCallback(async () => {
+    try {
+      const result = await api('/api/releases/seen-all', { method: 'POST', body: {} });
+      setApps(current => {
+        const next = current.map(app => ({ ...app, updateAvailable: false }));
+        writeSnapshot('apps', next);
+        return next;
+      });
+      setStats(current => {
+        const next = { ...current, updates: 0 };
+        writeSnapshot('stats', next);
+        return next;
+      });
+      toast.success(`${result.updated || 0} ${result.updated === 1 ? 'repository' : 'repositories'} marked as read.`);
+    } catch (issue) {
+      toast.error(issue.message || 'Could not mark everything as read.');
+    }
+  }, [toast]);
+
   const ignoreRelease = useCallback(
     async releaseId => {
       if (!releaseId) return;
       try {
         await api('/api/releases/ignore', { method: 'POST', body: { releaseId } });
-        setFeed(current => current.filter(item => item.id !== releaseId));
-        writeSnapshot('feed', feed.filter(item => item.id !== releaseId));
+        setFeed(current => {
+          const next = current.filter(item => item.id !== releaseId);
+          writeSnapshot('feed', next);
+          return next;
+        });
         toast.success('Release ignored.');
       } catch (issue) {
         toast.error(issue.message || 'Could not ignore the release.');
       }
     },
-    [feed, toast],
+    [toast],
   );
 
   const searchRepositories = useCallback(
@@ -940,10 +966,9 @@ export function App() {
           onCheck={checkApp}
           onRemove={removeApp}
           onMarkSeen={markSeen}
+          onMarkAllSeen={markAllSeen}
           onIgnore={ignoreRelease}
           onWatch={() => setAdding(true)}
-          onRefresh={refresh}
-          refreshing={refreshing}
           checking={checking}
         />
       );
@@ -1046,8 +1071,25 @@ export function App() {
         />
       );
     }
-    if (page === 'discover' || page === 'discover-sponsors' || page === 'owned-repos' || page === 'sponsor-detail') {
-      const mode = page === 'discover-sponsors' || page === 'sponsor-detail' ? 'sponsors' : page === 'owned-repos' ? 'owned' : 'search';
+    if (page === 'sponsor-detail') {
+      const maintainer = discoveryResults.find(person => person.login?.toLowerCase() === sponsorLogin.toLowerCase());
+      return (
+        <SponsorDetailPage
+          login={sponsorLogin}
+          maintainer={maintainer}
+          panel={sponsorPanels[sponsorLogin]}
+          onLoad={() => {
+            if (!sponsorPanels[sponsorLogin]?.items) expandSponsor({ login: sponsorLogin });
+          }}
+          watched={new Set(apps.map(app => app.repoFullName?.toLowerCase()))}
+          onWatch={addRepository}
+          onOpenRepo={openPreviewRepo}
+          onBack={() => navigate('discover-sponsors')}
+        />
+      );
+    }
+    if (page === 'discover' || page === 'discover-sponsors' || page === 'owned-repos') {
+      const mode = page === 'discover-sponsors' ? 'sponsors' : page === 'owned-repos' ? 'owned' : 'search';
       return (
         <DiscoverPage
           mode={mode}

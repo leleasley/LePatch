@@ -26,7 +26,7 @@ func TestDashboardFeedFiltersPrereleasesAndReportsUpdateFlags(t *testing.T) {
 	if _, err := db.DB().ExecContext(ctx, `INSERT INTO "User" (id,name,email,passwordHash,role) VALUES ('user-1','Test','test@example.test','hash','user')`); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.DB().ExecContext(ctx, `INSERT INTO "WatchedApp" (id,name,slug,repoOwner,repoName,repoFullName,githubUrl,userId,updateAvailable) VALUES ('app-1','Example','example','owner','repo','owner/repo','https://github.com/owner/repo','user-1',1)`); err != nil {
+	if _, err := db.DB().ExecContext(ctx, `INSERT INTO "WatchedApp" (id,name,slug,repoOwner,repoName,repoFullName,githubUrl,userId,updateAvailable,latestSeenTag) VALUES ('app-1','Example','example','owner','repo','owner/repo','https://github.com/owner/repo','user-1',1,'v1.0.0')`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.DB().ExecContext(ctx, `INSERT INTO "Release" (id,watchedAppId,githubReleaseId,tagName,htmlUrl,prerelease,draft) VALUES ('stable-1','app-1','gh-1','v1.0.0','https://github.com/owner/repo/releases/tag/v1.0.0',0,0)`); err != nil {
@@ -51,7 +51,8 @@ func TestDashboardFeedFiltersPrereleasesAndReportsUpdateFlags(t *testing.T) {
 			TagName    string `json:"tagName"`
 			Prerelease bool   `json:"prerelease"`
 			WatchedApp struct {
-				UpdateAvailable bool `json:"updateAvailable"`
+				UpdateAvailable bool    `json:"updateAvailable"`
+				LatestSeenTag   *string `json:"latestSeenTag"`
 			} `json:"watchedApp"`
 		} `json:"recent"`
 	} {
@@ -68,7 +69,8 @@ func TestDashboardFeedFiltersPrereleasesAndReportsUpdateFlags(t *testing.T) {
 				TagName    string `json:"tagName"`
 				Prerelease bool   `json:"prerelease"`
 				WatchedApp struct {
-					UpdateAvailable bool `json:"updateAvailable"`
+					UpdateAvailable bool    `json:"updateAvailable"`
+					LatestSeenTag   *string `json:"latestSeenTag"`
 				} `json:"watchedApp"`
 			} `json:"recent"`
 		}
@@ -84,6 +86,9 @@ func TestDashboardFeedFiltersPrereleasesAndReportsUpdateFlags(t *testing.T) {
 	}
 	if !stable.Recent[0].WatchedApp.UpdateAvailable {
 		t.Fatal("the feed should report the watched repository update flag")
+	}
+	if stable.Recent[0].WatchedApp.LatestSeenTag == nil || *stable.Recent[0].WatchedApp.LatestSeenTag != "v1.0.0" {
+		t.Fatal("the feed should report the last seen tag so the home page can flag unseen releases")
 	}
 
 	withPreReleases := fetch("/api/dashboard?includePrereleases=true")

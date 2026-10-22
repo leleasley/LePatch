@@ -1017,3 +1017,19 @@ func (s *Server) ignoreRelease(w http.ResponseWriter, r *http.Request) {
 	_, _ = s.store.DB().ExecContext(r.Context(), `UPDATE "WatchedApp" SET updateAvailable=0,updatedAt=? WHERE id=?`, time.Now().UTC().Format(time.RFC3339Nano), appID)
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
+
+// markAllReleasesSeen acknowledges every release waiting in the feed for the
+// signed in user.
+func (s *Server) markAllReleasesSeen(w http.ResponseWriter, r *http.Request) {
+	principal, _ := auth.PrincipalFromContext(r.Context())
+	result, err := s.store.DB().ExecContext(r.Context(), `UPDATE "WatchedApp"
+		SET updateAvailable=0,lastNotifiedReleaseId=latestSeenReleaseId,lastNotifiedTag=latestSeenTag,updatedAt=?
+		WHERE userId=? AND updateAvailable=1`, time.Now().UTC().Format(time.RFC3339Nano), principal.UserID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Could not mark releases seen")
+		return
+	}
+	updated, _ := result.RowsAffected()
+	_, _ = s.events.Publish(principal.UserID, "state.refresh", map[string]string{"reason": "seen-all"})
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "updated": updated})
+}
