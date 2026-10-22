@@ -449,7 +449,7 @@ function IntegrationsPanel() {
           ) : (
             <>
               <Field label="Webhook URL" hint={integrations.discord?.configured ? 'Configured securely · enter a replacement to rotate' : 'https://discord.com/api/webhooks/…'}>
-                <input className="input" type="password" autoComplete="new-password" value={forms.discord.webhookUrl} onChange={field('discord', 'webhookUrl')} placeholder={integrations.discord?.configured ? 'Configured securely' : 'https://discord.com/api/webhooks/…'} />
+                <input className="input" type="password" autoComplete="off" data-bwignore="true" data-lpignore="true" data-1p-ignore="true" value={forms.discord.webhookUrl} onChange={field('discord', 'webhookUrl')} placeholder={integrations.discord?.configured ? 'Configured securely' : 'https://discord.com/api/webhooks/…'} />
               </Field>
               <label className="switch">
                 <input type="checkbox" checked={forms.discord.enabled} onChange={event => setForms(current => ({ ...current, discord: { ...current.discord, enabled: event.target.checked } }))} />
@@ -488,7 +488,7 @@ function IntegrationsPanel() {
             <>
               <div className="account-grid" style={{ gap: 14 }}>
                 <Field label="Bot token" hint={integrations.telegram?.configured ? 'Configured securely' : 'From @BotFather'}>
-                  <input className="input" type="password" autoComplete="new-password" value={forms.telegram.botToken} onChange={field('telegram', 'botToken')} placeholder={integrations.telegram?.configured ? 'Configured securely' : 'Bot token from @BotFather'} />
+                  <input className="input" type="password" autoComplete="off" data-bwignore="true" data-lpignore="true" data-1p-ignore="true" value={forms.telegram.botToken} onChange={field('telegram', 'botToken')} placeholder={integrations.telegram?.configured ? 'Configured securely' : 'Bot token from @BotFather'} />
                 </Field>
                 <Field label="Bot username">
                   <input className="input" value={forms.telegram.botUsername} onChange={field('telegram', 'botUsername')} placeholder="YourBotName (without @)" />
@@ -497,7 +497,7 @@ function IntegrationsPanel() {
                   <input className="input" value={forms.telegram.botName} onChange={field('telegram', 'botName')} placeholder="LePatch" />
                 </Field>
                 <Field label="Webhook secret" hint="validates incoming Telegram updates">
-                  <input className="input" type="password" autoComplete="new-password" value={forms.telegram.webhookSecret} onChange={field('telegram', 'webhookSecret')} placeholder="Secret" />
+                  <input className="input" type="password" autoComplete="off" data-bwignore="true" data-lpignore="true" data-1p-ignore="true" value={forms.telegram.webhookSecret} onChange={field('telegram', 'webhookSecret')} placeholder="Secret" />
                 </Field>
                 <Field label="Default chat ID" hint={integrations.telegram?.defaultRecipientConfigured ? 'A default recipient is configured' : 'Optional fallback recipient'}>
                   <input className="input" value={forms.telegram.chatId} onChange={field('telegram', 'chatId')} placeholder="Optional fallback recipient" />
@@ -621,7 +621,7 @@ function UsersPanel() {
         <form className="user-create-form" onSubmit={create}>
           <input className="input" required placeholder="Name" value={newUser.name} onChange={event => setNewUser(current => ({ ...current, name: event.target.value }))} />
           <input className="input" required type="email" placeholder="Email" value={newUser.email} onChange={event => setNewUser(current => ({ ...current, email: event.target.value }))} />
-          <input className="input" required type="password" minLength={10} placeholder="Temporary password" value={newUser.password} onChange={event => setNewUser(current => ({ ...current, password: event.target.value }))} />
+          <input className="input" required type="password" minLength={10} autoComplete="new-password" data-bwignore="true" placeholder="Temporary password" value={newUser.password} onChange={event => setNewUser(current => ({ ...current, password: event.target.value }))} />
           <select className="select" value={newUser.role} onChange={event => setNewUser(current => ({ ...current, role: event.target.value }))}>
             <option value="user">User</option>
             <option value="moderator">Moderator</option>

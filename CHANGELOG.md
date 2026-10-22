@@ -9,6 +9,10 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- The two factor code is entered in six separate boxes. Typing moves forward,
+  Backspace moves back, and pasting or an authenticator autofill fills every
+  box. A link switches to a single recovery code field.
+
 - The administrator console shows how many repositories include pre-releases
   and can exclude them from every repository in one step.
 
@@ -132,6 +136,11 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - MFA enrolment keeps the pending secret server-side.
 
 ### Fixed
+
+- Password managers offered to save the Discord webhook, Telegram bot token
+  and webhook secret as account passwords, because those secret fields are
+  password inputs. They are now ignored by Bitwarden, LastPass and 1Password,
+  and so is the temporary password an administrator sets for a new user.
 
 - Switching from Sponsored maintainers to Repository search kept the previous
   results, so a maintainer was drawn as a repository with no name, a broken

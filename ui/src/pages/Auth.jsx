@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Check, Copy, GitBranch, KeyRound, LoaderCircle, TriangleAlert } from 'lucide-react';
+import { OtpInput } from '../components/OtpInput.jsx';
 
 export function AuthPage({ screen, notice, setupInfo, backupCodes, onLogin, onPasskey, onFirstSetup, onMFA, onSetup, onComplete, onBack }) {
   const [email, setEmail] = useState('');
@@ -8,6 +9,8 @@ export function AuthPage({ screen, notice, setupInfo, backupCodes, onLogin, onPa
   const [code, setCode] = useState('');
   const [working, setWorking] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const codeReady = recoveryMode ? code.trim().length >= 6 : code.length === 6;
 
   const submit = async event => {
     event.preventDefault();
@@ -109,7 +112,11 @@ export function AuthPage({ screen, notice, setupInfo, backupCodes, onLogin, onPa
           <>
             <span className="kicker">account security</span>
             <h1>Verify it is you</h1>
-            <p>Enter the six digit code from your authenticator, or one of your recovery codes.</p>
+            <p>
+              {recoveryMode
+                ? 'Enter one of the recovery codes you saved when you set up two factor sign in.'
+                : 'Enter the six digit code from your authenticator app.'}
+            </p>
             {notice ? (
               <div className="notice notice-error">
                 <TriangleAlert size={15} />
@@ -117,15 +124,41 @@ export function AuthPage({ screen, notice, setupInfo, backupCodes, onLogin, onPa
               </div>
             ) : null}
             <form onSubmit={submit} className="auth-form">
-              <label className="field">
-                <span>Authentication code</span>
-                <input className="input" required autoFocus autoComplete="one-time-code" inputMode="numeric" value={code} onChange={event => setCode(event.target.value)} placeholder="000000" />
-              </label>
-              <button className="btn btn-primary" type="submit" disabled={working}>
+              {recoveryMode ? (
+                <label className="field">
+                  <span>Recovery code</span>
+                  <input
+                    className="input"
+                    required
+                    autoFocus
+                    autoComplete="off"
+                    value={code}
+                    onChange={event => setCode(event.target.value)}
+                    placeholder="Your saved recovery code"
+                  />
+                </label>
+              ) : (
+                <div className="field">
+                  <span>Authentication code</span>
+                  <OtpInput value={code} onChange={setCode} autoFocus label="Authentication code" />
+                </div>
+              )}
+              <button className="btn btn-primary" type="submit" disabled={working || !codeReady}>
                 {working ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} Verify and sign in
               </button>
             </form>
-            <button className="btn btn-ghost" type="button" style={{ marginTop: 10 }} onClick={onBack}>
+            <button
+              className="btn btn-ghost"
+              type="button"
+              style={{ marginTop: 10 }}
+              onClick={() => {
+                setRecoveryMode(value => !value);
+                setCode('');
+              }}
+            >
+              {recoveryMode ? 'Use an authenticator code' : 'Use a recovery code instead'}
+            </button>
+            <button className="btn btn-ghost" type="button" onClick={onBack}>
               Back to sign in
             </button>
           </>
@@ -154,11 +187,11 @@ export function AuthPage({ screen, notice, setupInfo, backupCodes, onLogin, onPa
                   <small>Add this key in your authenticator app. It stays on this device.</small>
                 </div>
                 <form onSubmit={submit} className="auth-form">
-                  <label className="field">
+                  <div className="field">
                     <span>Six digit code</span>
-                    <input className="input" required autoComplete="one-time-code" inputMode="numeric" value={code} onChange={event => setCode(event.target.value)} placeholder="000000" />
-                  </label>
-                  <button className="btn btn-primary" type="submit" disabled={working}>
+                    <OtpInput value={code} onChange={setCode} autoFocus label="Authenticator code" />
+                  </div>
+                  <button className="btn btn-primary" type="submit" disabled={working || code.length !== 6}>
                     {working ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} Verify and enable MFA
                   </button>
                 </form>
