@@ -9,6 +9,9 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- The GitHub mark replaces the generic branch icon everywhere GitHub is
+  referenced, including the sign in button, the project card and the footer.
+
 - The two factor code is entered in six separate boxes. Typing moves forward,
   Backspace moves back, and pasting or an authenticator autofill fills every
   box. A link switches to a single recovery code field.
@@ -136,6 +139,21 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 - MFA enrolment keeps the pending secret server-side.
 
 ### Fixed
+
+- Release alerts are delivered once per provider. A legacy import could leave
+  more than one notification channel row for the same provider, which sent
+  every release once per row. Extra rows are disabled on start and the queue
+  now picks exactly one channel per provider.
+- A provider that rejects a request outright is no longer retried, which used
+  to resend the same alert up to five times, and delivery attempts are capped
+  at three.
+- Opening a watched repository's edit dialog on a phone focused the display
+  name field and opened the on-screen keyboard over the dialog. Focus is only
+  taken on a wide screen now.
+- A newly watched repository showed "No releases found" until the next
+  scheduled check. Watching now queues a check straight away, the open
+  repository reloads when that check finishes, and the release tab says it is
+  checking instead of showing an empty state.
 
 - Password managers offered to save the Discord webhook, Telegram bot token
   and webhook secret as account passwords, because those secret fields are

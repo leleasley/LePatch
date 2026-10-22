@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowUpRight, GitBranch, RefreshCw, TriangleAlert } from 'lucide-react';
+import { RefreshCw, TriangleAlert } from 'lucide-react';
 import { api, ApiError } from './lib/api.js';
 import { useTheme } from './lib/hooks.js';
 import { clearSnapshots, readSnapshot, writeSnapshot } from './lib/storage.js';
@@ -21,6 +21,7 @@ import { AccountPage } from './pages/Account.jsx';
 import { AdminPage } from './pages/Admin.jsx';
 import { AboutPage } from './pages/About.jsx';
 import { AuthPage } from './pages/Auth.jsx';
+import { GitHubMark } from './components/GitHubMark.jsx';
 
 const ROUTES = [
   { id: 'feed', path: '/' },
@@ -116,6 +117,7 @@ export function App() {
   const [detailApp, setDetailApp] = useState(null);
   const [detailReleases, setDetailReleases] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailVersion, setDetailVersion] = useState(0);
 
   const [raisedIssues, setRaisedIssues] = useState(() => readSnapshot('raised-issues-open', []));
   const [issueState, setIssueState] = useState('open');
@@ -158,6 +160,8 @@ export function App() {
   appsRef.current = apps;
   const themeRef = useRef(theme);
   themeRef.current = theme;
+  const detailAppIdRef = useRef(detailAppId);
+  detailAppIdRef.current = detailAppId;
   const themeTouched = useRef(false);
   const wasConnected = useRef(undefined);
 
@@ -505,8 +509,14 @@ export function App() {
     source.addEventListener('notification.failed', () => loadNotifications());
 
     // Live events also surface as toasts so a change is visible from any page.
+    const reloadOpenDetail = data => {
+      if (data?.appId && data.appId === detailAppIdRef.current) {
+        setDetailVersion(value => value + 1);
+      }
+    };
     source.addEventListener('release.discovered', event => {
       const data = parse(event);
+      reloadOpenDetail(data);
       toast.info({
         title: 'New release',
         message: `${appName(data.appId)} published ${data.latestTag || 'a new release'}.`,
@@ -514,6 +524,7 @@ export function App() {
     });
     source.addEventListener('check.finished', event => {
       const data = parse(event);
+      reloadOpenDetail(data);
       if (!data.failed) return;
       toast.error({
         title: 'Release check failed',
@@ -560,6 +571,23 @@ export function App() {
     return () => source.close();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authScreen, refresh, loadRaisedIssues, loadNotifications]);
+
+  // Re-run the repository load when the live counter changes.
+  useEffect(() => {
+    if (detailVersion === 0) return;
+    if (!['app-detail', 'release-detail'].includes(page) || !detailAppId) return;
+    let cancelled = false;
+    Promise.all([api(`/api/apps/${encodeURIComponent(detailAppId)}`), api(`/api/apps/${encodeURIComponent(detailAppId)}/releases?perPage=50`)])
+      .then(([appData, releaseData]) => {
+        if (cancelled) return;
+        setDetailApp(appData.app);
+        setDetailReleases(releaseData.releases || []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [detailVersion, page, detailAppId]);
 
   /* --------------------------------------------------------------- actions */
 
@@ -942,7 +970,7 @@ export function App() {
                 </span>
               </div>
               <a className="btn btn-primary" href={activeRelease.htmlUrl} target="_blank" rel="noreferrer">
-                View on GitHub <ArrowUpRight size={14} />
+                <GitHubMark size={14} /> View on GitHub
               </a>
             </div>
             {activeRelease.changelogSummary ? (
@@ -1122,7 +1150,7 @@ export function App() {
 
         <footer className="page-footer">
           <span>
-            <GitBranch size={12} /> GitHub release monitoring
+            <GitHubMark size={13} /> GitHub release monitoring
           </span>
           <span>Events update automatically · offline state is kept locally</span>
         </footer>

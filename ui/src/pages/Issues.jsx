@@ -1,6 +1,7 @@
 import { ArrowRight, ArrowUpRight, Check, CircleDot, MessageSquare, RefreshCw } from 'lucide-react';
 import { elapsed } from '../lib/format.js';
 import { EmptyState, Pill } from '../components/ui.jsx';
+import { GitHubMark } from '../components/GitHubMark.jsx';
 
 const STATES = [
   { id: 'open', label: 'Open' },
@@ -63,7 +64,7 @@ export function IssuesPage({ issues, state, onState, onSeen, onOpen, onRefresh, 
                   {issue.unreadCommentCount > 0 ? <Pill kind="accent">{issue.unreadCommentCount} new</Pill> : null}
                   <span>Opened {elapsed(issue.createdAt)}</span>
                   <a className="issue-meta-link" href={issue.htmlUrl} target="_blank" rel="noreferrer" title="Open on GitHub">
-                    GitHub <ArrowUpRight size={11} />
+                    <GitHubMark size={11} /> GitHub <ArrowUpRight size={10} />
                   </a>
                 </div>
               </div>

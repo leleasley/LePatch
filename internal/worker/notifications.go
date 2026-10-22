@@ -48,6 +48,12 @@ func (w *Runner) syncEnabledIntegrationChannels(ctx context.Context) {
 		_, err = w.db.ExecContext(ctx, `INSERT INTO "NotificationChannel" (id,type,name,enabled,configJson,createdAt,updatedAt) VALUES (?,?,?,1,'{}',?,?) ON CONFLICT(type,name) DO UPDATE SET enabled=1,updatedAt=excluded.updatedAt`, newID(), integration.provider, integration.name, now, now)
 		if err != nil {
 			w.logger.Error("enable configured notification channel", "provider", integration.provider, "error", err.Error())
+			continue
+		}
+		// A legacy import can leave extra rows for the same provider. Disable
+		// them so a release is not delivered once per row.
+		if _, err := w.db.ExecContext(ctx, `UPDATE "NotificationChannel" SET enabled=0 WHERE type=? AND name<>?`, integration.provider, integration.name); err != nil {
+			w.logger.Warn("could not disable duplicate notification channels", "provider", integration.provider, "error", err.Error())
 		}
 	}
 }
@@ -55,6 +61,10 @@ func (w *Runner) syncEnabledIntegrationChannels(ctx context.Context) {
 var semverTag = regexp.MustCompile(`(?i)^v?(\d+)\.(\d+)\.(\d+)`)
 
 const telegramMessageLimit = 4096
+
+// maxNotificationAttempts bounds retries so a provider that keeps failing
+// cannot send the same alert repeatedly.
+const maxNotificationAttempts = 3
 
 func (w *Runner) enqueueNotificationEvents(ctx context.Context, releaseID, userID string) error {
 	var enabled bool
@@ -65,17 +75,28 @@ func (w *Runner) enqueueNotificationEvents(ctx context.Context, releaseID, userI
 	if err == nil && !enabled {
 		return nil
 	}
-	rows, err := w.db.QueryContext(ctx, `SELECT id FROM "NotificationChannel" WHERE enabled=1 AND type IN ('discord','telegram')`)
+	rows, err := w.db.QueryContext(ctx, `SELECT id, type, name FROM "NotificationChannel"
+		WHERE enabled=1 AND type IN ('discord','telegram')
+		ORDER BY type,
+			CASE WHEN (type='discord' AND name='Discord') OR (type='telegram' AND name='Telegram') THEN 0 ELSE 1 END,
+			updatedAt DESC`)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
+	// Exactly one channel per provider. A legacy import can leave several rows
+	// for the same provider, which used to deliver every release once per row.
+	chosen := make(map[string]string, 2)
 	channelIDs := make([]string, 0, 2)
 	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
+		var id, channelType, name string
+		if err := rows.Scan(&id, &channelType, &name); err != nil {
 			return err
 		}
+		if _, seen := chosen[channelType]; seen {
+			continue
+		}
+		chosen[channelType] = id
 		channelIDs = append(channelIDs, id)
 	}
 	if err := rows.Err(); err != nil {
@@ -702,32 +723,59 @@ func postJSON(ctx context.Context, endpoint string, value any) error {
 	defer response.Body.Close()
 	responseBody, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("notification provider returned HTTP %d", response.StatusCode)
+		return &deliveryError{status: response.StatusCode, message: fmt.Sprintf("notification provider returned HTTP %d", response.StatusCode)}
 	}
 	var telegramResult struct {
 		OK bool `json:"ok"`
 	}
 	if strings.Contains(endpoint, "api.telegram.org") && (json.Unmarshal(responseBody, &telegramResult) != nil || !telegramResult.OK) {
-		return fmt.Errorf("Telegram rejected the notification")
+		return &deliveryError{status: http.StatusBadRequest, message: "Telegram rejected the notification"}
 	}
 	return nil
+}
+
+// deliveryError carries the provider status so a permanent rejection is not
+// retried. Retrying a bad request only sends the same alert again.
+type deliveryError struct {
+	status  int
+	message string
+}
+
+func (e *deliveryError) Error() string { return e.message }
+
+func (e *deliveryError) permanent() bool {
+	switch e.status {
+	case http.StatusBadRequest, http.StatusForbidden, http.StatusNotFound:
+		return true
+	}
+	return false
 }
 
 func (w *Runner) retryNotification(ctx context.Context, job notificationJob, sendErr error) {
 	attempt := job.attempts + 1
 	status := "pending"
 	var next any
-	if attempt >= 5 {
+
+	// A provider that rejects the request outright will reject it again, so
+	// stop instead of resending the same alert.
+	permanent := false
+	if failure, ok := sendErr.(*deliveryError); ok && failure.permanent() {
+		permanent = true
+	}
+
+	switch {
+	case permanent, attempt >= maxNotificationAttempts:
 		status = "failed"
-	} else {
+	default:
 		delay := time.Duration(5*(1<<(attempt-1))) * time.Second
 		next = time.Now().Add(delay).UTC().Format(time.RFC3339Nano)
 	}
+
 	_, err := w.db.ExecContext(ctx, `UPDATE "NotificationEvent" SET attemptCount=?,status=?,error=?,nextAttemptAt=? WHERE id=?`, attempt, status, truncateText(sendErr.Error(), 500), next, job.id)
 	if err != nil {
 		w.logger.Error("save notification retry", "event_id", job.id, "error", err.Error())
 	}
-	w.logger.Warn("notification delivery failed", "event_id", job.id, "attempt", attempt, "status", status, "error", sendErr.Error())
+	w.logger.Warn("notification delivery failed", "event_id", job.id, "attempt", attempt, "status", status, "permanent", permanent, "error", sendErr.Error())
 	_, _ = w.hub.Publish(job.userID, "notification.failed", map[string]string{"id": job.id, "status": status})
 }
 

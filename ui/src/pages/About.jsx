@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, GitFork, LoaderCircle, RefreshCw, TriangleAlert } from 'lucide-react';
+import { ArrowUpRight, LoaderCircle, RefreshCw, TriangleAlert } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { dateOnly } from '../lib/format.js';
+import { GitHubMark } from '../components/GitHubMark.jsx';
 
 export function AboutPage() {
   const [about, setAbout] = useState(null);
@@ -115,7 +116,7 @@ export function AboutPage() {
             <h2>Project</h2>
             <p>Source code, changes and contribution guidelines.</p>
           </div>
-          <GitFork size={18} style={{ color: 'var(--fg-subtle)' }} />
+          <GitHubMark size={18} className="about-github-mark" />
         </div>
         <div className="card-body">
           <a className="link-row" href="https://github.com/leleasley/LePatch" target="_blank" rel="noreferrer">

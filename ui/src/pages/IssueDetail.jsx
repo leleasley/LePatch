@@ -15,6 +15,7 @@ import { absolute, elapsed } from '../lib/format.js';
 import { useToast } from '../lib/toast.jsx';
 import { EmptyState, LoadingLine, Pill } from '../components/ui.jsx';
 import { MarkdownView } from '../components/Markdown.jsx';
+import { GitHubMark } from '../components/GitHubMark.jsx';
 
 export function IssueDetailPage({ owner, repo, number, onBack, onOpenRepo, onCommented }) {
   const toast = useToast();
@@ -141,7 +142,7 @@ export function IssueDetailPage({ owner, repo, number, onBack, onOpenRepo, onCom
             {isOpen ? 'Close issue' : 'Reopen issue'}
           </button>
           <a className="btn btn-sm" href={issue.html_url || `${repositoryUrl}/issues/${number}`} target="_blank" rel="noreferrer">
-            GitHub <ArrowUpRight size={13} />
+            <GitHubMark size={13} /> GitHub <ArrowUpRight size={11} />
           </a>
         </div>
       </div>

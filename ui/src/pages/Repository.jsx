@@ -25,6 +25,7 @@ import { useToast } from '../lib/toast.jsx';
 import { EmptyState, LoadingLine, RepoIcon } from '../components/ui.jsx';
 import { Modal } from '../components/Modal.jsx';
 import { MarkdownView } from '../components/Markdown.jsx';
+import { GitHubMark } from '../components/GitHubMark.jsx';
 
 const MAX_EDIT_BYTES = 900_000;
 const TABS = [
@@ -471,7 +472,7 @@ export function RepositoryPage({ app, releases, loading, onBack, onOpenRelease, 
               </div>
             </div>
             <a className="btn btn-sm" href={readme?.htmlUrl || `${app.githubUrl}#readme`} target="_blank" rel="noreferrer">
-              Open on GitHub <ArrowUpRight size={13} />
+              <GitHubMark size={13} /> Open on GitHub
             </a>
           </div>
           <div className="readme-body">
@@ -509,6 +510,8 @@ export function RepositoryPage({ app, releases, loading, onBack, onOpenRelease, 
                   <code>{release.tagName}</code>
                 </button>
               ))
+            ) : app.checkStatus === 'never' || app.checkStatus === 'checking' ? (
+              <LoadingLine>Checking this repository for releases…</LoadingLine>
             ) : (
               <EmptyState icon={FileClock} title="No releases found" description="Release history appears here after the next successful check." />
             )}
@@ -664,7 +667,7 @@ export function RepositoryPage({ app, releases, loading, onBack, onOpenRelease, 
               <p>Open and recently closed changes</p>
             </div>
             <a className="btn btn-sm" href={`${app.githubUrl}/pulls`} target="_blank" rel="noreferrer">
-              Open on GitHub <ArrowUpRight size={13} />
+              <GitHubMark size={13} /> Open on GitHub
             </a>
           </div>
           <div className="card">
@@ -739,7 +742,7 @@ export function RepositoryPage({ app, releases, loading, onBack, onOpenRelease, 
                 <span>Opened by {selectedIssue.user?.login || 'GitHub user'}</span>
                 <span>{selectedIssue.created_at ? new Date(selectedIssue.created_at).toLocaleString() : ''}</span>
                 <a href={selectedIssue.html_url} target="_blank" rel="noreferrer">
-                  View on GitHub <ArrowUpRight size={12} />
+                  <GitHubMark size={12} /> View on GitHub
                 </a>
               </div>
               <MarkdownView source={selectedIssue.body || 'No description provided.'} baseURL={selectedIssue.html_url || app.githubUrl} />
@@ -864,7 +867,7 @@ export function RepositoryPage({ app, releases, loading, onBack, onOpenRelease, 
               <p>Recent GitHub Actions activity</p>
             </div>
             <a className="btn btn-sm" href={`${app.githubUrl}/actions`} target="_blank" rel="noreferrer">
-              Open on GitHub <ArrowUpRight size={13} />
+              <GitHubMark size={13} /> Open on GitHub
             </a>
           </div>
           <div className="card">

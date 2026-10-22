@@ -2,11 +2,15 @@ package worker
 
 import (
 	"context"
+	"database/sql"
 	"html"
+	"io"
+	"log/slog"
 	"strings"
 	"testing"
 	"time"
 
+	"lepatch/internal/events"
 	"lepatch/internal/store"
 )
 
@@ -249,7 +253,7 @@ func TestQueueReleaseNotificationHonorsUserPreference(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	runner := &Runner{db: db.DB()}
+	runner := &Runner{db: db.DB(), logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	if err := runner.enqueueNotificationEvents(ctx, "r", "u"); err != nil {
 		t.Fatal(err)
 	}
@@ -282,7 +286,7 @@ func TestSyncEnabledIntegrationChannelsRestoresLegacyTelegramSetting(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	runner := &Runner{db: db.DB()}
+	runner := &Runner{db: db.DB(), logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	runner.syncEnabledIntegrationChannels(ctx)
 	var enabled bool
 	if err := db.DB().QueryRowContext(ctx, `SELECT enabled FROM "NotificationChannel" WHERE type='telegram'`).Scan(&enabled); err != nil || !enabled {
@@ -305,5 +309,98 @@ func TestNotificationPreferenceQuietHoursAndSeverity(t *testing.T) {
 	}
 	if delay := quietHoursDelay(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC), "22:00", "07:00", "UTC"); delay != 0 {
 		t.Fatalf("outside quiet hours delay = %v", delay)
+	}
+}
+
+func TestEnqueueNotificationEventsSendsOncePerProvider(t *testing.T) {
+	ctx := context.Background()
+	db, err := store.Open(ctx, ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	statements := []string{
+		`INSERT INTO "User" (id,name,email,passwordHash,role) VALUES ('user-1','Test','test@example.test','hash','user')`,
+		`INSERT INTO "WatchedApp" (id,name,slug,repoOwner,repoName,repoFullName,githubUrl,userId) VALUES ('app-1','Example','example','owner','repo','owner/repo','https://github.com/owner/repo','user-1')`,
+		`INSERT INTO "Release" (id,watchedAppId,githubReleaseId,tagName,htmlUrl,prerelease,draft) VALUES ('release-1','app-1','gh-1','v1.0.0','https://github.com/owner/repo/releases/tag/v1.0.0',0,0)`,
+		// A canonical channel and a legacy row for the same provider.
+		`INSERT INTO "NotificationChannel" (id,type,name,enabled,configJson) VALUES ('tg-canonical','telegram','Telegram',1,'{}')`,
+		`INSERT INTO "NotificationChannel" (id,type,name,enabled,configJson) VALUES ('tg-legacy','telegram','Default',1,'{}')`,
+		`INSERT INTO "NotificationChannel" (id,type,name,enabled,configJson) VALUES ('discord-1','discord','Discord',1,'{}')`,
+	}
+	for _, statement := range statements {
+		if _, err := db.DB().ExecContext(ctx, statement); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	runner := &Runner{db: db.DB(), logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	if err := runner.enqueueNotificationEvents(ctx, "release-1", "user-1"); err != nil {
+		t.Fatal(err)
+	}
+
+	var telegramEvents, total int
+	if err := db.DB().QueryRowContext(ctx, `SELECT
+		(SELECT count(*) FROM "NotificationEvent" e JOIN "NotificationChannel" c ON c.id=e.channelId WHERE c.type='telegram'),
+		(SELECT count(*) FROM "NotificationEvent")`).Scan(&telegramEvents, &total); err != nil {
+		t.Fatal(err)
+	}
+	if telegramEvents != 1 {
+		t.Fatalf("a duplicate telegram channel produced %d events, want 1", telegramEvents)
+	}
+	if total != 2 {
+		t.Fatalf("expected one event per provider, got %d", total)
+	}
+}
+
+func TestPermanentDeliveryFailureIsNotRetried(t *testing.T) {
+	ctx := context.Background()
+	db, err := store.Open(ctx, ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.DB().ExecContext(ctx, `INSERT INTO "User" (id,name,email,passwordHash,role) VALUES ('user-1','Test','test@example.test','hash','user')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.DB().ExecContext(ctx, `INSERT INTO "WatchedApp" (id,name,slug,repoOwner,repoName,repoFullName,githubUrl,userId) VALUES ('app-1','Example','example','owner','repo','owner/repo','https://github.com/owner/repo','user-1')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.DB().ExecContext(ctx, `INSERT INTO "Release" (id,watchedAppId,githubReleaseId,tagName,htmlUrl,prerelease,draft) VALUES ('release-1','app-1','gh-1','v1.0.0','https://github.com/owner/repo/releases/tag/v1.0.0',0,0)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.DB().ExecContext(ctx, `INSERT INTO "NotificationChannel" (id,type,name,enabled,configJson) VALUES ('c1','telegram','Telegram',1,'{}')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.DB().ExecContext(ctx, `INSERT INTO "NotificationEvent" (id,releaseId,channelId,status,attemptCount) VALUES ('event-1','release-1','c1','pending',0)`); err != nil {
+		t.Fatal(err)
+	}
+
+	runner := &Runner{db: db.DB(), hub: events.NewHub(8), logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	runner.retryNotification(ctx, notificationJob{id: "event-1", userID: "user-1", attempts: 0}, &deliveryError{status: 400, message: "Telegram rejected the notification"})
+
+	var status string
+	var next sql.NullString
+	if err := db.DB().QueryRowContext(ctx, `SELECT status,nextAttemptAt FROM "NotificationEvent" WHERE id='event-1'`).Scan(&status, &next); err != nil {
+		t.Fatal(err)
+	}
+	if status != "failed" {
+		t.Fatalf("a rejected request should be marked failed, got %q", status)
+	}
+	if next.Valid {
+		t.Fatalf("a rejected request should not be retried, nextAttemptAt=%q", next.String)
+	}
+
+	// A transient error is still retried.
+	if _, err := db.DB().ExecContext(ctx, `UPDATE "NotificationEvent" SET status='pending',attemptCount=0,nextAttemptAt=NULL WHERE id='event-1'`); err != nil {
+		t.Fatal(err)
+	}
+	runner.retryNotification(ctx, notificationJob{id: "event-1", userID: "user-1", attempts: 0}, &deliveryError{status: 502, message: "bad gateway"})
+	if err := db.DB().QueryRowContext(ctx, `SELECT status,nextAttemptAt FROM "NotificationEvent" WHERE id='event-1'`).Scan(&status, &next); err != nil {
+		t.Fatal(err)
+	}
+	if status != "pending" || !next.Valid {
+		t.Fatalf("a transient error should be retried, got status=%q next=%v", status, next.Valid)
 	}
 }

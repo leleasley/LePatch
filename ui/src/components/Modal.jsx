@@ -20,11 +20,15 @@ export function Modal({ open, onClose, title, description, children, footer, lab
     document.addEventListener('keydown', onKeyDown);
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    // Focus the first real field rather than the close button, so a phone
-    // opens the dialog ready to type instead of on a dismiss control.
-    const field = panel.current?.querySelector('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])');
-    const fallback = panel.current?.querySelector('button');
-    (field || fallback)?.focus?.();
+    // On a phone, focusing a field opens the on-screen keyboard straight
+    // away, which covers most of the dialog. Only focus where a hardware
+    // keyboard is likely.
+    const narrow = window.matchMedia('(max-width: 640px)').matches;
+    if (!narrow) {
+      const field = panel.current?.querySelector('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])');
+      const fallback = panel.current?.querySelector('button');
+      (field || fallback)?.focus?.();
+    }
     return () => {
       document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previous;

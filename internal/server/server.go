@@ -406,6 +406,15 @@ func (s *Server) createApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, _ = s.events.Publish(principal.UserID, "watched-app.added", app)
+
+	// Check straight away so the first releases are available as soon as the
+	// repository is opened, instead of waiting for the background schedule.
+	if s.worker != nil {
+		if err := s.worker.Enqueue(r.Context(), id); err != nil {
+			s.logger.Warn("could not queue the first release check", "app_id", id, "error", err.Error())
+		}
+	}
+
 	writeJSON(w, http.StatusCreated, map[string]any{"app": app})
 }
 

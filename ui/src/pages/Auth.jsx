@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Check, Copy, GitBranch, KeyRound, LoaderCircle, TriangleAlert } from 'lucide-react';
+import { Check, Copy, KeyRound, LoaderCircle, TriangleAlert } from 'lucide-react';
 import { OtpInput } from '../components/OtpInput.jsx';
+import { GitHubMark } from '../components/GitHubMark.jsx';
 
 export function AuthPage({ screen, notice, setupInfo, backupCodes, onLogin, onPasskey, onFirstSetup, onMFA, onSetup, onComplete, onBack }) {
   const [email, setEmail] = useState('');
@@ -100,7 +101,7 @@ export function AuthPage({ screen, notice, setupInfo, backupCodes, onLogin, onPa
               <span>or continue with</span>
             </div>
             <a className="btn" style={{ width: '100%' }} href="/api/auth/github?mode=login">
-              <GitBranch size={15} /> GitHub
+              <GitHubMark size={15} /> GitHub
             </a>
             <a className="link-row" style={{ justifyContent: 'center', fontSize: 'var(--text-xs)' }} href="/api/auth/github?mode=mfa-recovery">
               Lost your authenticator? Recover with your linked GitHub account
