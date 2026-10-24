@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check, KeyRound, LoaderCircle, Monitor, ShieldCheck } from 'lucide-react';
+import { Check, Copy, KeyRound, LoaderCircle, Monitor, Rss, ShieldCheck, Trash2 } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { absolute, elapsed } from '../lib/format.js';
 import { THEMES } from '../lib/hooks.js';
@@ -10,7 +10,11 @@ import { ConfirmDialog } from '../components/Modal.jsx';
 
 export function AccountPage({ user, onUser, onSignOut, theme, onTheme }) {
   const toast = useToast();
-  const [preferences, setPreferences] = useState({ enabled: true, digestInterval: null, quietHoursStart: null, quietHoursEnd: null, timezone: 'UTC', severityFilters: [], issueComments: true });
+  const [preferences, setPreferences] = useState({ enabled: true, digestInterval: null, quietHoursStart: null, quietHoursEnd: null, timezone: 'UTC', severityFilters: [], issueComments: true, pausedUntil: null });
+  const [feedTokens, setFeedTokens] = useState([]);
+  const [feedLabel, setFeedLabel] = useState('');
+  const [newFeed, setNewFeed] = useState(null);
+  const [feedBusy, setFeedBusy] = useState(false);
   const [sessions, setSessions] = useState([]);
   const [devices, setDevices] = useState([]);
   const [passkeys, setPasskeys] = useState([]);
@@ -26,7 +30,7 @@ export function AccountPage({ user, onUser, onSignOut, theme, onTheme }) {
   const load = async () => {
     setBusy('load');
     try {
-      const [pref, sessionData, deviceData, passkeyData, githubData, accountData, telegramData] = await Promise.all([
+      const [pref, sessionData, deviceData, passkeyData, githubData, accountData, telegramData, feedData] = await Promise.all([
         api('/api/account/notification-preferences'),
         api('/api/sessions'),
         api('/api/account/trusted-devices'),
@@ -34,6 +38,7 @@ export function AccountPage({ user, onUser, onSignOut, theme, onTheme }) {
         api('/api/account/github'),
         api('/api/account'),
         api('/api/account/telegram'),
+        api('/api/feeds'),
       ]);
       onUser(accountData.user);
       setName(accountData.user?.name || '');
@@ -43,6 +48,7 @@ export function AccountPage({ user, onUser, onSignOut, theme, onTheme }) {
       setPasskeys(passkeyData.credentials || []);
       setGithub(githubData);
       setTelegram(telegramData);
+      setFeedTokens(feedData.tokens || []);
     } catch (issue) {
       toast.error(issue.message || 'Could not load your account details.');
     } finally {
@@ -77,6 +83,45 @@ export function AccountPage({ user, onUser, onSignOut, theme, onTheme }) {
       toast.error(issue.message || 'Could not save your notification preferences.');
     } finally {
       setBusy('');
+    }
+  };
+
+  const createFeed = async () => {
+    setFeedBusy(true);
+    try {
+      const result = await api('/api/feeds', { method: 'POST', body: { label: feedLabel.trim() } });
+      setNewFeed(result);
+      setFeedLabel('');
+      const data = await api('/api/feeds');
+      setFeedTokens(data.tokens || []);
+      toast.success('Feed created. Copy the address now — it is shown once.');
+    } catch (issue) {
+      toast.error(issue.message || 'Could not create a release feed.');
+    } finally {
+      setFeedBusy(false);
+    }
+  };
+
+  const revokeFeed = async id => {
+    setFeedBusy(true);
+    try {
+      await api(`/api/feeds/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      setFeedTokens(current => current.filter(item => item.id !== id));
+      if (newFeed?.token?.id === id) setNewFeed(null);
+      toast.success('Feed revoked.');
+    } catch (issue) {
+      toast.error(issue.message || 'Could not revoke that feed.');
+    } finally {
+      setFeedBusy(false);
+    }
+  };
+
+  const copyText = async (value, label) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copied.`);
+    } catch {
+      toast.error('Could not copy to the clipboard.');
     }
   };
 
@@ -233,6 +278,34 @@ export function AccountPage({ user, onUser, onSignOut, theme, onTheme }) {
           <div className="card-body" style={{ display: 'grid', gap: 16 }}>
             <Switch id="pref-enabled" label="Receive notifications" checked={preferences.enabled} onChange={value => setPreferences({ ...preferences, enabled: value })} />
             <Switch id="pref-comments" label="Notify me about comments on my raised issues" checked={preferences.issueComments} onChange={value => setPreferences({ ...preferences, issueComments: value })} />
+            {preferences.pausedUntil && new Date(preferences.pausedUntil) > new Date() ? (
+              <div className="notice" style={{ alignItems: 'center' }}>
+                <span style={{ flex: 1 }}>
+                  Notifications are paused until {new Date(preferences.pausedUntil).toLocaleString()}. Releases published meanwhile are not sent.
+                </span>
+                <button className="btn btn-sm" type="button" onClick={() => setPreferences({ ...preferences, pausedUntil: null })}>
+                  Resume
+                </button>
+              </div>
+            ) : (
+              <Field label="Pause notifications" hint="Applies when you save. Security releases are held too, because a pause is explicit.">
+                <select
+                  className="select"
+                  value=""
+                  onChange={event => {
+                    const hours = Number(event.target.value);
+                    if (!hours) return;
+                    setPreferences({ ...preferences, pausedUntil: new Date(Date.now() + hours * 3600_000).toISOString() });
+                  }}
+                >
+                  <option value="">Not paused</option>
+                  <option value="1">Pause for 1 hour</option>
+                  <option value="8">Pause for 8 hours</option>
+                  <option value="24">Pause for 1 day</option>
+                  <option value="168">Pause for 1 week</option>
+                </select>
+              </Field>
+            )}
             <Field label="Time zone" hint="Used for quiet hours and digests">
               <input className="input" value={preferences.timezone || 'UTC'} onChange={event => setPreferences({ ...preferences, timezone: event.target.value })} placeholder="UTC" />
             </Field>
@@ -346,6 +419,76 @@ export function AccountPage({ user, onUser, onSignOut, theme, onTheme }) {
             </>
           ) : (
             <EmptyState icon={Monitor} title="Telegram is not configured" description="An administrator needs to add the bot credentials before you can link your account." />
+          )}
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <div>
+            <h2>Release feeds</h2>
+            <p>Follow your releases from an RSS reader, Home Assistant or a script, without sharing your session.</p>
+          </div>
+          <Rss size={18} style={{ color: 'var(--accent)' }} />
+        </div>
+        <div className="card-body" style={{ display: 'grid', gap: 14 }}>
+          {newFeed ? (
+            <div className="notice" style={{ display: 'grid', gap: 8 }}>
+              <span>
+                <b>Copy this now.</b> The address is shown once. Anyone with it can read this feed, so treat it like a password.
+              </span>
+              <code className="feed-token-secret">{newFeed.atomUrl}</code>
+              <code className="feed-token-secret">{newFeed.jsonUrl}</code>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button className="btn btn-sm" type="button" onClick={() => copyText(newFeed.atomUrl, 'RSS address')}>
+                  <Copy size={13} /> Copy RSS
+                </button>
+                <button className="btn btn-sm" type="button" onClick={() => copyText(newFeed.jsonUrl, 'JSON address')}>
+                  <Copy size={13} /> Copy JSON
+                </button>
+                <button className="btn btn-sm" type="button" onClick={() => setNewFeed(null)}>
+                  Done
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <input
+              className="input"
+              style={{ flex: 1, minWidth: 180 }}
+              value={feedLabel}
+              maxLength={60}
+              onChange={event => setFeedLabel(event.target.value)}
+              placeholder="Label, for example FreshRSS"
+              aria-label="Feed label"
+            />
+            <button className="btn btn-primary" type="button" onClick={createFeed} disabled={feedBusy || feedTokens.length >= 10}>
+              {feedBusy ? <LoaderCircle size={15} className="spin" /> : <Rss size={15} />} Create feed
+            </button>
+          </div>
+
+          {feedTokens.length ? (
+            <div>
+              {feedTokens.map(item => (
+                <div className="feed-token" key={item.id}>
+                  <div className="feed-token-copy">
+                    <b>{item.label || 'Unlabelled feed'}</b>
+                    <span>
+                      Created {new Date(item.createdAt).toLocaleDateString()}
+                      {item.lastUsedAt ? ` · last read ${elapsed(item.lastUsedAt)}` : ' · never read'}
+                    </span>
+                  </div>
+                  <button className="btn btn-sm btn-danger" type="button" onClick={() => revokeFeed(item.id)} disabled={feedBusy}>
+                    <Trash2 size={13} /> Revoke
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="subtle" style={{ fontSize: 'var(--text-xs)' }}>
+              No feeds yet. A feed contains the last 50 releases from every repository you watch.
+            </p>
           )}
         </div>
       </section>

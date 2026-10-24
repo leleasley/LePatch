@@ -21,7 +21,8 @@ notification idempotency, user scoping, and secret handling.
 - Add download statistics where GitHub exposes reliable data.
 - Give the administrator console per-user drill down for watched repositories
   and delivery history.
-- Move the release feed onto a cursor so very large histories stay fast.
+- ~~Move the release feed onto a cursor so very large histories stay fast.~~
+  Released: the feed now pages with a cursor and searches on the server.
 
 Server-management features are not planned for restoration.
 

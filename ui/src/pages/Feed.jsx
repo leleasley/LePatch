@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   BellRing,
   Check,
+  ChevronDown,
   EyeOff,
   FileClock,
   LayoutGrid,
@@ -11,75 +12,28 @@ import {
   Radio,
   RefreshCw,
   Search,
+  ShieldAlert,
   TriangleAlert,
 } from 'lucide-react';
 import { elapsed } from '../lib/format.js';
+import { filterReleases, groupByDay, newReleaseIds } from '../lib/feed.js';
 import { EmptyState, RepoIcon, Stat } from '../components/ui.jsx';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
   { id: 'new', label: 'New' },
+  { id: 'security', label: 'Security' },
   { id: 'prerelease', label: 'Pre-releases' },
 ];
 
-function startOfDay(value) {
-  const date = new Date(value);
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-}
-
-function dayKey(value) {
-  const date = new Date(value);
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-}
-
-function dayLabel(value) {
-  const date = new Date(value);
-  const days = Math.round((startOfDay(Date.now()) - startOfDay(value)) / 86_400_000);
-  if (days <= 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return date.toLocaleDateString(undefined, { weekday: 'long' });
-  return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-}
-
-// A release is "new" when it is the newest release of a repository that is
-// waiting on an update and its tag has not been acknowledged yet. The feed is
-// ordered by detection time, which is not the same as release order, so this
-// compares publication dates per repository.
-function newReleaseIds(feed) {
-  const newest = new Map();
-  for (const item of feed) {
-    const watched = item.watchedApp;
-    if (!watched?.id || !watched.updateAvailable) continue;
-    const stamp = new Date(item.publishedAt || item.detectedAt || 0).getTime();
-    const current = newest.get(watched.id);
-    if (!current || stamp > current.stamp) newest.set(watched.id, { item, stamp });
-  }
-  const ids = new Set();
-  for (const { item } of newest.values()) {
-    if (!item.watchedApp.latestSeenTag || item.tagName !== item.watchedApp.latestSeenTag) ids.add(item.id);
-  }
-  return ids;
-}
-
-function groupByDay(items) {
-  const groups = [];
-  for (const item of items) {
-    const key = dayKey(item.detectedAt);
-    const current = groups[groups.length - 1];
-    if (current && current.key === key) {
-      current.items.push(item);
-    } else {
-      groups.push({ key, label: dayLabel(item.detectedAt), items: [item] });
-    }
-  }
-  return groups;
-}
-
-function ReleaseCard({ item, isNew, onOpenApp, onOpenRelease, onMarkSeen, onIgnore }) {
+function ReleaseCard({ item, isNew, active, onOpenApp, onOpenRelease, onMarkSeen, onIgnore }) {
   const name = item.watchedApp?.name || item.appName || item.repoFullName;
   const repo = item.repoFullName || item.watchedApp?.repoFullName;
   return (
-    <article className={`release-card${isNew ? ' is-new' : ''}`}>
+    <article
+      className={`release-card${isNew ? ' is-new' : ''}${item.securityRelevant ? ' is-security' : ''}${active ? ' is-active' : ''}`}
+      data-release-id={item.id}
+    >
       <RepoIcon name={name} iconUrl={item.watchedApp?.iconUrl} />
       <div className="release-main">
         <div className="release-top">
@@ -102,6 +56,11 @@ function ReleaseCard({ item, isNew, onOpenApp, onOpenRelease, onMarkSeen, onIgno
         <p className="clamp-2">{item.changelogSummary || 'A new release is available for this project.'}</p>
         <div className="release-meta">
           {isNew ? <span className="new-badge">New</span> : null}
+          {item.securityRelevant ? (
+            <span className="security-badge">
+              <ShieldAlert size={11} /> Security
+            </span>
+          ) : null}
           {item.prerelease ? <span className="pill">Pre-release</span> : null}
           <span>Detected {elapsed(item.detectedAt)}</span>
         </div>
@@ -129,28 +88,26 @@ export function FeedPage({
   onMarkSeen,
   onMarkAllSeen,
   onIgnore,
+  onSearchReleases,
+  onLoadMore,
   onWatch,
   checking,
+  hasMore,
+  loadingMore,
 }) {
   const [filter, setFilter] = useState('all');
   const [layout, setLayout] = useState('list');
   const [releaseQuery, setReleaseQuery] = useState('');
   const [repoQuery, setRepoQuery] = useState('');
   const [markingAll, setMarkingAll] = useState(false);
+  const [activeId, setActiveId] = useState(null);
+  const searchRef = useRef(null);
+  const searchCallback = useRef(onSearchReleases);
+  searchCallback.current = onSearchReleases;
+  const firstRun = useRef(true);
 
   const newIds = useMemo(() => newReleaseIds(feed), [feed]);
-
-  const visible = useMemo(() => {
-    const needle = releaseQuery.trim().toLowerCase();
-    return feed.filter(item => {
-      if (filter === 'prerelease' && !item.prerelease) return false;
-      if (filter === 'new' && !newIds.has(item.id)) return false;
-      if (!needle) return true;
-      const haystack = `${item.watchedApp?.name || ''} ${item.repoFullName || ''} ${item.tagName || ''} ${item.name || ''}`.toLowerCase();
-      return haystack.includes(needle);
-    });
-  }, [feed, filter, releaseQuery, newIds]);
-
+  const visible = useMemo(() => filterReleases(feed, { filter, query: '', newIds }), [feed, filter, newIds]);
   const groups = useMemo(() => groupByDay(visible), [visible]);
 
   const watched = useMemo(() => {
@@ -160,7 +117,91 @@ export function FeedPage({
   }, [apps, repoQuery]);
 
   const newReleases = useMemo(() => feed.filter(item => newIds.has(item.id)), [feed, newIds]);
-  const newRepositories = useMemo(() => new Set(newReleases.map(item => item.watchedApp?.id)).size, [newReleases]);
+  // The server reports the unread summary separately from the current page so
+  // searching for an old release does not change the count in the banner.
+  const unreadReleases = stats.unread?.releases ?? newReleases.length;
+  const unreadRepositories = stats.unread?.repositories ?? new Set(newReleases.map(item => item.watchedApp?.id)).size;
+
+  // Search runs on the server so it also covers releases older than the
+  // current page. Debounce so typing does not queue a request per key.
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return undefined;
+    }
+    const timer = window.setTimeout(() => searchCallback.current?.(releaseQuery.trim()), 320);
+    return () => window.clearTimeout(timer);
+  }, [releaseQuery]);
+
+  // Keep the keyboard cursor valid when the list changes underneath it.
+  useEffect(() => {
+    if (activeId && !visible.some(item => item.id === activeId)) setActiveId(null);
+  }, [visible, activeId]);
+
+  useEffect(() => {
+    const onKeyDown = event => {
+      const target = event.target;
+      if (target instanceof HTMLElement) {
+        const tag = target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON' || tag === 'A' || target.isContentEditable) {
+          return;
+        }
+      }
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+      if (event.key === '/') {
+        event.preventDefault();
+        searchRef.current?.focus();
+        return;
+      }
+      if (!visible.length) return;
+      const index = visible.findIndex(item => item.id === activeId);
+      const move = step => {
+        const next = index === -1 ? (step > 0 ? 0 : visible.length - 1) : Math.min(Math.max(index + step, 0), visible.length - 1);
+        setActiveId(visible[next].id);
+        window.requestAnimationFrame(() => {
+          document.querySelector(`[data-release-id="${visible[next].id}"]`)?.scrollIntoView({ block: 'nearest' });
+        });
+      };
+      const current = index === -1 ? null : visible[index];
+
+      switch (event.key) {
+        case 'j':
+        case 'ArrowDown':
+          event.preventDefault();
+          move(1);
+          break;
+        case 'k':
+        case 'ArrowUp':
+          event.preventDefault();
+          move(-1);
+          break;
+        case 'o':
+        case 'Enter':
+          if (current) {
+            event.preventDefault();
+            onOpenRelease(current.watchedApp?.id, current.id);
+          }
+          break;
+        case 'm':
+          if (current) {
+            event.preventDefault();
+            onMarkSeen(current.watchedApp?.id);
+          }
+          break;
+        case 'x':
+          if (current) {
+            event.preventDefault();
+            onIgnore(current.id);
+          }
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [visible, activeId, onOpenRelease, onMarkSeen, onIgnore]);
 
   const markAll = async () => {
     setMarkingAll(true);
@@ -188,17 +229,17 @@ export function FeedPage({
 
   return (
     <>
-      {newReleases.length ? (
+      {unreadReleases ? (
         <div className="feed-banner">
           <span className="feed-banner-icon">
             <BellRing size={18} />
           </span>
           <div className="feed-banner-copy">
             <b>
-              {newReleases.length} new {newReleases.length === 1 ? 'release' : 'releases'}
+              {unreadReleases} new {unreadReleases === 1 ? 'release' : 'releases'}
             </b>
             <span>
-              across {newRepositories} {newRepositories === 1 ? 'repository' : 'repositories'} since you last checked
+              across {unreadRepositories} {unreadRepositories === 1 ? 'repository' : 'repositories'} since you last checked
             </span>
           </div>
           <button className="btn btn-primary btn-sm" type="button" onClick={markAll} disabled={markingAll}>
@@ -209,7 +250,7 @@ export function FeedPage({
 
       <div className="stat-grid" style={{ marginBottom: 24 }}>
         <Stat label="Watching" value={stats.total ?? apps.length} hint="repositories" icon={Radio} />
-        <Stat label="New releases" value={newReleases.length} hint="waiting for you" icon={BellRing} />
+        <Stat label="New releases" value={unreadReleases} hint="waiting for you" icon={BellRing} />
         <Stat label="Failed checks" value={stats.failed ?? 0} hint="need attention" icon={TriangleAlert} />
         <Stat label="Stale" value={stats.stale ?? 0} hint="over 24 hours" icon={FileClock} />
       </div>
@@ -219,11 +260,16 @@ export function FeedPage({
           <div className="section-head">
             <h2>
               Latest releases <span>{visible.length}</span>
+              <span className="feed-keyhint">
+                <kbd>j</kbd>
+                <kbd>k</kbd> move · <kbd>o</kbd> open · <kbd>m</kbd> read
+              </span>
             </h2>
             <div className="feed-tools">
               <label className="feed-search">
                 <Search size={14} />
                 <input
+                  ref={searchRef}
                   value={releaseQuery}
                   onChange={event => setReleaseQuery(event.target.value)}
                   placeholder="Search releases"
@@ -249,36 +295,49 @@ export function FeedPage({
           </div>
 
           {groups.length ? (
-            groups.map(group => (
-              <div className="feed-day" key={group.key}>
-                <div className="feed-day-head">
-                  <span>{group.label}</span>
-                  <i />
-                  <small>{group.items.length}</small>
+            <>
+              {groups.map(group => (
+                <div className="feed-day" key={group.key}>
+                  <div className="feed-day-head">
+                    <span>{group.label}</span>
+                    <i />
+                    <small>{group.items.length}</small>
+                  </div>
+                  <div className={layout === 'grid' ? 'release-grid' : 'release-list'}>
+                    {group.items.map(item => (
+                      <ReleaseCard
+                        key={item.id}
+                        item={item}
+                        isNew={newIds.has(item.id)}
+                        active={activeId === item.id}
+                        onOpenApp={onOpenApp}
+                        onOpenRelease={onOpenRelease}
+                        onMarkSeen={onMarkSeen}
+                        onIgnore={onIgnore}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className={layout === 'grid' ? 'release-grid' : 'release-list'}>
-                  {group.items.map(item => (
-                    <ReleaseCard
-                      key={item.id}
-                      item={item}
-                      isNew={newIds.has(item.id)}
-                      onOpenApp={onOpenApp}
-                      onOpenRelease={onOpenRelease}
-                      onMarkSeen={onMarkSeen}
-                      onIgnore={onIgnore}
-                    />
-                  ))}
+              ))}
+              {hasMore ? (
+                <div className="feed-more">
+                  <button className="btn" type="button" onClick={onLoadMore} disabled={loadingMore}>
+                    {loadingMore ? <RefreshCw size={14} className="spin" /> : <ChevronDown size={14} />}
+                    {loadingMore ? 'Loading…' : 'Load older releases'}
+                  </button>
                 </div>
-              </div>
-            ))
+              ) : null}
+            </>
           ) : (
             <EmptyState
               icon={FileClock}
-              title={feed.length ? 'Nothing matches those filters' : 'No releases yet'}
+              title={releaseQuery ? 'No releases match that search' : feed.length ? 'Nothing matches those filters' : 'No releases yet'}
               description={
-                feed.length
-                  ? 'Try a different filter or clear the search box.'
-                  : 'LePatch is watching your repositories. Releases appear here as soon as they are published.'
+                releaseQuery
+                  ? 'Try a shorter term, or clear the search to see the whole feed.'
+                  : feed.length
+                    ? 'Try a different filter or clear the search box.'
+                    : 'LePatch is watching your repositories. Releases appear here as soon as they are published.'
               }
             />
           )}
@@ -308,24 +367,17 @@ export function FeedPage({
             </label>
             <div className="watch-list">
               {watched.map(app => (
-                <div
-                  className="watch-row"
-                  key={app.id}
-                  onClick={() => onOpenApp(app.id)}
-                  onKeyDown={event => {
-                    if (event.key === 'Enter') onOpenApp(app.id);
-                  }}
-                  role="link"
-                  tabIndex={0}
-                >
-                  <RepoIcon name={app.name} iconUrl={app.iconUrl} size="is-sm" />
-                  <span className="watch-copy">
-                    <b>
-                      {app.name}
-                      {app.updateAvailable ? <i className="unread-dot" title="New release available" /> : null}
-                    </b>
-                    <span>{app.repoFullName}</span>
-                  </span>
+                <div className="watch-row" key={app.id}>
+                  <button className="watch-main" type="button" onClick={() => onOpenApp(app.id)}>
+                    <RepoIcon name={app.name} iconUrl={app.iconUrl} size="is-sm" />
+                    <span className="watch-copy">
+                      <b>
+                        {app.name}
+                        {app.updateAvailable ? <i className="unread-dot" title="New release available" /> : null}
+                      </b>
+                      <span>{app.repoFullName}</span>
+                    </span>
+                  </button>
                   <span className="watch-side">
                     <span>{app.latestSeenTag || '—'}</span>
                     <span className="row-actions">

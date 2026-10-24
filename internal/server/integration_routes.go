@@ -3,6 +3,9 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,6 +26,7 @@ type integrationStatus struct {
 	DefaultRecipientConfigured bool   `json:"defaultRecipientConfigured,omitempty"`
 	BotUsername                string `json:"botUsername,omitempty"`
 	BotName                    string `json:"botName,omitempty"`
+	Mode                       string `json:"mode,omitempty"`
 }
 
 func (s *Server) integrationInfo(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +37,7 @@ func (s *Server) integrationInfo(w http.ResponseWriter, r *http.Request) {
 	if provider == "" {
 		provider = r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
 	}
-	if provider != "discord" && provider != "telegram" {
+	if !knownIntegration(provider) {
 		writeError(w, http.StatusNotFound, "Integration not found")
 		return
 	}
@@ -59,7 +63,12 @@ func (s *Server) integrationsSummary(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "Could not read integration status")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"discord": discord, "telegram": telegram})
+	webhook, err := s.readIntegrationStatus(r.Context(), "webhook")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Could not read integration status")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"discord": discord, "telegram": telegram, "webhook": webhook})
 }
 
 func (s *Server) readIntegrationStatus(ctx context.Context, provider string) (integrationStatus, error) {
@@ -69,9 +78,13 @@ func (s *Server) readIntegrationStatus(ctx context.Context, provider string) (in
 		return status, err
 	}
 	status.Enabled = settings["enabled"] == "true"
-	if provider == "discord" {
+	switch provider {
+	case "discord":
 		status.Configured = settings["webhookUrl"] != ""
-	} else {
+	case "webhook":
+		status.Configured = settings["url"] != ""
+		status.Mode = settings["mode"]
+	default:
 		status.Configured = settings["botToken"] != ""
 		status.DefaultRecipientConfigured = settings["chatId"] != ""
 		status.BotUsername = settings["botUsername"]
@@ -110,7 +123,7 @@ func (s *Server) updateIntegration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	provider := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/api/integrations/"), "/")
-	if provider != "discord" && provider != "telegram" {
+	if !knownIntegration(provider) {
 		writeError(w, http.StatusNotFound, "Integration not found")
 		return
 	}
@@ -122,6 +135,10 @@ func (s *Server) updateIntegration(w http.ResponseWriter, r *http.Request) {
 		WebhookSecret *string `json:"webhookSecret"`
 		BotUsername   *string `json:"botUsername"`
 		BotName       *string `json:"botName"`
+		URL           *string `json:"url"`
+		Mode          *string `json:"mode"`
+		Token         *string `json:"token"`
+		Secret        *string `json:"secret"`
 		Enabled       *bool   `json:"enabled"`
 	}
 	if !decodeJSON(w, r, &input) {
@@ -172,6 +189,30 @@ func (s *Server) updateIntegration(w http.ResponseWriter, r *http.Request) {
 			values["botName"] = strings.TrimSpace(*input.BotName)
 		}
 	}
+	if provider == "webhook" {
+		if input.URL != nil {
+			raw := strings.TrimSpace(*input.URL)
+			if raw != "" && !worker.ValidIntegrationURL(raw) {
+				writeError(w, http.StatusBadRequest, "Webhook URL must be an http or https address")
+				return
+			}
+			values["url"] = raw
+		}
+		if input.Mode != nil {
+			mode := strings.ToLower(strings.TrimSpace(*input.Mode))
+			if mode != "generic" && mode != "ntfy" {
+				writeError(w, http.StatusBadRequest, "Webhook mode must be generic or ntfy")
+				return
+			}
+			values["mode"] = mode
+		}
+		if input.Token != nil {
+			values["token"] = strings.TrimSpace(*input.Token)
+		}
+		if input.Secret != nil {
+			values["secret"] = strings.TrimSpace(*input.Secret)
+		}
+	}
 	if input.Enabled != nil {
 		values["enabled"] = fmt.Sprintf("%t", *input.Enabled)
 	}
@@ -193,8 +234,8 @@ func (s *Server) testIntegration(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	if input.Provider != "discord" && input.Provider != "telegram" {
-		writeError(w, http.StatusBadRequest, "Choose Discord or Telegram")
+	if !knownIntegration(input.Provider) {
+		writeError(w, http.StatusBadRequest, "Choose Discord, Telegram or a webhook")
 		return
 	}
 	values, err := s.integrationValues(r.Context(), input.Provider)
@@ -271,7 +312,7 @@ func (s *Server) deleteIntegration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	provider := chi.URLParam(r, "provider")
-	if provider != "discord" && provider != "telegram" {
+	if !knownIntegration(provider) {
 		writeError(w, http.StatusNotFound, "Integration not found")
 		return
 	}
@@ -308,14 +349,19 @@ func (s *Server) saveIntegrationValues(ctx context.Context, provider string, val
 	}
 	defer tx.Rollback()
 	keys := []string{"enabled", "webhookUrl"}
-	if provider == "telegram" {
+	switch provider {
+	case "telegram":
 		keys = []string{"enabled", "botToken", "chatId", "webhookSecret", "botUsername", "botName"}
+	case "webhook":
+		keys = []string{"enabled", "url", "mode", "token", "secret"}
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	for _, key := range keys {
 		value := values[key]
 		encrypted := false
-		if (provider == "discord" && key == "webhookUrl") || (provider == "telegram" && (key == "botToken" || key == "chatId" || key == "webhookSecret")) {
+		if (provider == "discord" && key == "webhookUrl") ||
+			(provider == "telegram" && (key == "botToken" || key == "chatId" || key == "webhookSecret")) ||
+			(provider == "webhook" && (key == "url" || key == "token" || key == "secret")) {
 			if value != "" {
 				value, err = secrets.EncryptIntegrationValue(s.config.EncryptionKey, value)
 				if err != nil {
@@ -343,6 +389,24 @@ func (s *Server) saveIntegrationValues(ctx context.Context, provider string, val
 }
 
 func (s *Server) sendIntegrationTest(ctx context.Context, provider string, values map[string]string) error {
+	if provider == "webhook" {
+		if !worker.ValidIntegrationURL(values["url"]) {
+			return fmt.Errorf("missing or invalid webhook URL")
+		}
+		if strings.EqualFold(values["mode"], "ntfy") {
+			headers := map[string]string{
+				"Title":      "LePatch test notification",
+				"Priority":   "default",
+				"Tags":       "rocket",
+				"User-Agent": "LePatch",
+			}
+			if token := strings.TrimSpace(values["token"]); token != "" {
+				headers["Authorization"] = "Bearer " + token
+			}
+			return postExternalBody(ctx, values["url"], "text/plain; charset=utf-8", []byte("This is a test notification from LePatch. Nothing was published."), headers)
+		}
+		return postExternalJSONWithSecret(ctx, values["url"], worker.PreviewWebhookPayload(s.config.AppURL.String()), values["secret"])
+	}
 	if provider == "discord" {
 		webhook := values["webhookUrl"]
 		if !validDiscordWebhook(webhook) {
@@ -400,6 +464,10 @@ func (s *Server) telegramRecipients(ctx context.Context, defaultChat string) ([]
 	return recipients, nil
 }
 
+func knownIntegration(provider string) bool {
+	return provider == "discord" || provider == "telegram" || provider == "webhook"
+}
+
 func validDiscordWebhook(raw string) bool {
 	parsed, err := url.Parse(raw)
 	return err == nil && parsed.Scheme == "https" && (parsed.Host == "discord.com" || parsed.Host == "discordapp.com") && strings.HasPrefix(parsed.Path, "/api/webhooks/")
@@ -417,6 +485,45 @@ func postExternalJSON(ctx context.Context, endpoint string, payload any) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("integration returned HTTP %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// postExternalJSONWithSecret mirrors the worker's signed webhook so the test
+// button delivers exactly what a release would.
+func postExternalJSONWithSecret(ctx context.Context, endpoint string, payload any, secret string) error {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	headers := map[string]string{"User-Agent": "LePatch"}
+	if strings.TrimSpace(secret) != "" {
+		mac := hmac.New(sha256.New, []byte(secret))
+		mac.Write(body)
+		headers["X-LePatch-Signature"] = "sha256=" + hex.EncodeToString(mac.Sum(nil))
+	}
+	return postExternalBody(ctx, endpoint, "application/json", body, headers)
+}
+
+func postExternalBody(ctx context.Context, endpoint, contentType string, body []byte, headers map[string]string) error {
+	requestCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(requestCtx, http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", contentType)
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err

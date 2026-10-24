@@ -1,8 +1,8 @@
 # LePatch
 
 LePatch is a self-hosted GitHub release monitor. Watch repositories, review
-release history and repository activity, track issues, and receive Discord or
-Telegram notifications. Search and sponsored maintainers help you discover
+release history and repository activity, track issues, and receive Discord,
+Telegram, webhook or ntfy notifications. Search and sponsored maintainers help you discover
 repositories.
 
 The Go service serves an embedded, mobile-friendly web app. It supports GitHub
@@ -96,6 +96,16 @@ linked chat accounts. Telegram webhooks are only for receiving bot commands
 such as `/link`; configure a public HTTPS `APP_URL`, save a webhook secret in
 admin settings, and choose **Register bot webhook**. A Telegram webhook does
 not send outbound notifications.
+
+The admin console also has a webhook channel. In **Generic JSON** mode each
+release is posted as a flat JSON body, optionally signed with
+`X-LePatch-Signature: sha256=<hmac>` when a secret is set. In **ntfy** mode the
+URL is a topic address and the alert is published with `Title`, `Priority`,
+`Tags` and `Click` headers, plus a bearer token if one is configured.
+
+Each account can create **release feeds** on the profile page: an Atom or JSON
+address that returns the last 50 releases. Only a hash of the token is stored,
+the address is shown once, and it can be revoked at any time.
 
 ## Development
 

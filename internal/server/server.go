@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -141,6 +142,7 @@ func (s *Server) Handler() http.Handler {
 	})
 	r.Post("/api/apps", s.auth.Middleware(s.csrf(http.HandlerFunc(s.createApp))).ServeHTTP)
 	r.Get("/api/apps", s.auth.Middleware(http.HandlerFunc(s.listApps)).ServeHTTP)
+	r.Post("/api/apps/bulk", s.auth.Middleware(s.csrf(http.HandlerFunc(s.bulkUpdateApps))).ServeHTTP)
 	r.Route("/api/apps/{id}", func(r chi.Router) {
 		r.Use(s.auth.Middleware)
 		r.Get("/", s.getApp)
@@ -187,9 +189,22 @@ func (s *Server) Handler() http.Handler {
 	r.Post("/api/releases/seen-all", s.auth.Middleware(s.csrf(http.HandlerFunc(s.markAllReleasesSeen))).ServeHTTP)
 	r.Get("/api/issues/raised", s.auth.Middleware(http.HandlerFunc(s.raisedIssues)).ServeHTTP)
 	r.Post("/api/issues/raised/{id}/seen", s.auth.Middleware(s.csrf(http.HandlerFunc(s.markRaisedIssueSeen))).ServeHTTP)
+	r.Get("/api/feeds", s.auth.Middleware(http.HandlerFunc(s.listFeedTokens)).ServeHTTP)
+	r.Post("/api/feeds", s.auth.Middleware(s.csrf(http.HandlerFunc(s.createFeedToken))).ServeHTTP)
+	r.Delete("/api/feeds/{id}", s.auth.Middleware(s.csrf(http.HandlerFunc(s.revokeFeedToken))).ServeHTTP)
+	r.Get("/feed/{token}", http.HandlerFunc(s.serveFeed))
 	r.Get("/", s.serveUI)
 	r.Handle("/*", http.HandlerFunc(s.serveUI))
 	return r
+}
+
+// redactAccessPath keeps bearer tokens out of the request log. A feed URL is
+// a credential, so only the shape of the path is recorded.
+func redactAccessPath(path string) string {
+	if strings.HasPrefix(path, "/feed/") {
+		return "/feed/[token]"
+	}
+	return path
 }
 
 func (s *Server) accessLog(next http.Handler) http.Handler {
@@ -197,7 +212,7 @@ func (s *Server) accessLog(next http.Handler) http.Handler {
 		started := time.Now()
 		wrapped := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 		next.ServeHTTP(wrapped, r)
-		s.logger.Info("http request", "method", r.Method, "path", r.URL.Path, "status", wrapped.Status(), "bytes", wrapped.BytesWritten(), "duration_ms", time.Since(started).Milliseconds(), "request_id", middleware.GetReqID(r.Context()))
+		s.logger.Info("http request", "method", r.Method, "path", redactAccessPath(r.URL.Path), "status", wrapped.Status(), "bytes", wrapped.BytesWritten(), "duration_ms", time.Since(started).Milliseconds(), "request_id", middleware.GetReqID(r.Context()))
 	})
 }
 
@@ -292,6 +307,7 @@ type watchedApp struct {
 	UpdateAvailable      bool            `json:"updateAvailable"`
 	NotificationsEnabled bool            `json:"notificationsEnabled"`
 	IncludePrereleases   bool            `json:"includePrereleases"`
+	ExcludeTags          string          `json:"excludeTags"`
 	CheckIntervalMinutes int             `json:"checkIntervalMinutes"`
 	CreatedAt            string          `json:"createdAt"`
 	UpdatedAt            string          `json:"updatedAt"`
@@ -313,7 +329,7 @@ func (s *Server) listApps(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.store.DB().QueryContext(r.Context(), `
 		SELECT id, name, slug, repoOwner, repoName, repoFullName, githubUrl, iconUrl, ownerAvatarUrl, description, homepageUrl, language, license, defaultBranch, stars, topics,
 		latestSeenTag, lastCheckedAt, checkStatus, checkError, updateAvailable, notificationsEnabled,
-		includePrereleases, checkIntervalMinutes, createdAt, updatedAt
+		includePrereleases, excludeTags, checkIntervalMinutes, createdAt, updatedAt
 		FROM "WatchedApp" WHERE userId = ? ORDER BY name COLLATE NOCASE ASC LIMIT ? OFFSET ?`,
 		principal.UserID, perPage, (page-1)*perPage)
 	if err != nil {
@@ -328,7 +344,7 @@ func (s *Server) listApps(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&app.ID, &app.Name, &app.Slug, &app.RepoOwner, &app.RepoName, &app.RepoFullName,
 			&app.GitHubURL, &app.IconURL, &app.OwnerAvatarURL, &app.Description, &app.HomepageURL, &app.Language, &app.License, &app.DefaultBranch, &app.Stars, &topics, &app.LatestSeenTag, &app.LastCheckedAt,
 			&app.CheckStatus, &app.CheckError, &app.UpdateAvailable, &app.NotificationsEnabled,
-			&app.IncludePrereleases, &app.CheckIntervalMinutes, &app.CreatedAt, &app.UpdatedAt); err != nil {
+			&app.IncludePrereleases, &app.ExcludeTags, &app.CheckIntervalMinutes, &app.CreatedAt, &app.UpdatedAt); err != nil {
 			writeError(w, http.StatusInternalServerError, "Could not read watched repositories")
 			return
 		}
@@ -441,7 +457,7 @@ func (s *Server) updateApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	allowed := map[string]string{
-		"name": "name", "includePrereleases": "includePrereleases", "notificationsEnabled": "notificationsEnabled", "checkIntervalMinutes": "checkIntervalMinutes",
+		"name": "name", "includePrereleases": "includePrereleases", "notificationsEnabled": "notificationsEnabled", "checkIntervalMinutes": "checkIntervalMinutes", "excludeTags": "excludeTags",
 	}
 	sets, args := make([]string, 0, len(input)), make([]any, 0, len(input)+2)
 	for key, raw := range input {
@@ -463,6 +479,18 @@ func (s *Server) updateApp(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			value = text
+		case "excludeTags":
+			var text string
+			if err := json.Unmarshal(raw, &text); err != nil {
+				writeError(w, http.StatusBadRequest, "Excluded tags must be a string")
+				return
+			}
+			normalised, ok := normaliseTagFilters(text)
+			if !ok {
+				writeError(w, http.StatusBadRequest, "Excluded tags must be 20 patterns or fewer, each 64 characters or fewer")
+				return
+			}
+			value = normalised
 		case "checkIntervalMinutes":
 			var number int
 			if err := json.Unmarshal(raw, &number); err != nil || number < 1 || number > 43_200 {
@@ -563,7 +591,7 @@ func (s *Server) listReleases(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "Could not load releases")
 		return
 	}
-	rows, err := s.store.DB().QueryContext(r.Context(), `SELECT id, tagName, name, body, htmlUrl, prerelease, draft, releaseType, changelogSummary, changelogSections, publishedAt, detectedAt, ignored FROM "Release" WHERE watchedAppId = ? ORDER BY publishedAt DESC, detectedAt DESC LIMIT ? OFFSET ?`, appID, perPage, (page-1)*perPage)
+	rows, err := s.store.DB().QueryContext(r.Context(), `SELECT id, tagName, name, body, htmlUrl, prerelease, draft, releaseType, changelogSummary, changelogSections, publishedAt, detectedAt, ignored, securityRelevant FROM "Release" WHERE watchedAppId = ? ORDER BY publishedAt DESC, detectedAt DESC LIMIT ? OFFSET ?`, appID, perPage, (page-1)*perPage)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Could not load releases")
 		return
@@ -583,12 +611,13 @@ func (s *Server) listReleases(w http.ResponseWriter, r *http.Request) {
 		PublishedAt       *string         `json:"publishedAt"`
 		DetectedAt        string          `json:"detectedAt"`
 		Ignored           bool            `json:"ignored"`
+		SecurityRelevant  bool            `json:"securityRelevant"`
 	}
 	items := make([]release, 0, perPage)
 	for rows.Next() {
 		var item release
 		var changelogSections []byte
-		if err := rows.Scan(&item.ID, &item.TagName, &item.Name, &item.Body, &item.HTMLURL, &item.Prerelease, &item.Draft, &item.ReleaseType, &item.ChangelogSummary, &changelogSections, &item.PublishedAt, &item.DetectedAt, &item.Ignored); err != nil {
+		if err := rows.Scan(&item.ID, &item.TagName, &item.Name, &item.Body, &item.HTMLURL, &item.Prerelease, &item.Draft, &item.ReleaseType, &item.ChangelogSummary, &changelogSections, &item.PublishedAt, &item.DetectedAt, &item.Ignored, &item.SecurityRelevant); err != nil {
 			writeError(w, http.StatusInternalServerError, "Could not read releases")
 			return
 		}
@@ -608,12 +637,32 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 	feedSize := queryInt(r, "perPage", settings.ReleaseFeedSize, 5, 200)
 	includePrereleases := r.URL.Query().Get("includePrereleases") == "true"
 	includeIgnored := r.URL.Query().Get("includeIgnored") == "true"
+	search := strings.TrimSpace(r.URL.Query().Get("q"))
+	if len(search) > 80 {
+		search = search[:80]
+	}
+	cursorTime, cursorID, hasCursor := decodeFeedCursor(r.URL.Query().Get("cursor"))
 	var total, updates, failed, stale int
 	if err := s.store.DB().QueryRowContext(r.Context(), `SELECT count(*), COALESCE(sum(CASE WHEN updateAvailable = 1 THEN 1 ELSE 0 END), 0), COALESCE(sum(CASE WHEN checkStatus = 'failed' THEN 1 ELSE 0 END), 0), COALESCE(sum(CASE WHEN lastCheckedAt IS NULL OR lastCheckedAt < datetime('now', '-24 hours') THEN 1 ELSE 0 END), 0) FROM "WatchedApp" WHERE userId = ?`, principal.UserID).Scan(&total, &updates, &failed, &stale); err != nil {
 		writeError(w, http.StatusInternalServerError, "Could not load release feed")
 		return
 	}
-	feedQuery := `SELECT r.id, r.tagName, r.name, r.htmlUrl, r.prerelease, r.publishedAt, r.detectedAt, r.changelogSummary, a.id, a.name, a.repoFullName, a.iconUrl, a.updateAvailable, a.latestSeenTag
+	// The unread summary ignores the current search and page so the banner
+	// keeps telling the truth while the reader is looking at older releases.
+	var unreadReleases, unreadRepositories int
+	if err := s.store.DB().QueryRowContext(r.Context(), `SELECT count(*), count(DISTINCT newest.watchedAppId) FROM (
+			SELECT a.id AS watchedAppId, (
+				SELECT r.tagName FROM "Release" r
+				WHERE r.watchedAppId = a.id AND r.ignored = 0
+				ORDER BY COALESCE(r.publishedAt, r.detectedAt) DESC LIMIT 1
+			) AS newestTag, a.latestSeenTag AS seenTag
+			FROM "WatchedApp" a WHERE a.userId = ? AND a.updateAvailable = 1
+		) newest
+		WHERE newest.newestTag IS NOT NULL AND newest.newestTag <> COALESCE(newest.seenTag, '')`, principal.UserID).Scan(&unreadReleases, &unreadRepositories); err != nil {
+		writeError(w, http.StatusInternalServerError, "Could not load release feed")
+		return
+	}
+	feedQuery := `SELECT r.id, r.tagName, r.name, r.htmlUrl, r.prerelease, r.publishedAt, r.detectedAt, r.changelogSummary, r.securityRelevant, a.id, a.name, a.repoFullName, a.iconUrl, a.updateAvailable, a.latestSeenTag
 		FROM "Release" r JOIN "WatchedApp" a ON a.id = r.watchedAppId WHERE a.userId = ?`
 	feedArgs := []any{principal.UserID}
 	if !includePrereleases {
@@ -622,8 +671,22 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 	if !includeIgnored {
 		feedQuery += ` AND r.ignored = 0`
 	}
-	feedQuery += ` ORDER BY r.detectedAt DESC LIMIT ?`
-	feedArgs = append(feedArgs, feedSize)
+	if search != "" {
+		// LIKE is used instead of a full-text index because release bodies are
+		// small, the table is per-installation, and it needs no extra state to
+		// keep in sync. The wildcards are escaped so a literal % still matches.
+		pattern := "%" + escapeLikePattern(search) + "%"
+		feedQuery += ` AND (r.name LIKE ? ESCAPE '\' OR r.tagName LIKE ? ESCAPE '\' OR r.changelogSummary LIKE ? ESCAPE '\' OR r.body LIKE ? ESCAPE '\')`
+		feedArgs = append(feedArgs, pattern, pattern, pattern, pattern)
+	}
+	if hasCursor {
+		feedQuery += ` AND (r.detectedAt < ? OR (r.detectedAt = ? AND r.id < ?))`
+		feedArgs = append(feedArgs, cursorTime, cursorTime, cursorID)
+	}
+	feedQuery += ` ORDER BY r.detectedAt DESC, r.id DESC LIMIT ?`
+	// One extra row tells the client whether another page exists without a
+	// second count query.
+	feedArgs = append(feedArgs, feedSize+1)
 	rows, err := s.store.DB().QueryContext(r.Context(), feedQuery, feedArgs...)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Could not load release feed")
@@ -639,6 +702,7 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 		PublishedAt      *string `json:"publishedAt"`
 		DetectedAt       string  `json:"detectedAt"`
 		ChangelogSummary *string `json:"changelogSummary"`
+		SecurityRelevant bool    `json:"securityRelevant"`
 		WatchedApp       struct {
 			ID              string  `json:"id"`
 			Name            string  `json:"name"`
@@ -648,16 +712,62 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 			LatestSeenTag   *string `json:"latestSeenTag"`
 		} `json:"watchedApp"`
 	}
-	recent := make([]feedItem, 0, feedSize)
+	recent := make([]feedItem, 0, feedSize+1)
 	for rows.Next() {
 		var item feedItem
-		if err := rows.Scan(&item.ID, &item.TagName, &item.Name, &item.HTMLURL, &item.Prerelease, &item.PublishedAt, &item.DetectedAt, &item.ChangelogSummary, &item.WatchedApp.ID, &item.WatchedApp.Name, &item.WatchedApp.RepoFullName, &item.WatchedApp.IconURL, &item.WatchedApp.UpdateAvailable, &item.WatchedApp.LatestSeenTag); err != nil {
+		if err := rows.Scan(&item.ID, &item.TagName, &item.Name, &item.HTMLURL, &item.Prerelease, &item.PublishedAt, &item.DetectedAt, &item.ChangelogSummary, &item.SecurityRelevant, &item.WatchedApp.ID, &item.WatchedApp.Name, &item.WatchedApp.RepoFullName, &item.WatchedApp.IconURL, &item.WatchedApp.UpdateAvailable, &item.WatchedApp.LatestSeenTag); err != nil {
 			writeError(w, http.StatusInternalServerError, "Could not read release feed")
 			return
 		}
 		recent = append(recent, item)
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"total": total, "updates": updates, "failed": failed, "stale": stale, "recent": recent})
+	if err := rows.Err(); err != nil {
+		writeError(w, http.StatusInternalServerError, "Could not read release feed")
+		return
+	}
+	hasMore := len(recent) > feedSize
+	if hasMore {
+		recent = recent[:feedSize]
+	}
+	var nextCursor any
+	if hasMore && len(recent) > 0 {
+		last := recent[len(recent)-1]
+		nextCursor = encodeFeedCursor(last.DetectedAt, last.ID)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"total": total, "updates": updates, "failed": failed, "stale": stale,
+		"recent": recent, "hasMore": hasMore, "nextCursor": nextCursor,
+		"unread": map[string]int{"releases": unreadReleases, "repositories": unreadRepositories},
+	})
+}
+
+// encodeFeedCursor keeps the position opaque so clients do not build queries
+// against internal column formats.
+func encodeFeedCursor(detectedAt, id string) string {
+	return base64.RawURLEncoding.EncodeToString([]byte(detectedAt + "\x00" + id))
+}
+
+func decodeFeedCursor(raw string) (string, string, bool) {
+	if raw == "" {
+		return "", "", false
+	}
+	decoded, err := base64.RawURLEncoding.DecodeString(raw)
+	if err != nil {
+		return "", "", false
+	}
+	parts := strings.SplitN(string(decoded), "\x00", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", false
+	}
+	return parts[0], parts[1], true
+}
+
+// escapeLikePattern neutralises the wildcards SQLite recognises inside LIKE.
+func escapeLikePattern(value string) string {
+	value = strings.ReplaceAll(value, "\\", "\\\\")
+	value = strings.ReplaceAll(value, "%", "\\%")
+	value = strings.ReplaceAll(value, "_", "\\_")
+	return value
 }
 
 func (s *Server) raisedIssues(w http.ResponseWriter, r *http.Request) {
@@ -794,10 +904,33 @@ func writeSSE(w http.ResponseWriter, event events.Event) error {
 func (s *Server) loadApp(ctx context.Context, userID, id string) (watchedApp, error) {
 	var app watchedApp
 	var topics []byte
-	err := s.store.DB().QueryRowContext(ctx, `SELECT id, name, slug, repoOwner, repoName, repoFullName, githubUrl, iconUrl, ownerAvatarUrl, description, homepageUrl, language, license, defaultBranch, stars, topics, latestSeenTag, lastCheckedAt, checkStatus, checkError, updateAvailable, notificationsEnabled, includePrereleases, checkIntervalMinutes, createdAt, updatedAt FROM "WatchedApp" WHERE id = ? AND userId = ?`, id, userID).
-		Scan(&app.ID, &app.Name, &app.Slug, &app.RepoOwner, &app.RepoName, &app.RepoFullName, &app.GitHubURL, &app.IconURL, &app.OwnerAvatarURL, &app.Description, &app.HomepageURL, &app.Language, &app.License, &app.DefaultBranch, &app.Stars, &topics, &app.LatestSeenTag, &app.LastCheckedAt, &app.CheckStatus, &app.CheckError, &app.UpdateAvailable, &app.NotificationsEnabled, &app.IncludePrereleases, &app.CheckIntervalMinutes, &app.CreatedAt, &app.UpdatedAt)
+	err := s.store.DB().QueryRowContext(ctx, `SELECT id, name, slug, repoOwner, repoName, repoFullName, githubUrl, iconUrl, ownerAvatarUrl, description, homepageUrl, language, license, defaultBranch, stars, topics, latestSeenTag, lastCheckedAt, checkStatus, checkError, updateAvailable, notificationsEnabled, includePrereleases, excludeTags, checkIntervalMinutes, createdAt, updatedAt FROM "WatchedApp" WHERE id = ? AND userId = ?`, id, userID).
+		Scan(&app.ID, &app.Name, &app.Slug, &app.RepoOwner, &app.RepoName, &app.RepoFullName, &app.GitHubURL, &app.IconURL, &app.OwnerAvatarURL, &app.Description, &app.HomepageURL, &app.Language, &app.License, &app.DefaultBranch, &app.Stars, &topics, &app.LatestSeenTag, &app.LastCheckedAt, &app.CheckStatus, &app.CheckError, &app.UpdateAvailable, &app.NotificationsEnabled, &app.IncludePrereleases, &app.ExcludeTags, &app.CheckIntervalMinutes, &app.CreatedAt, &app.UpdatedAt)
 	app.Topics = json.RawMessage(topics)
 	return app, err
+}
+
+// normaliseTagFilters stores one exclusion pattern per line so the worker can
+// parse it identically however the client formatted it.
+func normaliseTagFilters(raw string) (string, bool) {
+	fields := strings.FieldsFunc(raw, func(r rune) bool {
+		return r == '\n' || r == ',' || r == ';'
+	})
+	cleaned := make([]string, 0, len(fields))
+	for _, field := range fields {
+		pattern := strings.TrimSpace(field)
+		if pattern == "" {
+			continue
+		}
+		if len(pattern) > 64 {
+			return "", false
+		}
+		cleaned = append(cleaned, pattern)
+	}
+	if len(cleaned) > 20 {
+		return "", false
+	}
+	return strings.Join(cleaned, "\n"), true
 }
 
 func splitRepository(fullName string) (string, string, bool) {

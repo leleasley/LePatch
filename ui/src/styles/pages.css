@@ -1853,3 +1853,236 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Security releases ------------------------------------------------------- */
+
+.security-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  border-radius: var(--radius-pill);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: var(--text-xs);
+  font-weight: 650;
+}
+
+.release-card.is-security {
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+}
+
+/* Keyboard navigation ---------------------------------------------------- */
+
+.release-card.is-active {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.feed-keyhint {
+  display: none;
+  margin-left: 10px;
+  color: var(--fg-faint);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.feed-keyhint kbd {
+  display: inline-block;
+  min-width: 16px;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-inset);
+  color: var(--fg-subtle);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-align: center;
+}
+
+@media (min-width: 900px) and (pointer: fine) {
+  .feed-keyhint {
+    display: inline;
+  }
+}
+
+/* Older releases --------------------------------------------------------- */
+
+.feed-more {
+  display: flex;
+  justify-content: center;
+  padding: 18px 0 4px;
+}
+
+/* The watch row is a plain container now so its action buttons are not nested
+   inside a link, which confused screen readers and the tab order. */
+.watch-row {
+  cursor: default;
+}
+
+.watch-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.watch-main:hover .watch-copy b {
+  color: var(--accent);
+}
+
+.watch-main:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Bulk selection on the watch list --------------------------------------- */
+
+.bulk-bar {
+  position: sticky;
+  bottom: 16px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-lg);
+}
+
+.bulk-bar b {
+  font-size: var(--text-sm);
+}
+
+.bulk-bar .spacer {
+  flex: 1;
+}
+
+.bulk-bar select {
+  height: 32px;
+}
+
+/* Account feed tokens ---------------------------------------------------- */
+
+.feed-token {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.feed-token:last-child {
+  border-bottom: 0;
+}
+
+.feed-token-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.feed-token-copy b {
+  display: block;
+  font-size: var(--text-sm);
+}
+
+.feed-token-copy span {
+  color: var(--fg-faint);
+  font-size: var(--text-2xs);
+  font-family: var(--font-mono);
+}
+
+.feed-token-secret {
+  display: block;
+  width: 100%;
+  overflow-wrap: anywhere;
+  padding: 8px 10px;
+  border: 1px dashed var(--accent-line);
+  border-radius: var(--radius-xs);
+  background: var(--bg-inset);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+/* Watch list selection --------------------------------------------------- */
+
+.repo-select {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.repo-select input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.repo-card.is-selected {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 1px var(--accent-line) inset;
+}
+
+.repo-card-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font-size: var(--text-md);
+  font-weight: 650;
+  text-align: left;
+}
+
+.repo-card-name:hover {
+  color: var(--accent);
+}
+
+.repo-card-name:focus-visible,
+.repo-card-open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+button.repo-card-open {
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Visually hidden but available to screen readers. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

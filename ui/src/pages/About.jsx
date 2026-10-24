@@ -23,7 +23,6 @@ export function AboutPage() {
 
   useEffect(() => {
     checkForUpdates();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const release = about?.release;

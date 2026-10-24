@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -90,6 +89,9 @@ func (s *Store) Migrate(ctx context.Context) error {
 	if err := s.applyMigration(ctx, 3, "migrations/0003_notification_delivery.sql"); err != nil {
 		return err
 	}
+	if err := s.applyMigration(ctx, 4, "migrations/0004_search_feeds_and_filters.sql"); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -110,11 +112,11 @@ func (s *Store) applyMigration(ctx context.Context, version int, resource string
 		return fmt.Errorf("begin migration %d: %w", version, err)
 	}
 	defer func() { _ = tx.Rollback() }()
-	for _, statement := range strings.Split(string(script), ";") {
-		statement = strings.TrimSpace(statement)
-		if statement == "" {
-			continue
-		}
+	statements, err := splitSQLScript(string(script))
+	if err != nil {
+		return fmt.Errorf("parse migration %d: %w", version, err)
+	}
+	for _, statement := range statements {
 		if _, err := tx.ExecContext(ctx, statement); err != nil {
 			return fmt.Errorf("apply migration %d: %w", version, err)
 		}

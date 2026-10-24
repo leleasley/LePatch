@@ -9,6 +9,34 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Added
 
+- The interface has unit tests for feed grouping, unseen-release detection and
+  filters, and ESLint fails on undefined identifiers, which the bundler did not
+  catch.
+
+- Release notes can be searched across the whole history, not just the loaded
+  page. The feed pages with an opaque cursor and a "Load older releases"
+  button, and the unread summary stays accurate while searching.
+
+- Security releases are detected from CVE and GHSA identifiers and from
+  security terms in the notes. They carry a badge in the feed and on the
+  release page, have their own filter, and interrupt quiet hours and digests.
+
+- Each account can create Atom and JSON release feeds from the profile page.
+  Only a hash of the feed token is stored, the address is shown once, and it
+  can be revoked. Feed requests are kept out of the access log.
+
+- The administrator console can deliver alerts to any HTTP webhook as a flat
+  JSON body, optionally signed with an HMAC, or to an ntfy topic.
+
+- Repository settings can skip tags with glob patterns such as `*-nightly`,
+  so builds that should never be tracked are not stored or notified.
+
+- Notification preferences can be paused for an hour, a day or a week. The
+  backlog is dropped rather than delivered in a burst when the pause ends.
+
+- The watch list supports bulk actions: select repositories and mute, unmute,
+  include pre-releases, restrict to stable or change the check interval.
+
 - The release feed is grouped by day, flags each unseen release with a "New"
   badge and shows an unread banner that counts new releases across
   repositories and can mark everything as read in one request.
@@ -101,6 +129,9 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Changed
 
+- Repository cards no longer act as one large link. The name and the "Open"
+  action are buttons, so the settings, check and remove controls are reachable
+  in a predictable tab order.
 - The home page searches releases separately from the watched repository list,
   keeps the release filter and list or grid layout in one toolbar, and labels
   the release actions "Mark read" and "Ignore" instead of icon only buttons.
@@ -147,6 +178,13 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- Migrations are split with a scanner that understands string literals,
+  comments and quoted identifiers. The previous split on every semicolon broke
+  as soon as a statement contained one, and trigger definitions now fail loudly
+  instead of being fragmented.
+- A repository check loaded one column fewer than it scanned, so every
+  scheduled check failed after tag filters were added. Both query paths now
+  share one column list and are covered by a test.
 - Opening a sponsored maintainer from the sponsors list rendered the list
   again, so the maintainer's repositories could not be reached. The maintainer
   now has its own page with their profile and repositories.

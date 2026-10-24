@@ -24,6 +24,7 @@ type notificationJob struct {
 	summary                                                          string
 	attempts                                                         int
 	prerelease                                                       bool
+	security                                                         bool
 	createdAt                                                        string
 }
 
@@ -31,7 +32,7 @@ type notificationJob struct {
 // Synchronize that state on startup so imported enabled integrations continue
 // receiving events even when their legacy NotificationChannel row is disabled.
 func (w *Runner) syncEnabledIntegrationChannels(ctx context.Context) {
-	for _, integration := range []struct{ provider, name string }{{"discord", "Discord"}, {"telegram", "Telegram"}} {
+	for _, integration := range []struct{ provider, name string }{{"discord", "Discord"}, {"telegram", "Telegram"}, {"webhook", "Webhook"}} {
 		var enabled string
 		err := w.db.QueryRowContext(ctx, `SELECT value FROM "IntegrationSetting" WHERE provider=? AND key='enabled'`, integration.provider).Scan(&enabled)
 		if err == sql.ErrNoRows {
@@ -76,7 +77,7 @@ func (w *Runner) enqueueNotificationEvents(ctx context.Context, releaseID, userI
 		return nil
 	}
 	rows, err := w.db.QueryContext(ctx, `SELECT id, type, name FROM "NotificationChannel"
-		WHERE enabled=1 AND type IN ('discord','telegram')
+		WHERE enabled=1 AND type IN ('discord','telegram','webhook')
 		ORDER BY type,
 			CASE WHEN (type='discord' AND name='Discord') OR (type='telegram' AND name='Telegram') THEN 0 ELSE 1 END,
 			updatedAt DESC`)
@@ -86,8 +87,8 @@ func (w *Runner) enqueueNotificationEvents(ctx context.Context, releaseID, userI
 	defer rows.Close()
 	// Exactly one channel per provider. A legacy import can leave several rows
 	// for the same provider, which used to deliver every release once per row.
-	chosen := make(map[string]string, 2)
-	channelIDs := make([]string, 0, 2)
+	chosen := make(map[string]string, 3)
+	channelIDs := make([]string, 0, 3)
 	for rows.Next() {
 		var id, channelType, name string
 		if err := rows.Scan(&id, &channelType, &name); err != nil {
@@ -123,7 +124,7 @@ func (w *Runner) dispatchNotifications(ctx context.Context) {
 	jobs := make([]notificationJob, 0, 40)
 	for rows.Next() {
 		var job notificationJob
-		if err := rows.Scan(&job.id, &job.attempts, &job.createdAt, &job.releaseID, &job.appID, &job.channelID, &job.channelType, &job.configJSON, &job.userID, &job.appName, &job.repoFullName, &job.tag, &job.releaseURL, &job.body, &job.releaseType, &job.prerelease, &job.summary); err != nil {
+		if err := rows.Scan(&job.id, &job.attempts, &job.createdAt, &job.releaseID, &job.appID, &job.channelID, &job.channelType, &job.configJSON, &job.userID, &job.appName, &job.repoFullName, &job.tag, &job.releaseURL, &job.body, &job.releaseType, &job.prerelease, &job.security, &job.summary); err != nil {
 			w.logger.Warn("read queued notification event", "error", err.Error())
 			continue
 		}
@@ -159,14 +160,26 @@ func (w *Runner) dispatchNotifications(ctx context.Context) {
 func (w *Runner) deliveryDecision(ctx context.Context, job notificationJob) (time.Duration, string, bool) {
 	var enabled bool
 	var digest sql.NullInt64
-	var quietStart, quietEnd, timezone sql.NullString
+	var quietStart, quietEnd, timezone, paused sql.NullString
 	var severity sql.NullString
-	err := w.db.QueryRowContext(ctx, `SELECT enabled,digestInterval,quietHoursStart,quietHoursEnd,timezone,severityFilters FROM "NotificationPreference" WHERE userId=?`, job.userID).Scan(&enabled, &digest, &quietStart, &quietEnd, &timezone, &severity)
+	err := w.db.QueryRowContext(ctx, `SELECT enabled,digestInterval,quietHoursStart,quietHoursEnd,timezone,severityFilters,pausedUntil FROM "NotificationPreference" WHERE userId=?`, job.userID).Scan(&enabled, &digest, &quietStart, &quietEnd, &timezone, &severity, &paused)
 	if err == nil && !enabled {
 		return 0, "notifications disabled", false
 	}
 	if err != nil && err != sql.ErrNoRows {
 		return 0, "preference lookup failed", false
+	}
+	now := time.Now()
+	if paused.Valid && strings.TrimSpace(paused.String) != "" {
+		if until, parseErr := parseTime(paused.String); parseErr == nil && now.Before(until) {
+			// A pause means "do not tell me now", so the backlog is dropped
+			// rather than delivered in a burst when it ends.
+			return 0, "notifications paused", false
+		}
+	}
+	// A security release is worth interrupting quiet hours and digests for.
+	if job.security {
+		return 0, "security release", true
 	}
 	if severity.Valid && strings.TrimSpace(severity.String) != "" {
 		var allowed []string
@@ -183,7 +196,6 @@ func (w *Runner) deliveryDecision(ctx context.Context, job notificationJob) (tim
 			}
 		}
 	}
-	now := time.Now()
 	if quietStart.Valid && quietEnd.Valid {
 		if delay := quietHoursDelay(now, quietStart.String, quietEnd.String, timezone.String); delay > 0 {
 			return delay, "quiet hours", false
@@ -388,6 +400,9 @@ func (w *Runner) sendNotification(ctx context.Context, job notificationJob) erro
 		}
 		return postJSON(ctx, webhook, discordReleasePayload(job, w.appURL))
 	}
+	if job.channelType == "webhook" {
+		return w.sendWebhook(ctx, job, config)
+	}
 	if job.channelType == "telegram" {
 		token := config["botToken"]
 		if token == "" {
@@ -505,6 +520,9 @@ func trimReleaseNotes(text string) string {
 func telegramReleaseMessage(job notificationJob, appURL string) (string, map[string]any) {
 	label, icon, prerelease := releaseKind(job)
 	kind := releaseTypeLabel(job)
+	if job.security {
+		label, icon = "Security release detected", "🛡️"
+	}
 
 	var header strings.Builder
 	header.WriteString(icon + " <b>" + label + "</b>\n\n")
@@ -515,6 +533,9 @@ func telegramReleaseMessage(job notificationJob, appURL string) (string, map[str
 	}
 	if prerelease {
 		header.WriteString("\n\n⚠️ <i>This is a pre-release build, not a final release.</i>")
+	}
+	if job.security {
+		header.WriteString("\n\n🛡️ <i>This release addresses a security issue. Update when you can.</i>")
 	}
 
 	head := header.String()
@@ -612,6 +633,10 @@ func discordReleasePayload(job notificationJob, appURL string) map[string]any {
 	if prerelease {
 		colour = 0xf59e0b
 	}
+	if job.security {
+		label, icon = "Security release detected", "🛡️"
+		colour = 0xef4444
+	}
 
 	fields := []map[string]any{{"name": "Version", "value": "`" + job.tag + "`", "inline": true}}
 	if kind != "" {
@@ -636,6 +661,9 @@ func discordReleasePayload(job notificationJob, appURL string) map[string]any {
 	}
 	if prerelease {
 		embed["author"] = map[string]any{"name": "⚠ Pre-release build"}
+	}
+	if job.security {
+		embed["author"] = map[string]any{"name": "🛡 Security release"}
 	}
 	return map[string]any{
 		"embeds":           []map[string]any{embed},
@@ -709,12 +737,20 @@ func postJSON(ctx context.Context, endpoint string, value any) error {
 	if err != nil {
 		return err
 	}
+	return postBody(ctx, endpoint, "application/json", body, map[string]string{"User-Agent": "LePatch"})
+}
+
+// postBody is the single outbound POST used by every notification provider so
+// timeouts, response limits and error mapping stay consistent.
+func postBody(ctx context.Context, endpoint, contentType string, body []byte, headers map[string]string) error {
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("User-Agent", "LePatch")
+	request.Header.Set("Content-Type", contentType)
+	for key, value := range headers {
+		request.Header.Set(key, value)
+	}
 	client := &http.Client{Timeout: 8 * time.Second}
 	response, err := client.Do(request)
 	if err != nil {

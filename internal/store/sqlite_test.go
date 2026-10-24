@@ -19,8 +19,8 @@ func TestOpenMigratesCompleteApplicationSchema(t *testing.T) {
 	if err := db.DB().QueryRowContext(ctx, `SELECT count(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
-	if count != 21 { // 18 existing tables, GitHub cache, migration ledger and RaisedIssue.
-		t.Fatalf("expected 21 tables, got %d", count)
+	if count != 22 { // 18 existing tables, GitHub cache, migration ledger, RaisedIssue and FeedToken.
+		t.Fatalf("expected 22 tables, got %d", count)
 	}
 
 	if _, err := db.DB().ExecContext(ctx, `INSERT INTO "User" (id, name, email, passwordHash) VALUES ('u1', 'User', 'user@example.test', 'hash')`); err != nil {

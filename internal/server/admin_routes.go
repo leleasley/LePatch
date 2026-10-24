@@ -181,6 +181,11 @@ func (s *Server) adminOverview(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "Could not load integration status")
 		return
 	}
+	webhook, err := s.readIntegrationStatus(ctx, "webhook")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Could not load integration status")
+		return
+	}
 
 	queue := map[string]any{"running": false, "queueDepth": 0, "queueCapacity": 0, "pendingChecks": 0, "lastScheduleAt": "", "lastCheckAt": "", "lastError": ""}
 	if s.worker != nil {
@@ -216,7 +221,7 @@ func (s *Server) adminOverview(w http.ResponseWriter, r *http.Request) {
 		"notifications": map[string]any{"sent": sent, "failed": failed, "pending": pending},
 		"auditEvents":   auditEvents,
 		"backups":       backups,
-		"integrations":  map[string]any{"discord": discord, "telegram": telegram},
+		"integrations":  map[string]any{"discord": discord, "telegram": telegram, "webhook": webhook},
 		"queue":         queue,
 		"storage":       s.storageSummary(),
 		"settings":      s.workspaceSettings(ctx),

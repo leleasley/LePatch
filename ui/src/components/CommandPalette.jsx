@@ -30,7 +30,7 @@ const PAGES = [
   { id: 'about', label: 'About LePatch', hint: 'Version and updates', icon: Info },
 ];
 
-export function CommandPalette({ open, onClose, onNavigate, onAction, apps = [], theme, onTheme }) {
+export function CommandPalette({ open, onClose, onNavigate, onAction, apps = [], theme }) {
   const [term, setTerm] = useState('');
   const [cursor, setCursor] = useState(0);
   const listRef = useRef(null);

@@ -6,7 +6,9 @@
   "scripts": {
     "check": "node scripts/check-imports.mjs",
     "build": "npm run check && vite build",
-    "dev": "vite --host 127.0.0.1"
+    "dev": "vite --host 127.0.0.1",
+    "test": "vitest run",
+    "lint": "eslint src"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^6.1.2",
@@ -18,5 +20,12 @@
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "vite": "^8.3.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "vitest": "^3.2.7"
   }
 }

@@ -176,6 +176,8 @@ function OverviewPanel({ overview, loading, onRefresh }) {
               <div className="kv-row">
                 <dt>Telegram bot</dt>
                 <dd>{overview.integrations?.telegram?.botUsername ? `@${overview.integrations.telegram.botUsername}` : 'Not set'}</dd>
+                <dt>Webhook</dt>
+                <dd>{overview.integrations?.webhook?.enabled ? 'Enabled' : overview.integrations?.webhook?.configured ? 'Configured, disabled' : 'Not configured'}</dd>
               </div>
             </dl>
           </div>
@@ -339,10 +341,21 @@ function WorkspacePanel({ settings, prereleaseCount, onSaved, onPrereleasesChang
   );
 }
 
+function providerLabel(provider) {
+  if (provider === 'discord') return 'Discord';
+  if (provider === 'telegram') return 'Telegram';
+  if (provider === 'webhook') return 'Webhook';
+  return provider;
+}
+
 function IntegrationsPanel() {
   const toast = useToast();
-  const [integrations, setIntegrations] = useState({ discord: {}, telegram: {} });
-  const [forms, setForms] = useState({ discord: { webhookUrl: '', enabled: false }, telegram: { botToken: '', chatId: '', webhookSecret: '', botUsername: '', botName: '', enabled: false } });
+  const [integrations, setIntegrations] = useState({ discord: {}, telegram: {}, webhook: {} });
+  const [forms, setForms] = useState({
+    discord: { webhookUrl: '', enabled: false },
+    telegram: { botToken: '', chatId: '', webhookSecret: '', botUsername: '', botName: '', enabled: false },
+    webhook: { url: '', mode: 'generic', token: '', secret: '', enabled: false },
+  });
   const [busy, setBusy] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -358,6 +371,11 @@ function IntegrationsPanel() {
           enabled: Boolean(data.telegram?.enabled),
           botUsername: data.telegram?.botUsername || current.telegram.botUsername,
           botName: data.telegram?.botName || current.telegram.botName,
+        },
+        webhook: {
+          ...current.webhook,
+          enabled: Boolean(data.webhook?.enabled),
+          mode: data.webhook?.mode || current.webhook.mode || 'generic',
         },
       }));
     } catch (issue) {
@@ -383,9 +401,15 @@ function IntegrationsPanel() {
       if (provider === 'telegram' && form.webhookSecret.trim()) payload.webhookSecret = form.webhookSecret.trim();
       if (provider === 'telegram' && form.botUsername.trim()) payload.botUsername = form.botUsername.trim();
       if (provider === 'telegram' && form.botName.trim()) payload.botName = form.botName.trim();
+      if (provider === 'webhook') {
+        payload.mode = form.mode || 'generic';
+        if (form.url.trim()) payload.url = form.url.trim();
+        if (form.token.trim()) payload.token = form.token.trim();
+        if (form.secret.trim()) payload.secret = form.secret.trim();
+      }
       await api(`/api/integrations/${provider}`, { method: 'PUT', body: payload });
-      setForms(current => ({ ...current, [provider]: { ...current[provider], webhookUrl: '', botToken: '', chatId: '', webhookSecret: '' } }));
-      toast.success(`${provider === 'discord' ? 'Discord' : 'Telegram'} settings saved securely.`);
+      setForms(current => ({ ...current, [provider]: { ...current[provider], webhookUrl: '', botToken: '', chatId: '', webhookSecret: '', url: '', token: '', secret: '' } }));
+      toast.success(`${providerLabel(provider)} settings saved securely.`);
       await load();
     } catch (issue) {
       toast.error(issue.message || 'Could not save the integration settings.');
@@ -398,7 +422,7 @@ function IntegrationsPanel() {
     setBusy(`${provider}-test`);
     try {
       await api('/api/notifications/test', { method: 'POST', body: { provider } });
-      toast.success(`Test message sent through ${provider === 'discord' ? 'Discord' : 'Telegram'}.`);
+      toast.success(`Test message sent through ${providerLabel(provider)}.`);
     } catch (issue) {
       toast.error(issue.message || 'The test message failed.');
     } finally {
@@ -410,7 +434,7 @@ function IntegrationsPanel() {
     setBusy(`${provider}-clear`);
     try {
       await api(`/api/integrations/${provider}`, { method: 'DELETE' });
-      toast.success(`${provider === 'discord' ? 'Discord' : 'Telegram'} credentials removed.`);
+      toast.success(`${providerLabel(provider)} credentials removed.`);
       await load();
     } catch (issue) {
       toast.error(issue.message || 'Could not remove the integration.');
@@ -519,6 +543,100 @@ function IntegrationsPanel() {
                 </button>
                 {integrations.telegram?.configured ? (
                   <button className="btn btn-danger" type="button" onClick={() => remove('telegram')} disabled={busy !== ''}>
+                    Remove
+                  </button>
+                ) : null}
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <div>
+            <h2>Webhook and ntfy</h2>
+            <p>Post release alerts to any HTTP endpoint, or straight to an ntfy topic.</p>
+          </div>
+          <Pill kind={integrations.webhook?.enabled ? 'success' : ''}>{integrations.webhook?.enabled ? 'Enabled' : 'Disabled'}</Pill>
+        </div>
+        <div className="card-body" style={{ display: 'grid', gap: 16 }}>
+          {loading ? (
+            <span className="loading-line">Loading saved settings…</span>
+          ) : (
+            <>
+              <Field label="Mode" hint="Generic posts a JSON body. ntfy posts a notification to a topic URL.">
+                <select className="select" value={forms.webhook.mode} onChange={field('webhook', 'mode')}>
+                  <option value="generic">Generic JSON webhook</option>
+                  <option value="ntfy">ntfy topic</option>
+                </select>
+              </Field>
+              <Field
+                label={forms.webhook.mode === 'ntfy' ? 'Topic URL' : 'Webhook URL'}
+                hint={
+                  integrations.webhook?.configured
+                    ? 'Configured securely · enter a replacement to rotate'
+                    : forms.webhook.mode === 'ntfy'
+                      ? 'https://ntfy.sh/my-lepatch-topic'
+                      : 'https://example.com/hooks/lepatch'
+                }
+              >
+                <input
+                  className="input"
+                  type="password"
+                  autoComplete="off"
+                  data-bwignore="true"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  value={forms.webhook.url}
+                  onChange={field('webhook', 'url')}
+                  placeholder={integrations.webhook?.configured ? 'Configured securely' : 'https://…'}
+                />
+              </Field>
+              <div className="account-grid" style={{ gap: 14 }}>
+                {forms.webhook.mode === 'ntfy' ? (
+                  <Field label="Access token" hint="Optional · sent as a Bearer token">
+                    <input
+                      className="input"
+                      type="password"
+                      autoComplete="off"
+                      data-bwignore="true"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
+                      value={forms.webhook.token}
+                      onChange={field('webhook', 'token')}
+                      placeholder="Optional ntfy token"
+                    />
+                  </Field>
+                ) : (
+                  <Field label="Signing secret" hint="Optional · adds X-LePatch-Signature: sha256=…">
+                    <input
+                      className="input"
+                      type="password"
+                      autoComplete="off"
+                      data-bwignore="true"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
+                      value={forms.webhook.secret}
+                      onChange={field('webhook', 'secret')}
+                      placeholder="Optional shared secret"
+                    />
+                  </Field>
+                )}
+              </div>
+              <label className="switch">
+                <input type="checkbox" checked={forms.webhook.enabled} onChange={event => setForms(current => ({ ...current, webhook: { ...current.webhook, enabled: event.target.checked } }))} />
+                <span>Enable delivery</span>
+              </label>
+              <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
+                <button className="btn" type="button" onClick={() => test('webhook')} disabled={busy !== '' || !integrations.webhook?.configured}>
+                  Send test
+                </button>
+                <button className="btn btn-primary" type="button" onClick={() => save('webhook')} disabled={busy !== ''}>
+                  {busy === 'webhook' ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />} Save settings
+                </button>
+                {integrations.webhook?.configured ? (
+                  <button className="btn btn-danger" type="button" onClick={() => remove('webhook')} disabled={busy !== ''}>
                     Remove
                   </button>
                 ) : null}

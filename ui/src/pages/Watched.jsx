@@ -16,6 +16,7 @@ function RepoSettingsDialog({ app, open, onClose, onSaved }) {
   const [prereleases, setPrereleases] = useState(Boolean(app?.includePrereleases));
   const [notifications, setNotifications] = useState(app?.notificationsEnabled !== false);
   const [interval, setInterval] = useState(String(app?.checkIntervalMinutes || 360));
+  const [excludeTags, setExcludeTags] = useState(app?.excludeTags || '');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -24,6 +25,7 @@ function RepoSettingsDialog({ app, open, onClose, onSaved }) {
     setPrereleases(Boolean(app.includePrereleases));
     setNotifications(app.notificationsEnabled !== false);
     setInterval(String(app.checkIntervalMinutes || 360));
+    setExcludeTags(app.excludeTags || '');
   }, [app]);
 
   const save = async () => {
@@ -36,6 +38,7 @@ function RepoSettingsDialog({ app, open, onClose, onSaved }) {
           includePrereleases: prereleases,
           notificationsEnabled: notifications,
           checkIntervalMinutes: Number(interval),
+          excludeTags,
         },
       });
       toast.success('Repository settings saved.');
@@ -92,16 +95,62 @@ function RepoSettingsDialog({ app, open, onClose, onSaved }) {
           <input type="checkbox" checked={notifications} onChange={event => setNotifications(event.target.checked)} />
           <span>Send notifications for this repository</span>
         </label>
+        <label className="field">
+          <span>Skip tags</span>
+          <textarea
+            className="input"
+            rows={2}
+            value={excludeTags}
+            onChange={event => setExcludeTags(event.target.value)}
+            placeholder="*-nightly, v3.*"
+          />
+          <span className="field-hint">
+            One pattern per line, comma separated. <code>*</code> matches anything and <code>?</code> one character, so <code>*-nightly</code> stops nightly builds being stored or notified.
+          </span>
+        </label>
       </div>
     </Modal>
   );
 }
 
-export function WatchedPage({ apps, onOpen, onCheck, onRemove, onUpdate, checking, onWatch }) {
+export function WatchedPage({ apps, onOpen, onCheck, onRemove, onUpdate, onBulkUpdate, checking, onWatch }) {
   const toast = useToast();
   const [settingsApp, setSettingsApp] = useState(null);
   const [removeApp, setRemoveApp] = useState(null);
   const [removing, setRemoving] = useState(false);
+  const [selected, setSelected] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  // Drop selections for repositories that no longer exist.
+  useEffect(() => {
+    setSelected(current => {
+      const next = new Set([...current].filter(id => apps.some(app => app.id === id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [apps]);
+
+  const toggleSelected = id => {
+    setSelected(current => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const bulkApply = async payload => {
+    if (!selected.size || bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      const result = await api('/api/apps/bulk', { method: 'POST', body: { ids: [...selected], ...payload } });
+      onBulkUpdate?.(result.apps || []);
+      toast.success(`${result.updated || 0} ${result.updated === 1 ? 'repository' : 'repositories'} updated.`);
+    } catch (issue) {
+      toast.error(issue.message || 'Could not update the selected repositories.');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   const confirmRemove = async () => {
     if (!removeApp) return;
@@ -134,30 +183,25 @@ export function WatchedPage({ apps, onOpen, onCheck, onRemove, onUpdate, checkin
       <div className="repo-grid">
         {apps.map(app => (
           <article
-            className={`card card-hover repo-card${app.updateAvailable ? ' has-update' : ''}`}
+            className={`card card-hover repo-card${app.updateAvailable ? ' has-update' : ''}${selected.has(app.id) ? ' is-selected' : ''}`}
             key={app.id}
-            role="link"
-            tabIndex={0}
-            onClick={() => onOpen(app.id)}
-            onKeyDown={event => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                onOpen(app.id);
-              }
-            }}
           >
             <div className="repo-card-head">
+              <label className="repo-select" title={`Select ${app.repoFullName}`}>
+                <input type="checkbox" checked={selected.has(app.id)} onChange={() => toggleSelected(app.id)} />
+                <span className="sr-only">Select {app.repoFullName}</span>
+              </label>
               <RepoIcon name={app.name} iconUrl={app.iconUrl} size="is-md" />
               <div className="repo-card-title">
-                <b>
+                <button className="repo-card-name" type="button" onClick={() => onOpen(app.id)}>
                   {app.name}
                   {app.updateAvailable ? <i className="unread-dot" title="New release available" /> : null}
-                </b>
-                <a href={app.githubUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()}>
+                </button>
+                <a href={app.githubUrl} target="_blank" rel="noreferrer">
                   {app.repoFullName} <ArrowUpRight size={11} />
                 </a>
               </div>
-              <div className="repo-card-actions" onClick={event => event.stopPropagation()}>
+              <div className="repo-card-actions">
                 <button className="row-action" type="button" title="Repository settings" aria-label={`Settings for ${app.repoFullName}`} onClick={() => setSettingsApp(app)}>
                   <Settings2 size={15} />
                 </button>
@@ -192,9 +236,9 @@ export function WatchedPage({ apps, onOpen, onCheck, onRemove, onUpdate, checkin
                 {app.updateAvailable ? <span className="pill pill-accent">Update available</span> : null}
                 {app.checkStatus === 'failed' ? <span className="pill pill-danger">Check failed</span> : null}
               </div>
-              <span className="repo-card-open">
+              <button className="repo-card-open" type="button" onClick={() => onOpen(app.id)}>
                 Open <ArrowRight size={14} />
-              </span>
+              </button>
             </div>
 
             {app.checkStatus === 'failed' && app.checkError ? (
@@ -206,6 +250,48 @@ export function WatchedPage({ apps, onOpen, onCheck, onRemove, onUpdate, checkin
           </article>
         ))}
       </div>
+
+      {selected.size ? (
+        <div className="bulk-bar" role="region" aria-label="Bulk repository actions">
+          <b>
+            {selected.size} selected
+          </b>
+          <button className="btn btn-sm" type="button" disabled={bulkBusy} onClick={() => bulkApply({ notificationsEnabled: false })}>
+            Mute
+          </button>
+          <button className="btn btn-sm" type="button" disabled={bulkBusy} onClick={() => bulkApply({ notificationsEnabled: true })}>
+            Unmute
+          </button>
+          <button className="btn btn-sm" type="button" disabled={bulkBusy} onClick={() => bulkApply({ includePrereleases: true })}>
+            Include pre-releases
+          </button>
+          <button className="btn btn-sm" type="button" disabled={bulkBusy} onClick={() => bulkApply({ includePrereleases: false })}>
+            Stable only
+          </button>
+          <label className="field" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ whiteSpace: 'nowrap', fontSize: 'var(--text-xs)' }}>Check every</span>
+            <select
+              className="select"
+              value=""
+              disabled={bulkBusy}
+              onChange={event => {
+                if (event.target.value) bulkApply({ checkIntervalMinutes: Number(event.target.value) });
+              }}
+            >
+              <option value="">Choose…</option>
+              {INTERVALS.map(value => (
+                <option key={value} value={value}>
+                  {checkIntervalLabel(value)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span className="spacer" />
+          <button className="btn btn-sm" type="button" onClick={() => setSelected(new Set())}>
+            Clear
+          </button>
+        </div>
+      ) : null}
 
       <RepoSettingsDialog app={settingsApp} open={Boolean(settingsApp)} onClose={() => setSettingsApp(null)} onSaved={onUpdate} />
 

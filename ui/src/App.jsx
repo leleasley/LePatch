@@ -108,6 +108,10 @@ export function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [connected, setConnected] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [feedHasMore, setFeedHasMore] = useState(false);
+  const [feedLoadingMore, setFeedLoadingMore] = useState(false);
+  const feedCursorRef = useRef(null);
+  const feedQueryRef = useRef('');
   const [checking, setChecking] = useState(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -199,12 +203,16 @@ export function App() {
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
+      const search = feedQueryRef.current;
+      const dashboardPath = `/api/dashboard?perPage=80&includePrereleases=true${search ? `&q=${encodeURIComponent(search)}` : ''}`;
       const [dashboardResponse, appsResponse] = await Promise.all([
-        api('/api/dashboard?perPage=80&includePrereleases=true'),
+        api(dashboardPath),
         api('/api/apps?perPage=200'),
       ]);
       setStats(dashboardResponse);
       setFeed(dashboardResponse.recent || []);
+      setFeedHasMore(Boolean(dashboardResponse.hasMore));
+      feedCursorRef.current = dashboardResponse.nextCursor || null;
       setApps(appsResponse.apps || []);
       writeSnapshot('stats', dashboardResponse);
       writeSnapshot('feed', dashboardResponse.recent || []);
@@ -237,7 +245,7 @@ export function App() {
     } finally {
       setRefreshing(false);
     }
-  }, [connected, endSession, setTheme]);
+  }, [connected, endSession, localThemeExisted, setTheme]);
 
   const loadRaisedIssues = useCallback(async (state = issueStateRef.current) => {
     setIssueLoading(true);
@@ -320,15 +328,6 @@ export function App() {
     if (location.pathname !== path) history.pushState({}, '', path);
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [apps]);
-
-  const openOwnedRepo = useCallback(repoName => {
-    const [owner, name] = repoName.split('/');
-    setOwnedRepo(repoName);
-    setPage('owned-repo');
-    const path = `/your-repositories/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
-    if (location.pathname !== path) history.pushState({}, '', path);
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }, []);
 
   const openPreviewRepo = useCallback(repoName => {
     const [owner, name] = repoName.split('/');
@@ -591,6 +590,49 @@ export function App() {
   }, [detailVersion, page, detailAppId]);
 
   /* --------------------------------------------------------------- actions */
+
+  // The release search and "load older" paging are separate from refresh() so
+  // a live event does not throw away the page the reader is looking at.
+  const searchFeed = useCallback(async query => {
+    feedQueryRef.current = query;
+    try {
+      const params = new URLSearchParams({ perPage: '80', includePrereleases: 'true' });
+      if (query) params.set('q', query);
+      const data = await api(`/api/dashboard?${params}`);
+      setFeed(data.recent || []);
+      writeSnapshot('feed', data.recent || []);
+      setFeedHasMore(Boolean(data.hasMore));
+      feedCursorRef.current = data.nextCursor || null;
+    } catch (issue) {
+      if (issue instanceof ApiError && issue.status === 401) {
+        endSession();
+        return;
+      }
+      toast.error(issue.message || 'Could not search the release feed.');
+    }
+  }, [endSession, toast]);
+
+  const loadMoreFeed = useCallback(async () => {
+    if (!feedCursorRef.current || feedLoadingMore) return;
+    setFeedLoadingMore(true);
+    try {
+      const params = new URLSearchParams({ perPage: '80', includePrereleases: 'true', cursor: feedCursorRef.current });
+      if (feedQueryRef.current) params.set('q', feedQueryRef.current);
+      const data = await api(`/api/dashboard?${params}`);
+      setFeed(current => {
+        const seen = new Set(current.map(item => item.id));
+        const next = [...current, ...(data.recent || []).filter(item => !seen.has(item.id))];
+        writeSnapshot('feed', next);
+        return next;
+      });
+      setFeedHasMore(Boolean(data.hasMore));
+      feedCursorRef.current = data.nextCursor || null;
+    } catch (issue) {
+      toast.error(issue.message || 'Could not load older releases.');
+    } finally {
+      setFeedLoadingMore(false);
+    }
+  }, [feedLoadingMore, toast]);
 
   const addRepository = useCallback(
     async repoFullName => {
@@ -916,6 +958,11 @@ export function App() {
     }
   }, [finishAuthentication]);
 
+  const replaceApps = useCallback(list => {
+    setApps(list);
+    writeSnapshot('apps', list);
+  }, []);
+
   const updateApp = useCallback(updated => {
     setApps(current => {
       const next = current.map(app => (app.id === updated.id ? updated : app));
@@ -968,13 +1015,17 @@ export function App() {
           onMarkSeen={markSeen}
           onMarkAllSeen={markAllSeen}
           onIgnore={ignoreRelease}
+          onSearchReleases={searchFeed}
+          onLoadMore={loadMoreFeed}
           onWatch={() => setAdding(true)}
           checking={checking}
+          hasMore={feedHasMore}
+          loadingMore={feedLoadingMore}
         />
       );
     }
     if (page === 'apps') {
-      return <WatchedPage apps={apps} onOpen={id => openApp(id)} onCheck={checkApp} onRemove={removeApp} onUpdate={updateApp} checking={checking} onWatch={() => setAdding(true)} />;
+      return <WatchedPage apps={apps} onOpen={id => openApp(id)} onCheck={checkApp} onRemove={removeApp} onUpdate={updateApp} onBulkUpdate={replaceApps} checking={checking} onWatch={() => setAdding(true)} />;
     }
     if (page === 'app-detail' || page === 'release-detail') {
       if (page === 'release-detail' && activeRelease) {
@@ -986,7 +1037,10 @@ export function App() {
             <div className="repo-hero">
               <RepoIcon name={detailApp?.name || 'LP'} iconUrl={detailApp?.iconUrl} size="is-lg" />
               <div className="repo-hero-copy">
-                <span className="kicker">{activeRelease.draft ? 'draft' : activeRelease.prerelease ? 'pre-release' : 'release'}</span>
+                <span className="kicker">
+                  {activeRelease.draft ? 'draft' : activeRelease.prerelease ? 'pre-release' : 'release'}
+                  {activeRelease.securityRelevant ? ' · security' : ''}
+                </span>
                 <h2>{activeRelease.name || activeRelease.tagName}</h2>
                 <span className="release-meta">
                   <span>{activeRelease.tagName}</span>
@@ -998,6 +1052,13 @@ export function App() {
                 <GitHubMark size={14} /> View on GitHub
               </a>
             </div>
+            {activeRelease.securityRelevant ? (
+              <div className="notice notice-error" style={{ marginTop: 18 }}>
+                <span>
+                  <b>Security release.</b> This version addresses a security issue. Update when you can.
+                </span>
+              </div>
+            ) : null}
             {activeRelease.changelogSummary ? (
               <div className="card card-pad" style={{ marginTop: 18 }}>
                 <span className="kicker">summary</span>

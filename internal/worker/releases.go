@@ -87,6 +87,7 @@ type appRow struct {
 	notificationsEnabled    bool
 	lastChecked             sql.NullString
 	iconURL, defaultBranch  sql.NullString
+	excludeTags             string
 }
 type release struct {
 	ID         int64   `json:"id"`
@@ -112,6 +113,7 @@ func (w *Runner) Start(ctx context.Context) {
 			w.status.Running = true
 			w.statusMu.Unlock()
 			w.syncEnabledIntegrationChannels(ctx)
+			w.backfillSecurityFlags(ctx)
 			w.schedule(ctx)
 			w.dispatchNotifications(ctx)
 			w.syncIssueCommentNotifications(ctx)
@@ -181,9 +183,23 @@ func (w *Runner) Enqueue(ctx context.Context, id string) error {
 	}
 }
 
+// appColumns is shared by every query that builds an appRow so the column list
+// and the scan cannot drift apart, which silently broke scheduled checks once.
+const appColumns = `id,userId,repoOwner,repoName,checkIntervalMinutes,includePrereleases,notificationsEnabled,lastCheckedAt,iconUrl,defaultBranch,excludeTags`
+
+func scanAppRow(scanner interface{ Scan(dest ...any) error }) (appRow, error) {
+	var a appRow
+	err := scanner.Scan(&a.id, &a.userID, &a.owner, &a.repo, &a.interval, &a.prereleases, &a.notificationsEnabled, &a.lastChecked, &a.iconURL, &a.defaultBranch, &a.excludeTags)
+	return a, err
+}
+
+func (w *Runner) loadAppRow(ctx context.Context, id string) (appRow, error) {
+	return scanAppRow(w.db.QueryRowContext(ctx, `SELECT `+appColumns+` FROM "WatchedApp" WHERE id = ?`, id))
+}
+
 func (w *Runner) schedule(ctx context.Context) {
 	w.recordSchedule()
-	rows, err := w.db.QueryContext(ctx, `SELECT id, userId, repoOwner, repoName, checkIntervalMinutes, includePrereleases, notificationsEnabled, lastCheckedAt, iconUrl, defaultBranch FROM "WatchedApp"`)
+	rows, err := w.db.QueryContext(ctx, `SELECT `+appColumns+` FROM "WatchedApp"`)
 	if err != nil {
 		w.logger.Error("load scheduled release checks", "error", err.Error())
 		return
@@ -191,8 +207,8 @@ func (w *Runner) schedule(ctx context.Context) {
 	defer rows.Close()
 	now := time.Now().UTC()
 	for rows.Next() {
-		var a appRow
-		if err := rows.Scan(&a.id, &a.userID, &a.owner, &a.repo, &a.interval, &a.prereleases, &a.notificationsEnabled, &a.lastChecked, &a.iconURL, &a.defaultBranch); err != nil {
+		a, err := scanAppRow(rows)
+		if err != nil {
 			w.logger.Error("read scheduled release check", "error", err.Error())
 			continue
 		}
@@ -221,8 +237,7 @@ func (w *Runner) schedule(ctx context.Context) {
 }
 
 func (w *Runner) checkByID(ctx context.Context, id string) {
-	var a appRow
-	err := w.db.QueryRowContext(ctx, `SELECT id,userId,repoOwner,repoName,checkIntervalMinutes,includePrereleases,notificationsEnabled,lastCheckedAt,iconUrl,defaultBranch FROM "WatchedApp" WHERE id = ?`, id).Scan(&a.id, &a.userID, &a.owner, &a.repo, &a.interval, &a.prereleases, &a.notificationsEnabled, &a.lastChecked, &a.iconURL, &a.defaultBranch)
+	a, err := w.loadAppRow(ctx, id)
 	if err == sql.ErrNoRows {
 		return
 	}
@@ -275,9 +290,13 @@ func (w *Runner) check(ctx context.Context, a appRow) error {
 	if err = json.Unmarshal(result.Body, &releases); err != nil {
 		return w.fail(ctx, a, "GitHub returned an invalid release response")
 	}
+	excluded := parseTagFilters(a.excludeTags)
 	eligible := make([]release, 0, len(releases))
 	for _, r := range releases {
 		if r.Draft || (r.Prerelease && !a.prereleases) || r.ID == 0 || r.Tag == "" {
+			continue
+		}
+		if excluded.Matches(r.Tag) {
 			continue
 		}
 		eligible = append(eligible, r)
@@ -302,7 +321,10 @@ func (w *Runner) check(ctx context.Context, a appRow) error {
 				}
 			}
 			releaseRowID := newID()
-			res, insertErr := tx.ExecContext(ctx, `INSERT OR IGNORE INTO "Release" (id,watchedAppId,githubReleaseId,tagName,name,body,htmlUrl,prerelease,draft,releaseType,changelogSummary,publishedAt,detectedAt,ignored,notificationSent) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,0)`, releaseRowID, a.id, strconv.FormatInt(r.ID, 10), r.Tag, r.Name, r.Body, r.URL, r.Prerelease, r.Draft, classifyRelease(r.Tag), releaseSummary(r.Body), published, now)
+			summary := releaseSummary(r.Body)
+			summaryText, _ := summary.(string)
+			security := IsSecurityRelease(textValue(r.Name), summaryText, textValue(r.Body))
+			res, insertErr := tx.ExecContext(ctx, `INSERT OR IGNORE INTO "Release" (id,watchedAppId,githubReleaseId,tagName,name,body,htmlUrl,prerelease,draft,releaseType,changelogSummary,publishedAt,detectedAt,ignored,notificationSent,securityRelevant) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,?)`, releaseRowID, a.id, strconv.FormatInt(r.ID, 10), r.Tag, r.Name, r.Body, r.URL, r.Prerelease, r.Draft, classifyRelease(r.Tag), summary, published, now, security)
 			if insertErr != nil {
 				_ = tx.Rollback()
 				return w.fail(ctx, a, "Could not store release results")
@@ -371,6 +393,13 @@ func staleError(stale bool) any {
 	return nil
 }
 func parseTime(raw string) (time.Time, error) { return time.Parse(time.RFC3339Nano, raw) }
+
+func textValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
 func newID() string {
 	var bytes [16]byte
 	if _, err := rand.Read(bytes[:]); err == nil {

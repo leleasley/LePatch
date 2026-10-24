@@ -1,10 +1,8 @@
-import { useState } from 'react';
 import { ArrowUpRight, Check, Compass, Folder, Heart, LoaderCircle, Plus, Search, TriangleAlert } from 'lucide-react';
 import { EmptyState } from '../components/ui.jsx';
 
 export function DiscoverPage({
   mode,
-  onMode,
   query,
   onQuery,
   onSearch,
@@ -19,7 +17,6 @@ export function DiscoverPage({
   onOpenRepo,
   onBack,
 }) {
-  const [searching, setSearching] = useState(false);
   const watched = new Set(apps.map(app => app.repoFullName?.toLowerCase()));
   // The repository view must never render a maintainer payload; only a
   // repository has a full name.
@@ -27,12 +24,7 @@ export function DiscoverPage({
 
   const submit = async event => {
     event.preventDefault();
-    setSearching(true);
-    try {
-      await onSearch();
-    } finally {
-      setSearching(false);
-    }
+    await onSearch();
   };
 
   if (mode === 'sponsors') {

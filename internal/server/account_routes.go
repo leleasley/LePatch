@@ -233,14 +233,15 @@ type notificationPreference struct {
 	Timezone        string          `json:"timezone"`
 	SeverityFilters json.RawMessage `json:"severityFilters"`
 	IssueComments   bool            `json:"issueComments"`
+	PausedUntil     *string         `json:"pausedUntil"`
 }
 
 func (s *Server) notificationPreferences(w http.ResponseWriter, r *http.Request) {
 	p, _ := auth.PrincipalFromContext(r.Context())
 	var value notificationPreference
 	var digest sql.NullInt64
-	var start, end, severity sql.NullString
-	err := s.store.DB().QueryRowContext(r.Context(), `SELECT enabled,digestInterval,quietHoursStart,quietHoursEnd,timezone,severityFilters,issueComments FROM "NotificationPreference" WHERE userId=?`, p.UserID).Scan(&value.Enabled, &digest, &start, &end, &value.Timezone, &severity, &value.IssueComments)
+	var start, end, severity, paused sql.NullString
+	err := s.store.DB().QueryRowContext(r.Context(), `SELECT enabled,digestInterval,quietHoursStart,quietHoursEnd,timezone,severityFilters,issueComments,pausedUntil FROM "NotificationPreference" WHERE userId=?`, p.UserID).Scan(&value.Enabled, &digest, &start, &end, &value.Timezone, &severity, &value.IssueComments, &paused)
 	if err == sql.ErrNoRows {
 		value.Enabled = true
 		value.Timezone = "UTC"
@@ -259,6 +260,9 @@ func (s *Server) notificationPreferences(w http.ResponseWriter, r *http.Request)
 		}
 		if end.Valid {
 			value.QuietHoursEnd = &end.String
+		}
+		if paused.Valid {
+			value.PausedUntil = &paused.String
 		}
 		if severity.Valid && json.Valid([]byte(severity.String)) {
 			value.SeverityFilters = json.RawMessage(severity.String)
@@ -293,15 +297,32 @@ func (s *Server) updateNotificationPreferences(w http.ResponseWriter, r *http.Re
 	if input.DigestInterval != nil {
 		digest = *input.DigestInterval
 	}
-	var start, end any
+	var start, end, paused any
 	if input.QuietHoursStart != nil {
 		start = *input.QuietHoursStart
 	}
 	if input.QuietHoursEnd != nil {
 		end = *input.QuietHoursEnd
 	}
+	if input.PausedUntil != nil {
+		raw := strings.TrimSpace(*input.PausedUntil)
+		if raw == "" {
+			paused = nil
+		} else {
+			until, err := time.Parse(time.RFC3339, raw)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, "Pause end must be an RFC 3339 timestamp")
+				return
+			}
+			if until.After(time.Now().AddDate(1, 0, 0)) {
+				writeError(w, http.StatusBadRequest, "A pause can last at most one year")
+				return
+			}
+			paused = until.UTC().Format(time.RFC3339Nano)
+		}
+	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
-	_, err := s.store.DB().ExecContext(r.Context(), `INSERT INTO "NotificationPreference" (id,userId,enabled,digestInterval,quietHoursStart,quietHoursEnd,timezone,severityFilters,issueComments,createdAt,updatedAt) VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(userId) DO UPDATE SET enabled=excluded.enabled,digestInterval=excluded.digestInterval,quietHoursStart=excluded.quietHoursStart,quietHoursEnd=excluded.quietHoursEnd,timezone=excluded.timezone,severityFilters=excluded.severityFilters,issueComments=excluded.issueComments,updatedAt=excluded.updatedAt`, newID(), p.UserID, input.Enabled, digest, start, end, input.Timezone, string(input.SeverityFilters), input.IssueComments, now, now)
+	_, err := s.store.DB().ExecContext(r.Context(), `INSERT INTO "NotificationPreference" (id,userId,enabled,digestInterval,quietHoursStart,quietHoursEnd,timezone,severityFilters,issueComments,pausedUntil,createdAt,updatedAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(userId) DO UPDATE SET enabled=excluded.enabled,digestInterval=excluded.digestInterval,quietHoursStart=excluded.quietHoursStart,quietHoursEnd=excluded.quietHoursEnd,timezone=excluded.timezone,severityFilters=excluded.severityFilters,issueComments=excluded.issueComments,pausedUntil=excluded.pausedUntil,updatedAt=excluded.updatedAt`, newID(), p.UserID, input.Enabled, digest, start, end, input.Timezone, string(input.SeverityFilters), input.IssueComments, paused, now, now)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Could not save notification preferences")
 		return
