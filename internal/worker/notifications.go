@@ -113,26 +113,36 @@ func (w *Runner) enqueueNotificationEvents(ctx context.Context, releaseID, userI
 	return nil
 }
 
-func (w *Runner) dispatchNotifications(ctx context.Context) {
-	rows, err := w.db.QueryContext(ctx, `SELECT e.id,e.attemptCount,e.createdAt,e.releaseId,a.id,c.id,c.type,c.configJson,a.userId,a.name,a.repoFullName,r.tagName,r.htmlUrl,COALESCE(r.body,''),COALESCE(r.releaseType,''),r.prerelease,COALESCE(r.changelogSummary,'')
+// notificationJobColumns is shared by the loader so the selected columns and
+// the scan cannot drift apart. They did once, which silently stopped every
+// release notification.
+const notificationJobColumns = `e.id,e.attemptCount,e.createdAt,e.releaseId,a.id,c.id,c.type,c.configJson,
+	a.userId,a.name,a.repoFullName,r.tagName,r.htmlUrl,COALESCE(r.body,''),COALESCE(r.releaseType,''),
+	r.prerelease,r.securityRelevant,COALESCE(r.changelogSummary,'')`
+
+func (w *Runner) loadPendingNotificationJobs(ctx context.Context) ([]notificationJob, error) {
+	rows, err := w.db.QueryContext(ctx, `SELECT `+notificationJobColumns+`
 		FROM "NotificationEvent" e JOIN "Release" r ON r.id=e.releaseId JOIN "WatchedApp" a ON a.id=r.watchedAppId JOIN "NotificationChannel" c ON c.id=e.channelId
 		WHERE e.status='pending' AND c.enabled=1 AND (e.nextAttemptAt IS NULL OR e.nextAttemptAt<=?) ORDER BY e.createdAt LIMIT 40`, time.Now().UTC().Format(time.RFC3339Nano))
 	if err != nil {
-		w.logger.Error("load queued notification events", "error", err.Error())
-		return
+		return nil, err
 	}
+	defer rows.Close()
 	jobs := make([]notificationJob, 0, 40)
 	for rows.Next() {
 		var job notificationJob
 		if err := rows.Scan(&job.id, &job.attempts, &job.createdAt, &job.releaseID, &job.appID, &job.channelID, &job.channelType, &job.configJSON, &job.userID, &job.appName, &job.repoFullName, &job.tag, &job.releaseURL, &job.body, &job.releaseType, &job.prerelease, &job.security, &job.summary); err != nil {
-			w.logger.Warn("read queued notification event", "error", err.Error())
-			continue
+			return nil, fmt.Errorf("read queued notification event: %w", err)
 		}
 		jobs = append(jobs, job)
 	}
-	_ = rows.Close()
-	if err := rows.Err(); err != nil {
-		w.logger.Error("iterate queued notification events", "error", err.Error())
+	return jobs, rows.Err()
+}
+
+func (w *Runner) dispatchNotifications(ctx context.Context) {
+	jobs, err := w.loadPendingNotificationJobs(ctx)
+	if err != nil {
+		w.logger.Error("load queued notification events", "error", err.Error())
 		return
 	}
 	for _, job := range jobs {
@@ -737,15 +747,28 @@ func postJSON(ctx context.Context, endpoint string, value any) error {
 	if err != nil {
 		return err
 	}
-	return postBody(ctx, endpoint, "application/json", body, map[string]string{"User-Agent": "LePatch"})
-}
-
-// postBody is the single outbound POST used by every notification provider so
-// timeouts, response limits and error mapping stay consistent.
-func postBody(ctx context.Context, endpoint, contentType string, body []byte, headers map[string]string) error {
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+	responseBody, err := postBody(ctx, endpoint, "application/json", body, map[string]string{"User-Agent": "LePatch"})
 	if err != nil {
 		return err
+	}
+	if strings.Contains(endpoint, "api.telegram.org") {
+		return checkTelegramResponse(responseBody)
+	}
+	return nil
+}
+
+// maxResponseBytes bounds how much of a provider response is kept. It must be
+// well above Telegram's echo of a full-length message: reading only 4 KB used
+// to truncate that JSON, so every long release looked like a rejection.
+const maxResponseBytes = 1 << 20
+
+// postBody is the single outbound POST used by every notification provider so
+// timeouts, response limits and error mapping stay consistent. It returns the
+// response body so callers can validate provider-specific payloads.
+func postBody(ctx context.Context, endpoint, contentType string, body []byte, headers map[string]string) ([]byte, error) {
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
 	}
 	request.Header.Set("Content-Type", contentType)
 	for key, value := range headers {
@@ -754,20 +777,32 @@ func postBody(ctx context.Context, endpoint, contentType string, body []byte, he
 	client := &http.Client{Timeout: 8 * time.Second}
 	response, err := client.Do(request)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer response.Body.Close()
-	responseBody, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
+	responseBody, _ := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return &deliveryError{status: response.StatusCode, message: fmt.Sprintf("notification provider returned HTTP %d", response.StatusCode)}
+		return responseBody, &deliveryError{status: response.StatusCode, message: fmt.Sprintf("notification provider returned HTTP %d", response.StatusCode)}
 	}
-	var telegramResult struct {
-		OK bool `json:"ok"`
+	return responseBody, nil
+}
+
+// checkTelegramResponse surfaces Telegram's own description so a failure says
+// why (chat not found, too long, cannot parse entities) instead of only that
+// it was rejected.
+func checkTelegramResponse(body []byte) error {
+	var result struct {
+		OK          bool   `json:"ok"`
+		Description string `json:"description"`
 	}
-	if strings.Contains(endpoint, "api.telegram.org") && (json.Unmarshal(responseBody, &telegramResult) != nil || !telegramResult.OK) {
-		return &deliveryError{status: http.StatusBadRequest, message: "Telegram rejected the notification"}
+	if err := json.Unmarshal(body, &result); err == nil && result.OK {
+		return nil
 	}
-	return nil
+	detail := strings.TrimSpace(result.Description)
+	if detail == "" {
+		detail = "Telegram rejected the notification"
+	}
+	return &deliveryError{status: http.StatusBadRequest, message: truncateText(detail, 200)}
 }
 
 // deliveryError carries the provider status so a permanent rejection is not

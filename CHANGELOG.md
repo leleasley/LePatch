@@ -178,6 +178,17 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ### Fixed
 
+- Release notifications stopped after the security flag was added: the queued
+  event query selected one column fewer than it scanned, so every dispatch
+  failed. The columns and the scan now share one definition and a test covers
+  the loader.
+
+- Long Telegram alerts were reported as rejected. Telegram echoes the whole
+  message back, and the response was read with a 4 KB limit, which truncated
+  that JSON so a successful send looked like a failure. Responses are read up
+  to 1 MB now, and a rejection carries Telegram's own description ("message is
+  too long", "chat not found") instead of a generic error.
+
 - Migrations are split with a scanner that understands string literals,
   comments and quoted identifiers. The previous split on every semicolon broke
   as soon as a statement contained one, and trigger definitions now fail loudly

@@ -104,7 +104,8 @@ func (w *Runner) sendWebhook(ctx context.Context, job notificationJob, config ma
 		if token := strings.TrimSpace(config["token"]); token != "" {
 			headers["Authorization"] = "Bearer " + token
 		}
-		return postBody(ctx, endpoint, "text/plain; charset=utf-8", []byte(body), headers)
+		_, err := postBody(ctx, endpoint, "text/plain; charset=utf-8", []byte(body), headers)
+		return err
 	}
 
 	body, err := json.Marshal(webhookReleasePayload(job, w.appURL))
@@ -117,7 +118,8 @@ func (w *Runner) sendWebhook(ctx context.Context, job notificationJob, config ma
 		mac.Write(body)
 		headers["X-LePatch-Signature"] = "sha256=" + hex.EncodeToString(mac.Sum(nil))
 	}
-	return postBody(ctx, endpoint, "application/json", body, headers)
+	_, err = postBody(ctx, endpoint, "application/json", body, headers)
+	return err
 }
 
 // PreviewWebhookPayload renders the sample body shown by the administrator

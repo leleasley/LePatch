@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -90,8 +91,8 @@ func TestValidIntegrationURL(t *testing.T) {
 
 func TestSendWebhookSignsTheBody(t *testing.T) {
 	var (
-		received []byte
-		signature string
+		received    []byte
+		signature   string
 		contentType string
 	)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -156,5 +157,49 @@ func TestSendWebhookPostsNtfyWithBearerToken(t *testing.T) {
 func TestParseTimeAcceptsTheStoredFormat(t *testing.T) {
 	if _, err := parseTime("2026-10-22T10:00:00.123456789Z"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestCheckTelegramResponseAcceptsALongEcho(t *testing.T) {
+	// Telegram echoes the whole message back, so a full-length release produces
+	// a response well over 4 KB.
+	echo := strings.Repeat("a", 6000)
+	body, err := json.Marshal(map[string]any{"ok": true, "result": map[string]any{"text": echo}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(body) <= 4096 {
+		t.Fatalf("the test payload should exceed the old limit, got %d bytes", len(body))
+	}
+	if err := checkTelegramResponse(body); err != nil {
+		t.Fatalf("a successful long response must not be treated as a rejection: %v", err)
+	}
+}
+
+func TestCheckTelegramResponseReportsTheReason(t *testing.T) {
+	body := []byte(`{"ok":false,"error_code":400,"description":"Bad Request: message is too long"}`)
+	err := checkTelegramResponse(body)
+	if err == nil || !strings.Contains(err.Error(), "message is too long") {
+		t.Fatalf("the Telegram description should be surfaced, got %v", err)
+	}
+	var failure *deliveryError
+	if !errors.As(err, &failure) || !failure.permanent() {
+		t.Fatal("a rejected message is permanent and should not be retried")
+	}
+}
+
+func TestPostBodyReadsResponsesLargerThanFourKilobytes(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true,"padding":"` + strings.Repeat("x", 8000) + `"}`))
+	}))
+	defer server.Close()
+
+	body, err := postBody(t.Context(), server.URL, "application/json", []byte(`{}`), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(body) <= 4096 {
+		t.Fatalf("the response was truncated at %d bytes", len(body))
 	}
 }
