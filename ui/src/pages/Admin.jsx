@@ -14,6 +14,7 @@ import {
   Plus,
   RefreshCw,
   Settings2,
+  SkipForward,
   Trash2,
   TriangleAlert,
   Users,
@@ -893,6 +894,7 @@ function QueuesPanel() {
         <Stat label="Pending" value={compact(queues.pending)} hint="waiting to send" icon={Boxes} />
         <Stat label="Sent" value={compact(queues.sent)} hint="delivered" icon={Check} />
         <Stat label="Failed" value={compact(queues.failed)} hint="need a retry" icon={TriangleAlert} />
+        <Stat label="Superseded" value={compact(queues.superseded)} hint="replaced by a newer release" icon={SkipForward} />
         <Stat label="Check queue" value={`${queues.worker?.queueDepth || 0}`} hint={`of ${queues.worker?.queueCapacity || 0} slots`} icon={Activity} />
       </div>
 

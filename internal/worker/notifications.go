@@ -139,7 +139,50 @@ func (w *Runner) loadPendingNotificationJobs(ctx context.Context) ([]notificatio
 	return jobs, rows.Err()
 }
 
+// supersedePendingEvents keeps only the newest queued alert per repository and
+// channel. After an outage this prevents a burst of intermediate versions;
+// the newest release is the one worth announcing. Events that already failed
+// once are left alone so an explicit retry is still delivered.
+func (w *Runner) supersedePendingEvents(ctx context.Context) error {
+	_, err := w.db.ExecContext(ctx, `UPDATE "NotificationEvent"
+		SET status='superseded', error='Superseded by a newer release', nextAttemptAt=NULL
+		WHERE status='pending' AND attemptCount=0
+		AND EXISTS (
+			SELECT 1 FROM "NotificationEvent" newer
+			JOIN "Release" newerRelease ON newerRelease.id = newer.releaseId
+			WHERE newer.channelId = "NotificationEvent".channelId
+				AND newer.id <> "NotificationEvent".id
+				AND newer.status IN ('pending','sent')
+				AND (newer.createdAt > "NotificationEvent".createdAt
+					OR (newer.createdAt = "NotificationEvent".createdAt AND newer.id > "NotificationEvent".id))
+				AND newerRelease.watchedAppId = (SELECT watchedAppId FROM "Release" WHERE id = "NotificationEvent".releaseId)
+		)`)
+	return err
+}
+
+// supersedeFailedEvents retires old failures once a newer release for the same
+// repository and channel has been delivered. The failure no longer needs an
+// action because the reader has already been told about a newer version.
+func (w *Runner) supersedeFailedEvents(ctx context.Context) error {
+	_, err := w.db.ExecContext(ctx, `UPDATE "NotificationEvent"
+		SET status='superseded', error='Superseded by a newer release', nextAttemptAt=NULL
+		WHERE status='failed'
+		AND EXISTS (
+			SELECT 1 FROM "NotificationEvent" newer
+			JOIN "Release" newerRelease ON newerRelease.id = newer.releaseId
+			WHERE newer.channelId = "NotificationEvent".channelId
+				AND newer.status='sent'
+				AND (newer.createdAt > "NotificationEvent".createdAt
+					OR (newer.createdAt = "NotificationEvent".createdAt AND newer.id > "NotificationEvent".id))
+				AND newerRelease.watchedAppId = (SELECT watchedAppId FROM "Release" WHERE id = "NotificationEvent".releaseId)
+		)`)
+	return err
+}
+
 func (w *Runner) dispatchNotifications(ctx context.Context) {
+	if err := w.supersedePendingEvents(ctx); err != nil {
+		w.logger.Warn("could not supersede older notifications", "error", err.Error())
+	}
 	jobs, err := w.loadPendingNotificationJobs(ctx)
 	if err != nil {
 		w.logger.Error("load queued notification events", "error", err.Error())
@@ -795,7 +838,13 @@ func checkTelegramResponse(body []byte) error {
 		OK          bool   `json:"ok"`
 		Description string `json:"description"`
 	}
-	if err := json.Unmarshal(body, &result); err == nil && result.OK {
+	// A 2xx response means Telegram accepted the message. The body is only a
+	// diagnostic echo, so an unparseable one must not turn a success into a
+	// failure; a long release used to do exactly that.
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil
+	}
+	if result.OK {
 		return nil
 	}
 	detail := strings.TrimSpace(result.Description)

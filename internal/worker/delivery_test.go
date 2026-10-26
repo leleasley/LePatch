@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"strings"
@@ -104,5 +105,92 @@ func TestLoadPendingNotificationJobsReadsEveryColumn(t *testing.T) {
 	}
 	if !jobs[0].security || jobs[0].tag != "v1.0.0" || jobs[0].summary != "Fixes a CVE." {
 		t.Fatalf("unexpected job: %+v", jobs[0])
+	}
+}
+
+func seedNotificationFixture(t *testing.T, db *store.Store, releases int) {
+	t.Helper()
+	ctx := context.Background()
+	statements := []string{
+		`INSERT INTO "WatchedApp" (id,name,slug,repoOwner,repoName,repoFullName,githubUrl,userId) VALUES ('a','Repo','repo','owner','repo','owner/repo','https://github.com/owner/repo','u')`,
+		`INSERT INTO "NotificationChannel" (id,type,name,enabled,configJson) VALUES ('c','telegram','Telegram',1,'{}')`,
+	}
+	for index := 1; index <= releases; index++ {
+		statements = append(statements, fmt.Sprintf(`INSERT INTO "Release" (id,watchedAppId,githubReleaseId,tagName,htmlUrl,prerelease,draft) VALUES ('r%d','a','%d','v1.0.%d','https://github.com/owner/repo/releases/tag/v1.0.%d',0,0)`, index, index, index, index))
+	}
+	for _, statement := range statements {
+		if _, err := db.DB().ExecContext(ctx, statement); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestSupersedePendingEventsKeepsOnlyTheNewest(t *testing.T) {
+	runner, db := deliveryTestRunner(t)
+	ctx := context.Background()
+	seedNotificationFixture(t, db, 3)
+	// Older events were never attempted; the last one is a manual retry and
+	// must survive so an explicit resend still happens.
+	for index, attempts := range []int{0, 0, 1} {
+		created := fmt.Sprintf("2026-10-2%dT10:00:00Z", index+1)
+		if _, err := db.DB().ExecContext(ctx, `INSERT INTO "NotificationEvent" (id,releaseId,channelId,status,createdAt,attemptCount) VALUES (?,?,?,'pending',?,?)`,
+			fmt.Sprintf("e%d", index+1), fmt.Sprintf("r%d", index+1), "c", created, attempts); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := runner.supersedePendingEvents(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	status := func(id string) string {
+		var value string
+		if err := db.DB().QueryRowContext(ctx, `SELECT status FROM "NotificationEvent" WHERE id=?`, id).Scan(&value); err != nil {
+			t.Fatal(err)
+		}
+		return value
+	}
+	if got := status("e1"); got != "superseded" {
+		t.Fatalf("the oldest event should be superseded, got %q", got)
+	}
+	if got := status("e2"); got != "superseded" {
+		t.Fatalf("the middle event should be superseded, got %q", got)
+	}
+	if got := status("e3"); got != "pending" {
+		t.Fatalf("the manually retried event must stay pending, got %q", got)
+	}
+}
+
+func TestSupersedeFailedEventsRetiresFailuresWithANewerDelivery(t *testing.T) {
+	runner, db := deliveryTestRunner(t)
+	ctx := context.Background()
+	seedNotificationFixture(t, db, 3)
+	statements := []string{
+		`INSERT INTO "NotificationEvent" (id,releaseId,channelId,status,createdAt,attemptCount,error) VALUES ('old-failure','r1','c','failed','2026-10-21T10:00:00Z',3,'Telegram rejected the notification')`,
+		`INSERT INTO "NotificationEvent" (id,releaseId,channelId,status,createdAt,attemptCount) VALUES ('newer-sent','r2','c','sent','2026-10-22T10:00:00Z',0)`,
+		`INSERT INTO "NotificationEvent" (id,releaseId,channelId,status,createdAt,attemptCount,error) VALUES ('lonely-failure','r3','c','failed','2026-10-23T10:00:00Z',3,'chat not found')`,
+	}
+	for _, statement := range statements {
+		if _, err := db.DB().ExecContext(ctx, statement); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := runner.supersedeFailedEvents(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	status := func(id string) string {
+		var value string
+		if err := db.DB().QueryRowContext(ctx, `SELECT status FROM "NotificationEvent" WHERE id=?`, id).Scan(&value); err != nil {
+			t.Fatal(err)
+		}
+		return value
+	}
+	if got := status("old-failure"); got != "superseded" {
+		t.Fatalf("a failure replaced by a newer delivery should be retired, got %q", got)
+	}
+	if got := status("lonely-failure"); got != "failed" {
+		t.Fatalf("a failure with no newer delivery must stay failed, got %q", got)
 	}
 }

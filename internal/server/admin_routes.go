@@ -312,11 +312,12 @@ func (s *Server) adminQueues(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	var pending, sent, failed int
+	var pending, sent, failed, superseded int
 	if err := s.store.DB().QueryRowContext(ctx, `SELECT
 		COALESCE(sum(CASE WHEN status='pending' THEN 1 ELSE 0 END),0),
 		COALESCE(sum(CASE WHEN status='sent' THEN 1 ELSE 0 END),0),
-		COALESCE(sum(CASE WHEN status='failed' THEN 1 ELSE 0 END),0) FROM "NotificationEvent"`).Scan(&pending, &sent, &failed); err != nil {
+		COALESCE(sum(CASE WHEN status='failed' THEN 1 ELSE 0 END),0),
+		COALESCE(sum(CASE WHEN status='superseded' THEN 1 ELSE 0 END),0) FROM "NotificationEvent"`).Scan(&pending, &sent, &failed, &superseded); err != nil {
 		writeError(w, http.StatusInternalServerError, "Could not load queue statistics")
 		return
 	}
@@ -358,12 +359,13 @@ func (s *Server) adminQueues(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"pending":   pending,
-		"sent":      sent,
-		"failed":    failed,
-		"failures":  failures,
-		"worker":    queue,
-		"updatedAt": time.Now().UTC().Format(time.RFC3339Nano),
+		"pending":    pending,
+		"sent":       sent,
+		"failed":     failed,
+		"superseded": superseded,
+		"failures":   failures,
+		"worker":     queue,
+		"updatedAt":  time.Now().UTC().Format(time.RFC3339Nano),
 	})
 }
 

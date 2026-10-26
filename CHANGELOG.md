@@ -176,6 +176,14 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   live session.
 - MFA enrolment keeps the pending secret server-side.
 
+### Changed
+
+- Queued release alerts are coalesced per repository and channel. After an
+  outage only the newest release is delivered instead of a burst of every
+  intermediate version, and the older events are recorded as superseded. A
+  failure that a newer delivery has replaced is retired the same way, so the
+  queue only shows problems that still need action.
+
 ### Fixed
 
 - Release notifications stopped after the security flag was added: the queued

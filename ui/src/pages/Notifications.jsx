@@ -1,6 +1,13 @@
-import { ArrowUpRight, Bell, Check, Clock3, RefreshCw, TriangleAlert } from 'lucide-react';
+import { ArrowUpRight, Bell, Check, Clock3, RefreshCw, SkipForward, TriangleAlert } from 'lucide-react';
 import { elapsed } from '../lib/format.js';
 import { EmptyState, Pill } from '../components/ui.jsx';
+
+function channelLabel(type) {
+  if (type === 'telegram') return 'Telegram';
+  if (type === 'discord') return 'Discord';
+  if (type === 'webhook') return 'Webhook';
+  return type;
+}
 
 export function NotificationsPage({ events, notice, onRefresh, loading, onOpenRelease }) {
   const failures = events.filter(event => event.status === 'failed').length;
@@ -51,20 +58,32 @@ export function NotificationsPage({ events, notice, onRefresh, loading, onOpenRe
                   ) : (
                     <span>Release</span>
                   )}
-                  <span>· {event.channelType === 'telegram' ? 'Telegram' : 'Discord'} alert</span>
+                  <span>· {channelLabel(event.channelType)} alert</span>
                 </span>
               </div>
               <Pill kind={event.channelType === 'telegram' ? 'info' : 'violet'}>
-                {event.channelType === 'telegram' ? 'Telegram' : 'Discord'}
+                {channelLabel(event.channelType)}
               </Pill>
               <div style={{ display: 'grid', justifyItems: 'end', gap: 4 }}>
                 <Pill kind={event.status === 'sent' ? 'success' : event.status === 'failed' ? 'danger' : ''}>
-                  {event.status === 'sent' ? <Check size={11} /> : event.status === 'failed' ? <TriangleAlert size={11} /> : <Clock3 size={11} />}
+                  {event.status === 'sent' ? (
+                    <Check size={11} />
+                  ) : event.status === 'failed' ? (
+                    <TriangleAlert size={11} />
+                  ) : event.status === 'superseded' ? (
+                    <SkipForward size={11} />
+                  ) : (
+                    <Clock3 size={11} />
+                  )}
                   {event.status}
                 </Pill>
                 <span className="log-when">{elapsed(event.sentAt || event.createdAt)}</span>
                 {event.error ? (
-                  <small className="log-when" style={{ color: 'var(--danger)' }} title={event.error}>
+                  <small
+                    className="log-when"
+                    style={{ color: event.status === 'failed' ? 'var(--danger)' : 'var(--fg-faint)' }}
+                    title={event.error}
+                  >
                     {event.error.slice(0, 48)}
                   </small>
                 ) : null}

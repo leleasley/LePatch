@@ -203,3 +203,11 @@ func TestPostBodyReadsResponsesLargerThanFourKilobytes(t *testing.T) {
 		t.Fatalf("the response was truncated at %d bytes", len(body))
 	}
 }
+
+func TestCheckTelegramResponseTreatsAnUnparseableSuccessAsDelivered(t *testing.T) {
+	// The HTTP status is authoritative: a 2xx body that cannot be parsed is a
+	// diagnostic problem, not a delivery failure.
+	if err := checkTelegramResponse([]byte("not json at all")); err != nil {
+		t.Fatalf("a 2xx response must count as delivered, got %v", err)
+	}
+}

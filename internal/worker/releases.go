@@ -114,6 +114,9 @@ func (w *Runner) Start(ctx context.Context) {
 			w.statusMu.Unlock()
 			w.syncEnabledIntegrationChannels(ctx)
 			w.backfillSecurityFlags(ctx)
+			if err := w.supersedeFailedEvents(ctx); err != nil {
+				w.logger.Warn("could not retire superseded failures", "error", err.Error())
+			}
 			w.schedule(ctx)
 			w.dispatchNotifications(ctx)
 			w.syncIssueCommentNotifications(ctx)
